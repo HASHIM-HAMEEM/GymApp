@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian · Member App</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="logo" data-logo="27"></span><span class="wm">Meridian <span>· Membership System</span></span></a>
+    <nav class="site-nav">
+      <a href="index.html">Design System</a>
+      <a href="member.html" class="on">Member App</a>
+      <a href="admin.html">Admin</a>
+      <a href="flows.html">Flows</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="page-hero">
+    <div class="kicker">Role 01 — Member · iOS · 390 × 844</div>
+    <h1>The member app</h1>
+    <p class="lede">A member opens the app for three reasons: to see that their membership is fine, to walk past reception, and to hear from the club. Every screen below answers one of those without detours. Status is visible from Home; the QR card is one tap from anywhere; expired and due states never borrow the active look.</p>
+  </section>
+
+  <!-- ============ ENTRY ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Entry</div>
+    <div class="sec-head"><h2>Arrival & sign-in</h2><div class="note">Phone-number sign-in with a six-digit code. No passwords to forget at the front desk.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="splash">
+              <span class="logo mark" data-logo="72"></span>
+              <div class="wm">Meridian</div>
+              <div class="cap">Athletic Club</div>
+              <div class="foot">Membership · V2.0</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-01</em>Splash</div><div class="d">The mark fades up over near-black. No marketing carousel — the app opens like a door.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="body" style="justify-content:flex-end; gap:26px;">
+              <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:18px;">
+                <span class="logo" data-logo="46"></span>
+                <h1 style="font-size:31px; font-weight:600; letter-spacing:-.02em; line-height:1.15;">Members walk straight in.</h1>
+                <p style="font-size:14.5px; color:var(--ink-3); line-height:1.65; max-width:30ch;">Your membership, your card, your visits — in one quiet place. Sign in with the phone number reception has on file.</p>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:12px; padding-bottom:22px;">
+                <button class="btn btn-primary btn-block">Sign in with phone number</button>
+                <button class="btn btn-quiet btn-block" style="font-size:13.5px;">New here? Visit reception to join</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-02</em>Welcome</div><div class="d">One action. Self-serve signup is deliberately absent — membership starts at the desk, not on a form.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button></div>
+            <div class="body">
+              <div>
+                <div class="slabel" style="margin-bottom:12px;">Sign in</div>
+                <h1 style="font-size:26px; font-weight:600; letter-spacing:-.015em;">Your phone number</h1>
+                <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.6;">We'll text you a six-digit code. Standard rates apply.</p>
+              </div>
+              <div class="field">
+                <label>Mobile number</label>
+                <div class="control"><span style="font-size:14px; font-weight:600; color:var(--ink-2); display:flex; align-items:center; gap:7px; border-right:1px solid var(--line); padding-right:12px;">🇪🇬 +20</span><input value="10 2748 8531" class="mono" style="font-size:15px;"></div>
+                <span class="hint">Use the number you registered at reception.</span>
+              </div>
+              <div style="margin-top:auto; padding-bottom:16px; display:flex; flex-direction:column; gap:14px;">
+                <button class="btn btn-primary btn-block">Send code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-03</em>Sign in — number</div><div class="d">Country prefix pinned, mono digits, one hint. The keypad is the only thing below this.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button></div>
+            <div class="body">
+              <div>
+                <div class="slabel" style="margin-bottom:12px;">Sign in</div>
+                <h1 style="font-size:26px; font-weight:600; letter-spacing:-.015em;">Your phone number</h1>
+                <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.6;">We'll text you a six-digit code. Standard rates apply.</p>
+              </div>
+              <div class="field err">
+                <label>Mobile number</label>
+                <div class="control"><span style="font-size:14px; font-weight:600; color:var(--ink-2); display:flex; align-items:center; gap:7px; border-right:1px solid var(--line); padding-right:12px;">🇪🇬 +20</span><input value="10 274" class="mono" style="font-size:15px;"></div>
+                <span class="err-msg"><i data-ic="alertc" data-size="15"></i>That number looks short — Egyptian mobiles have 10 digits after +20.</span>
+              </div>
+              <div style="margin-top:auto; padding-bottom:16px;">
+                <button class="btn btn-primary btn-block" disabled>Send code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-04</em>Sign in — invalid</div><div class="d">Inline error in place, action disabled. Errors explain what's wrong and how to fix it, in the member's words.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button></div>
+            <div class="body">
+              <div>
+                <div class="slabel" style="margin-bottom:12px;">Verification</div>
+                <h1 style="font-size:26px; font-weight:600; letter-spacing:-.015em;">Enter the code</h1>
+                <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.6;">Sent to <span class="mono" style="color:var(--ink-2);">+20 10 2748 8531</span>. It expires in 10 minutes.</p>
+              </div>
+              <div class="otp">
+                <input value="2"><input value="4"><input value="6"><input><input><input>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--ink-3);">
+                <span>Didn't get it?</span>
+                <span class="mono" style="color:var(--ink-2);">Resend in 0:42</span>
+              </div>
+              <div style="margin-top:auto; padding-bottom:16px; display:flex; flex-direction:column; gap:14px;">
+                <button class="btn btn-primary btn-block">Verify</button>
+                <button class="textbtn quiet" style="align-self:center; font-size:13.5px;">Use a different number</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-05</em>OTP — entering</div><div class="d">Six cells, one focus ring, countdown in mono. The resend timer replaces the button until it expires.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button></div>
+            <div class="body">
+              <div>
+                <div class="slabel" style="margin-bottom:12px;">Verification</div>
+                <h1 style="font-size:26px; font-weight:600; letter-spacing:-.015em;">Enter the code</h1>
+                <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.6;">Sent to <span class="mono" style="color:var(--ink-2);">+20 10 2748 8531</span>. It expires in 10 minutes.</p>
+              </div>
+              <div class="otp err">
+                <input value="1"><input value="1"><input value="1"><input value="1"><input value="1"><input value="1">
+              </div>
+              <div class="banner err" style="margin-top:2px;"><i data-ic="alertc" data-size="18"></i><div>That code doesn't match. Check the latest message — older codes stop working when a new one is sent.</div></div>
+              <div style="margin-top:auto; padding-bottom:16px;">
+                <button class="btn btn-primary btn-block">Verify</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-06</em>OTP — wrong code</div><div class="d">Cells tint red, a banner explains why. Nothing clears the input — members don't retype under pressure.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ HOME ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Home</div>
+    <div class="sec-head"><h2>Status without opening anything</h2><div class="note">The ring answers "am I fine?" in under a second. Everything else is context.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar">
+              <div>
+                <div class="slabel">Saturday · 20 Sep</div>
+                <div class="title" style="margin-top:4px; font-size:19px;">Good evening, Layla</div>
+              </div>
+              <div class="spacer"></div>
+              <button class="iconbtn"><i data-ic="bell" data-size="21"></i></button>
+            </div>
+            <div class="body scroll">
+              <div class="ringcard">
+                <div class="ring">
+                  <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="115.6"/></svg>
+                  <div class="c"><div class="n">34</div><div class="u">Days left</div></div>
+                </div>
+                <div class="rc-info">
+                  <span class="tag tag-ok"><span class="sdot"></span>Active</span>
+                  <h3>Premium Monthly</h3>
+                  <p>Renews 24 Oct 2026<br>at reception or online.</p>
+                </div>
+              </div>
+              <div class="mcard">
+                <div class="mcard-top">
+                  <div class="brandrow"><span class="logo" data-logo="20"></span><span class="wm">Meridian</span></div>
+                  <span class="plan-chip">Premium</span>
+                </div>
+                <div class="holder"><div class="n">Layla Hassan</div><div class="id">MRD-2481</div></div>
+                <div class="mcard-foot">
+                  <div class="stat"><div class="cap">Valid until</div><div class="v">24 Oct 2026</div></div>
+                  <div class="qrs"><div class="qr" data-qr="MERIDIAN|MRD-2481|LH|ACT" data-size="34"></div></div>
+                </div>
+              </div>
+              <div class="week">
+                <div class="wd on"><div class="dot"></div><span>Mon</span></div>
+                <div class="wd on"><div class="dot"></div><span>Tue</span></div>
+                <div class="wd"><div class="dot"></div><span>Wed</span></div>
+                <div class="wd on"><div class="dot"></div><span>Thu</span></div>
+                <div class="wd"><div class="dot"></div><span>Fri</span></div>
+                <div class="wd today"><div class="dot"></div><span>Sat</span></div>
+                <div class="wd"><div class="dot"></div><span>Sun</span></div>
+              </div>
+              <div class="list">
+                <div class="nrow" style="border-bottom:none;">
+                  <div class="cat">Schedule</div>
+                  <div class="grow"><div class="t">Studio moves to evening hours</div><div class="p">From 1 October the studio timetable shifts…</div></div>
+                  <div class="dt">18 Sep</div>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab on"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-07</em>Home — active</div><div class="d">Ring at 60%, card below it, week strip, latest notice. The eye lands on "34 days left" first, every time.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone lt">
+          <div class="screen">
+            <div class="appbar">
+              <div>
+                <div class="slabel">Saturday · 20 Sep</div>
+                <div class="title" style="margin-top:4px; font-size:19px;">Good evening, Layla</div>
+              </div>
+              <div class="spacer"></div>
+              <button class="iconbtn"><i data-ic="bell" data-size="21"></i></button>
+            </div>
+            <div class="body scroll">
+              <div class="ringcard">
+                <div class="ring">
+                  <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="115.6"/></svg>
+                  <div class="c"><div class="n">34</div><div class="u">Days left</div></div>
+                </div>
+                <div class="rc-info">
+                  <span class="tag tag-ok"><span class="sdot"></span>Active</span>
+                  <h3>Premium Monthly</h3>
+                  <p>Renews 24 Oct 2026<br>at reception or online.</p>
+                </div>
+              </div>
+              <div class="mcard">
+                <div class="mcard-top">
+                  <div class="brandrow"><span class="logo" data-logo="20"></span><span class="wm">Meridian</span></div>
+                  <span class="plan-chip">Premium</span>
+                </div>
+                <div class="holder"><div class="n">Layla Hassan</div><div class="id">MRD-2481</div></div>
+                <div class="mcard-foot">
+                  <div class="stat"><div class="cap">Valid until</div><div class="v">24 Oct 2026</div></div>
+                  <div class="qrs"><div class="qr" data-qr="MERIDIAN|MRD-2481|LH|ACT" data-size="34"></div></div>
+                </div>
+              </div>
+              <div class="week">
+                <div class="wd on"><div class="dot"></div><span>Mon</span></div>
+                <div class="wd on"><div class="dot"></div><span>Tue</span></div>
+                <div class="wd"><div class="dot"></div><span>Wed</span></div>
+                <div class="wd on"><div class="dot"></div><span>Thu</span></div>
+                <div class="wd"><div class="dot"></div><span>Fri</span></div>
+                <div class="wd today"><div class="dot"></div><span>Sat</span></div>
+                <div class="wd"><div class="dot"></div><span>Sun</span></div>
+              </div>
+              <div class="list">
+                <div class="nrow" style="border-bottom:none;">
+                  <div class="cat">Schedule</div>
+                  <div class="grow"><div class="t">Studio moves to evening hours</div><div class="p">From 1 October the studio timetable shifts…</div></div>
+                  <div class="dt">18 Sep</div>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab on"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-08</em>Home — light mode</div><div class="d">The same layout in the light theme scope. The card stays dark in both modes — it's an object, not a surface.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ QR ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Access</div>
+    <div class="sec-head"><h2>The card at reception</h2><div class="note">One tap on the raised dock button. Screen brightness is the phone's job; contrast is ours — the QR always sits on a light plate.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar">
+              <button class="iconbtn"><i data-ic="close" data-size="21"></i></button>
+              <div class="spacer"></div>
+              <span class="tag tag-ok tag-live"><span class="sdot"></span>Live</span>
+            </div>
+            <div class="body" style="align-items:center; justify-content:center; gap:26px; text-align:center;">
+              <div>
+                <div class="slabel" style="margin-bottom:10px;">Member card</div>
+                <h1 style="font-size:24px; font-weight:600; letter-spacing:-.015em;">Layla Hassan</h1>
+                <div class="mono" style="font-size:12.5px; color:var(--ink-3); margin-top:6px; letter-spacing:.06em;">MRD-2481</div>
+              </div>
+              <div style="background:var(--plate); padding:18px; border-radius:24px; box-shadow:0 18px 50px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.08);">
+                <div class="qr" data-qr="MERIDIAN|MRD-2481|LH|ACT" data-size="196"></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-3);">
+                <i data-ic="shield" data-size="17" style="color:var(--ok);"></i>
+                Active · Premium Monthly · until 24 Oct 2026
+              </div>
+            </div>
+            <div class="body" style="flex:none; padding-top:0; gap:12px;">
+              <button class="btn btn-secondary btn-block"><i data-ic="refresh" data-size="18"></i>Regenerate code</button>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-09</em>QR pass</div><div class="d">Maximal contrast: light plate on near-black, live badge pulsing. The code rotates every 60 seconds; regenerate is one tap.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar">
+              <button class="iconbtn"><i data-ic="close" data-size="21"></i></button>
+              <div class="spacer"></div>
+              <span class="tag tag-bad"><span class="sdot"></span>Expired</span>
+            </div>
+            <div class="body" style="align-items:center; justify-content:center; gap:26px; text-align:center;">
+              <div>
+                <div class="slabel" style="margin-bottom:10px;">Member card</div>
+                <h1 style="font-size:24px; font-weight:600; letter-spacing:-.015em;">Layla Hassan</h1>
+                <div class="mono" style="font-size:12.5px; color:var(--ink-3); margin-top:6px; letter-spacing:.06em;">MRD-2481</div>
+              </div>
+              <div style="position:relative;">
+                <div style="background:var(--plate); padding:18px; border-radius:24px; opacity:.28; filter:grayscale(1);">
+                  <div class="qr" data-qr="MERIDIAN|MRD-2481|LH|EXP" data-size="196"></div>
+                </div>
+                <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+                  <span class="tag tag-bad" style="height:34px; padding:0 16px; font-size:12px; box-shadow:0 8px 24px rgba(0,0,0,.5);">Won't scan</span>
+                </div>
+              </div>
+              <div style="font-size:13.5px; color:var(--ink-2); line-height:1.6; max-width:28ch;">Membership ended 15 Aug 2026. Renew to reactivate this card.</div>
+            </div>
+            <div class="body" style="flex:none; padding-top:0; gap:12px;">
+              <button class="btn btn-primary btn-block">Renew membership</button>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-10</em>QR pass — expired</div><div class="d">Same screen, different truth: the code fades to 28%, the badge says it won't scan, and renewal becomes the primary action. No green anywhere.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar">
+              <div>
+                <div class="slabel">Saturday · 20 Sep</div>
+                <div class="title" style="margin-top:4px; font-size:19px;">Good evening, Layla</div>
+              </div>
+              <div class="spacer"></div>
+              <button class="iconbtn"><i data-ic="bell" data-size="21"></i></button>
+            </div>
+            <div class="body scroll" style="opacity:.4;">
+              <div class="ringcard">
+                <div class="ring">
+                  <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="115.6"/></svg>
+                  <div class="c"><div class="n">34</div><div class="u">Days left</div></div>
+                </div>
+                <div class="rc-info">
+                  <span class="tag tag-ok"><span class="sdot"></span>Active</span>
+                  <h3>Premium Monthly</h3>
+                  <p>Renews 24 Oct 2026</p>
+                </div>
+              </div>
+              <div class="mcard">
+                <div class="mcard-top"><div class="brandrow"><span class="logo" data-logo="20"></span><span class="wm">Meridian</span></div><span class="plan-chip">Premium</span></div>
+                <div class="holder"><div class="n">Layla Hassan</div><div class="id">MRD-2481</div></div>
+                <div class="mcard-foot"><div class="stat"><div class="cap">Valid until</div><div class="v">24 Oct 2026</div></div><div class="qrs"></div></div>
+              </div>
+            </div>
+            <div class="scrim">
+              <div class="sheet">
+                <div class="grip"></div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:6px;">
+                  <i data-ic="refresh" data-size="20" style="color:var(--accent-hi);"></i>
+                  <h3>Regenerate code?</h3>
+                </div>
+                <p class="desc">The current code stops working immediately. Use this if you think someone saw your screen.</p>
+                <div style="display:flex; gap:11px; margin-top:20px;">
+                  <button class="btn btn-secondary" style="flex:1;">Keep current</button>
+                  <button class="btn btn-primary" style="flex:1;">Regenerate</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-11</em>Sheet — regenerate</div><div class="d">Short contextual actions live in bottom sheets with a scrimmed, dimmed page behind. Consequence is stated in one sentence.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ MEMBERSHIP STATES ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Membership</div>
+    <div class="sec-head"><h2>Every state, honestly drawn</h2><div class="note">Six states of one screen. Layout never changes; only the truth does — color, ring, and the primary action.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="body scroll">
+              <div class="ringcard" style="flex-direction:column; align-items:flex-start; gap:18px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="115.6"/></svg>
+                    <div class="c"><div class="n">34</div><div class="u">Days left</div></div>
+                  </div>
+                  <div>
+                    <span class="tag tag-ok"><span class="sdot"></span>Active</span>
+                    <h3 style="font-size:18px; margin-top:10px;">Premium Monthly</h3>
+                    <p style="font-size:12.5px; color:var(--ink-3); margin-top:4px;">EGP 1,500 / month</p>
+                  </div>
+                </div>
+                <div class="tl" style="align-self:stretch;">
+                  <div class="track"></div><div class="fill" style="width:60%;"></div>
+                  <div class="pt" style="left:0;"></div><div class="pt" style="left:60%; box-shadow:0 0 0 5px var(--accent-soft);"></div><div class="pt off" style="left:100%;"></div>
+                  <div class="lbl l"><div class="a">Start</div><div class="b">25 Aug</div></div>
+                  <div class="lbl" style="left:60%;"><div class="a" style="color:var(--accent-hi);">Today</div><div class="b">20 Sep</div></div>
+                  <div class="lbl r"><div class="a">Ends</div><div class="b">24 Oct</div></div>
+                </div>
+              </div>
+              <div class="kvs">
+                <div class="kv"><span class="k"><i data-ic="cal" data-size="17"></i>Started</span><span class="v">25 Aug 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="cal" data-size="17"></i>Valid until</span><span class="v">24 Oct 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="receipt" data-size="17"></i>Last payment</span><span class="v">EGP 1,500 · 25 Aug</span></div>
+                <div class="kv"><span class="k"><i data-ic="refresh" data-size="17"></i>Auto-renew</span><span class="v" style="color:var(--ink-3); font-weight:500;">Off — renew at reception</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:2px;">
+                <button class="btn btn-primary btn-block">Renew membership</button>
+                <button class="btn btn-quiet btn-block" style="font-size:13.5px;">Show QR code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-12</em>Membership — active</div><div class="d">Ring, timeline, and facts agree. Renewal is offered but quiet — there's nothing to fix.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="body scroll">
+              <div class="banner warn"><i data-ic="alertc" data-size="18"></i><div><b>4 days left.</b> Renew by 24 Sep to keep your access uninterrupted.</div></div>
+              <div class="ringcard" style="flex-direction:column; align-items:flex-start; gap:18px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg warn" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="250.4"/></svg>
+                    <div class="c"><div class="n" style="color:var(--warn);">4</div><div class="u">Days left</div></div>
+                  </div>
+                  <div>
+                    <span class="tag tag-warn"><span class="sdot"></span>Expiring soon</span>
+                    <h3 style="font-size:18px; margin-top:10px;">Premium Monthly</h3>
+                    <p style="font-size:12.5px; color:var(--ink-3); margin-top:4px;">EGP 1,500 / month</p>
+                  </div>
+                </div>
+                <div class="tl" style="align-self:stretch;">
+                  <div class="track"></div><div class="fill warn" style="width:87%;"></div>
+                  <div class="pt warn" style="left:0;"></div><div class="pt warn" style="left:87%; box-shadow:0 0 0 5px var(--warn-soft);"></div><div class="pt off" style="left:100%;"></div>
+                  <div class="lbl l"><div class="a">Start</div><div class="b">25 Aug</div></div>
+                  <div class="lbl" style="left:87%;"><div class="a" style="color:var(--warn);">Today</div><div class="b">20 Sep</div></div>
+                  <div class="lbl r"><div class="a">Ends</div><div class="b">24 Sep</div></div>
+                </div>
+              </div>
+              <div class="kvs">
+                <div class="kv"><span class="k"><i data-ic="cal" data-size="17"></i>Valid until</span><span class="v" style="color:var(--warn);">24 Sep 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="receipt" data-size="17"></i>Renewal price</span><span class="v">EGP 1,500</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:2px;">
+                <button class="btn btn-primary btn-block">Renew now — EGP 1,500</button>
+                <button class="btn btn-quiet btn-block" style="font-size:13.5px;">Show QR code</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-13</em>Membership — expiring</div><div class="d">Amber takes the ring, the timeline, and the date. The banner states the deadline and the action in one breath.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="body scroll">
+              <div class="banner err"><i data-ic="xc" data-size="18"></i><div><b>Membership expired 15 Aug.</b> Your QR won't open the door — renew to restore access today.</div></div>
+              <div class="ringcard" style="flex-direction:column; align-items:flex-start; gap:18px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg bad" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="0"/></svg>
+                    <div class="c"><div class="n" style="color:var(--bad);">0</div><div class="u">Days left</div></div>
+                  </div>
+                  <div>
+                    <span class="tag tag-bad"><span class="sdot"></span>Expired</span>
+                    <h3 style="font-size:18px; margin-top:10px;">Premium Monthly</h3>
+                    <p style="font-size:12.5px; color:var(--ink-3); margin-top:4px;">Ended 15 Aug 2026</p>
+                  </div>
+                </div>
+              </div>
+              <div class="kvs">
+                <div class="kv"><span class="k"><i data-ic="cal" data-size="17"></i>Expired on</span><span class="v" style="color:var(--bad);">15 Aug 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="clock" data-size="17"></i>Visits kept</span><span class="v">8 visits · history intact</span></div>
+                <div class="kv"><span class="k"><i data-ic="receipt" data-size="17"></i>Restart from</span><span class="v">EGP 1,500</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:2px;">
+                <button class="btn btn-primary btn-block">Renew membership</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-14</em>Membership — expired</div><div class="d">Red states the end plainly, confirms history is kept, and offers one way back. No countdown theater.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="body scroll">
+              <div class="banner" style="background:rgba(255,255,255,.05); border-color:var(--line-2); color:var(--ink);"><i data-ic="pause" data-size="18" style="color:var(--ink-3);"></i><div><b>Paused until 5 Nov.</b> Time doesn't count while you're away — your 22 remaining days are frozen.</div></div>
+              <div class="ringcard" style="flex-direction:column; align-items:flex-start; gap:18px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="158.9" style="stroke:var(--ink-4);"/></svg>
+                    <div class="c"><div class="n" style="color:var(--ink-3);">22</div><div class="u">Frozen</div></div>
+                  </div>
+                  <div>
+                    <span class="tag tag-muted"><span class="sdot"></span>Paused</span>
+                    <h3 style="font-size:18px; margin-top:10px;">Premium Monthly</h3>
+                    <p style="font-size:12.5px; color:var(--ink-3); margin-top:4px;">Resumes 5 Nov 2026</p>
+                  </div>
+                </div>
+              </div>
+              <div class="kvs">
+                <div class="kv"><span class="k"><i data-ic="pause" data-size="17"></i>Paused on</span><span class="v">10 Sep 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="cal" data-size="17"></i>Resumes</span><span class="v">5 Nov 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="clock" data-size="17"></i>Days preserved</span><span class="v">22 of 30</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:2px;">
+                <button class="btn btn-secondary btn-block">Resume early</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-15</em>Membership — paused</div><div class="d">Neutral ink, not alarm colors — pausing is a feature, not a failure. The ring freezes mid-cycle in graphite.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="body scroll">
+              <div class="banner warn"><i data-ic="receipt" data-size="18"></i><div><b>Payment due — EGP 1,500.</b> Your membership stays active until 24 Sep while this is settled.</div></div>
+              <div class="ringcard" style="flex-direction:column; align-items:flex-start; gap:18px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg warn" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="250.4"/></svg>
+                    <div class="c"><div class="n" style="color:var(--warn);">4</div><div class="u">Days left</div></div>
+                  </div>
+                  <div>
+                    <span class="tag tag-warn"><span class="sdot"></span>Payment due</span>
+                    <h3 style="font-size:18px; margin-top:10px;">Premium Monthly</h3>
+                    <p style="font-size:12.5px; color:var(--ink-3); margin-top:4px;">Renewal attempted 16 Sep — declined</p>
+                  </div>
+                </div>
+              </div>
+              <div class="kvs">
+                <div class="kv"><span class="k"><i data-ic="receipt" data-size="17"></i>Amount due</span><span class="v" style="color:var(--warn);">EGP 1,500</span></div>
+                <div class="kv"><span class="k"><i data-ic="cal" data-size="17"></i>Access until</span><span class="v">24 Sep 2026</span></div>
+                <div class="kv"><span class="k"><i data-ic="refresh" data-size="17"></i>Last attempt</span><span class="v" style="color:var(--ink-3); font-weight:500;">16 Sep · card declined</span></div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:2px;">
+                <button class="btn btn-primary btn-block">Pay now — EGP 1,500</button>
+                <button class="btn btn-quiet btn-block" style="font-size:13.5px;">Pay at reception instead</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-16</em>Membership — payment due</div><div class="d">Amber, with the reason and the deadline in the banner. Grace is explicit: access continues until the date shown.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="empty">
+              <div class="eico"><i data-ic="card" data-size="30"></i></div>
+              <h3>No plan yet</h3>
+              <p>You haven't been assigned a membership. Reception can set one up in about two minutes.</p>
+              <button class="btn btn-primary" style="margin-top:22px; padding:0 26px;">Contact reception</button>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-17</em>Membership — no plan</div><div class="d">A new member before their first assignment. The empty state names the next step and who does it.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ VISITS ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Visits</div>
+    <div class="sec-head"><h2>A quiet record</h2><div class="note">Check-ins as a ledger, not a feed. No streaks, no graphs, no judgment.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><div class="title">Visits</div><div class="spacer"></div><span class="mono" style="font-size:12px; color:var(--ink-3);">8 this month</span></div>
+            <div class="body scroll">
+              <div style="display:flex; gap:8px;">
+                <span class="chip on">September</span><span class="chip">August</span><span class="chip">July</span>
+              </div>
+              <div class="list">
+                <div class="vrow"><div class="date"><div class="d">18</div><div class="m">Thu</div></div><div class="grow"><div class="t">Evening check-in</div><div class="s">7:32 PM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">16</div><div class="m">Tue</div></div><div class="grow"><div class="t">Morning check-in</div><div class="s">8:04 AM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">15</div><div class="m">Mon</div></div><div class="grow"><div class="t">Evening check-in</div><div class="s">6:47 PM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">11</div><div class="m">Thu</div></div><div class="grow"><div class="t">Evening check-in</div><div class="s">7:15 PM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">9</div><div class="m">Tue</div></div><div class="grow"><div class="t">Morning check-in</div><div class="s">8:22 AM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">4</div><div class="m">Thu</div></div><div class="grow"><div class="t">Evening check-in</div><div class="s">7:58 PM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">2</div><div class="m">Tue</div></div><div class="grow"><div class="t">Morning check-in</div><div class="s">8:11 AM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+                <div class="vrow"><div class="date"><div class="d">1</div><div class="m">Mon</div></div><div class="grow"><div class="t">Evening check-in</div><div class="s">6:39 PM · Main entrance</div></div><i data-ic="checkc" data-size="18" style="color:var(--ok);"></i></div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab on"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-18</em>Visits — history</div><div class="d">Date blocks, mono timestamps, month filter chips. A record you can skim while walking to the door.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><div class="title">Visits</div><div class="spacer"></div></div>
+            <div class="empty">
+              <div class="eico"><i data-ic="clock" data-size="30"></i></div>
+              <h3>No visits yet</h3>
+              <p>Once you check in at reception, your visits will appear here.</p>
+              <button class="btn btn-secondary" style="margin-top:22px; padding:0 26px;"><i data-ic="qr" data-size="18"></i>Show my card</button>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab on"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-19</em>Visits — none yet</div><div class="d">The empty state offers the next real action — the card — rather than a motivational cartoon.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><div class="title">Visits</div><div class="spacer"></div><span class="mono" style="font-size:12px; color:var(--ink-3);">…</span></div>
+            <div class="body scroll">
+              <div style="display:flex; gap:8px;"><span class="sk" style="width:96px; height:34px; border-radius:999px;"></span><span class="sk" style="width:78px; height:34px; border-radius:999px;"></span></div>
+              <div class="list">
+                <div class="vrow"><div class="date sk" style="border:none;"></div><div class="grow"><div class="sk" style="height:13px; width:60%;"></div><div class="sk" style="height:11px; width:40%; margin-top:8px;"></div></div></div>
+                <div class="vrow"><div class="date sk" style="border:none;"></div><div class="grow"><div class="sk" style="height:13px; width:52%;"></div><div class="sk" style="height:11px; width:36%; margin-top:8px;"></div></div></div>
+                <div class="vrow"><div class="date sk" style="border:none;"></div><div class="grow"><div class="sk" style="height:13px; width:64%;"></div><div class="sk" style="height:11px; width:42%; margin-top:8px;"></div></div></div>
+                <div class="vrow"><div class="date sk" style="border:none;"></div><div class="grow"><div class="sk" style="height:13px; width:48%;"></div><div class="sk" style="height:11px; width:34%; margin-top:8px;"></div></div></div>
+                <div class="vrow"><div class="date sk" style="border:none;"></div><div class="grow"><div class="sk" style="height:13px; width:58%;"></div><div class="sk" style="height:11px; width:38%; margin-top:8px;"></div></div></div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab on"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-20</em>Visits — loading</div><div class="d">Skeletons mirror the real row geometry — date block, two text lines. One shimmer pass, no spinner.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ NOTICES ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Notices</div>
+    <div class="sec-head"><h2>From the club, in the club's voice</h2><div class="note">Announcements with category, date, and read state. No chat, no comments, no likes.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><div class="title">Notices</div><div class="spacer"></div><span class="tag tag-acc">2 new</span></div>
+            <div class="body scroll">
+              <div class="list">
+                <div class="nrow">
+                  <div class="cat">Schedule</div>
+                  <div class="grow"><div class="t">Studio moves to evening hours</div><div class="p">From 1 October the studio timetable shifts to 6–10 PM on weekdays…</div></div>
+                  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><div class="dt">18 Sep</div><div class="unread"></div></div>
+                </div>
+                <div class="nrow">
+                  <div class="cat warn">Facility</div>
+                  <div class="grow"><div class="t">Pool maintenance — Sunday morning</div><div class="p">The pool will be closed Sunday 21 Sep until 12 PM for scheduled cleaning…</div></div>
+                  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;"><div class="dt">17 Sep</div><div class="unread"></div></div>
+                </div>
+                <div class="nrow">
+                  <div class="cat ok">Club</div>
+                  <div class="grow"><div class="t">Members' evening — 26 September</div><div class="p">An open evening with the coaching team; bring a guest free of charge…</div></div>
+                  <div class="dt">12 Sep</div>
+                </div>
+                <div class="nrow">
+                  <div class="cat">Schedule</div>
+                  <div class="grow"><div class="t">September class timetable</div><div class="p">The updated September timetable is now posted at reception and on the board…</div></div>
+                  <div class="dt">1 Sep</div>
+                </div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab on"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-21</em>Notices — list</div><div class="d">Category column in mono caps, unread dots with a soft glow. Everything else stays quiet.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn"><i data-ic="back" data-size="22"></i></button><div class="sub mono">Notice · 18 Sep 2026</div><div class="spacer"></div></div>
+            <div class="body scroll">
+              <div>
+                <span class="tag tag-acc">Schedule</span>
+                <h1 style="font-size:24px; font-weight:600; letter-spacing:-.015em; margin-top:16px; line-height:1.25;">Studio moves to evening hours</h1>
+                <div class="mono" style="font-size:12px; color:var(--ink-4); margin-top:10px;">Posted by Reception · 18 Sep 2026</div>
+              </div>
+              <div class="divider"></div>
+              <p style="font-size:15px; line-height:1.75; color:var(--ink-2);">From <b style="color:var(--ink); font-weight:600;">1 October</b>, the studio timetable moves to its evening format: sessions run <b style="color:var(--ink); font-weight:600;">6 PM – 10 PM</b>, Monday through Friday.<br><br>Morning members are welcome to use the main floor during regular hours. The full October timetable is posted at reception and on the board by the studio door.<br><br>Questions? Ask any of us at the front desk.</p>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab on"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-22</em>Notices — detail</div><div class="d">A reading view, not a feed item: byline in mono, body copy at 1.75 line height, no actions to take.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><div class="title">Notices</div><div class="spacer"></div></div>
+            <div class="empty">
+              <div class="eico"><i data-ic="bell" data-size="30"></i></div>
+              <h3>All quiet</h3>
+              <p>No notices right now. When the club posts something, it'll show up here.</p>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab on"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-23</em>Notices — empty</div><div class="d">"All quiet" is the honest state of a club with nothing to announce.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============ PROFILE ============ -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">Profile</div>
+    <div class="sec-head"><h2>Details and editing</h2><div class="note">Read-only facts live in rows; editing is a separate screen with real validation.</div></div>
+    <div class="gallery">
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><div class="title">Profile</div><div class="spacer"></div><button class="textbtn" style="font-size:14px;">Edit</button></div>
+            <div class="body scroll">
+              <div style="display:flex; align-items:center; gap:16px; padding:6px 2px 2px;">
+                <div class="monogram" style="width:62px; height:62px; font-size:20px;">LH</div>
+                <div>
+                  <div style="font-family:var(--disp); font-size:20px; font-weight:600;">Layla Hassan</div>
+                  <div class="mono" style="font-size:12px; color:var(--ink-3); margin-top:5px;">MRD-2481 · joined Mar 2024</div>
+                </div>
+              </div>
+              <div class="list">
+                <div class="prow"><span class="k">Phone</span><span class="grow mono" style="font-size:13.5px;">+20 10 2748 8531</span></div>
+                <div class="prow"><span class="k">Email</span><span class="grow">layla.hassan@mail.com</span></div>
+                <div class="prow"><span class="k">Date of birth</span><span class="grow">14 Feb 1998</span></div>
+                <div class="prow"><span class="k">Emergency</span><span class="grow" style="display:flex; flex-direction:column; gap:2px;"><span>Marwa Hassan</span><span class="mono" style="font-size:12px; color:var(--ink-3);">+20 11 8843 2210</span></span></div>
+              </div>
+              <div class="list">
+                <div class="prow"><i data-ic="globe" data-size="18" style="color:var(--ink-3);"></i><span class="grow">Language</span><span style="font-size:13px; color:var(--ink-3);">English</span><i data-ic="chev" data-size="16" style="color:var(--ink-4);"></i></div>
+                <div class="prow"><i data-ic="shield" data-size="18" style="color:var(--ink-3);"></i><span class="grow">Privacy & data</span><i data-ic="chev" data-size="16" style="color:var(--ink-4);"></i></div>
+                <div class="prow"><i data-ic="logout" data-size="18" style="color:var(--bad);"></i><span class="grow" style="color:var(--bad);">Sign out</span></div>
+              </div>
+            </div>
+            <div class="tabbar">
+              <div class="tab"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab on"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-24</em>Profile</div><div class="d">Monogram instead of a photo — no cameras at a members' club. Facts in mono where they're numbers.</div></figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="phone">
+          <div class="screen">
+            <div class="appbar"><button class="textbtn quiet" style="font-size:14px;">Cancel</button><div class="title">Edit profile</div><div class="spacer"></div><button class="textbtn" style="font-size:14px;">Save</button></div>
+            <div class="body scroll">
+              <div class="field"><label>Full name</label><div class="control"><input value="Layla Hassan"></div></div>
+              <div class="field ok"><label>Phone number</label><div class="control"><input value="+20 10 2748 8531" class="mono" style="font-size:14.5px;"><span class="trail" style="color:var(--ok);">✓</span></div></div>
+              <div class="field err"><label>Email</label><div class="control"><input value="layla.hassan@mail"></div><span class="err-msg"><i data-ic="alertc" data-size="15"></i>That email looks incomplete — missing the domain ending.</span></div>
+              <div class="field"><label>Emergency contact</label><div class="control"><input value="Marwa Hassan · +20 11 8843 2210"></div><span class="hint">Only used if something happens at the club.</span></div>
+              <div style="display:flex; flex-direction:column; gap:11px; margin-top:4px; padding-bottom:10px;">
+                <button class="btn btn-primary btn-block loading"><span class="ld"></span><span>Saving…</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption><div class="t"><em>M-25</em>Edit — validating</div><div class="d">One field in error, one verified, save in flight. Validation messages say what's wrong in plain words.</div></figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Meridian Athletic Club · Member App · 25 screens</span>
+    <span><a href="admin.html" style="color:var(--accent-hi); text-decoration:none;">Admin role →</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="flows.html" style="color:var(--accent-hi); text-decoration:none;">Interactive flows →</a></span>
+  </footer>
+
+</main>
+
+<script src="assets/qrcode.js"></script>
+<script src="assets/shared.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>

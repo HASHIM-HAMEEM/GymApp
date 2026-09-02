@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian · Membership System V2</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="logo" data-logo="27"></span><span class="wm">Meridian <span>· Membership System</span></span></a>
+    <nav class="site-nav">
+      <a href="index.html" class="on">Design System</a>
+      <a href="member.html">Member App</a>
+      <a href="admin.html">Admin</a>
+      <a href="flows.html">Flows</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ================= HERO ================= -->
+  <section class="page-hero">
+    <div class="kicker">Design System · V2.0 · September 2026</div>
+    <h1>Dark, quiet, and <em>certain</em>. Membership at reception speed.</h1>
+    <p class="lede">Version two keeps the calm and trades ivory for ink. Meridian is a boutique gym membership product for two roles — members and reception staff. The surface is strictly monochrome: near-black grounds, warm-free grays, and a single white accent that means touch. Status colors stay strictly semantic — desaturated, never neon. Space Grotesk handles display and numerals, JetBrains Mono handles identity — IDs, timestamps, anything that must never wobble.</p>
+    <div class="hero-meta">
+      <div class="hm"><div class="k">Product type</div><div class="v">Mobile app UI (iOS-first) + admin workspace</div></div>
+      <div class="hm"><div class="k">Type</div><div class="v">Space Grotesk · Inter · JetBrains Mono · IBM Plex Sans Arabic</div></div>
+      <div class="hm"><div class="k">Grid</div><div class="v">4 pt base · 22 px screen margins</div></div>
+      <div class="hm"><div class="k">Mode</div><div class="v">Dark primary · light proven, scanner darkest</div></div>
+    </div>
+  </section>
+
+  <!-- ================= PRINCIPLES ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">01 — Principles</div>
+    <div class="sec-head">
+      <h2>How the product behaves</h2>
+      <div class="note">Six commitments. Every screen decision traces back to one of them — the difference between a members' club and a dashboard.</div>
+    </div>
+    <div class="grid2">
+      <div class="panel" style="display:flex; flex-direction:column; gap:0;">
+        <div style="display:flex; gap:16px; padding:16px 0; border-bottom:1px solid var(--line);"><span class="mono" style="color:var(--accent); font-size:12px; padding-top:2px;">P1</span><div><b style="font-size:15px;">Status at a glance</b><p style="font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.55;">Validity is answered from Home — a ring, a number, a color. Nothing important waits behind a tap.</p></div></div>
+        <div style="display:flex; gap:16px; padding:16px 0; border-bottom:1px solid var(--line);"><span class="mono" style="color:var(--accent); font-size:12px; padding-top:2px;">P2</span><div><b style="font-size:15px;">The QR is one tap away</b><p style="font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.55;">A raised white button lives in the center of the dock. From anywhere, the member card is a single reach of the thumb.</p></div></div>
+        <div style="display:flex; gap:16px; padding:16px 0;"><span class="mono" style="color:var(--accent); font-size:12px; padding-top:2px;">P3</span><div><b style="font-size:15px;">One accent, honestly used</b><p style="font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.55;">White marks interactive intent and brand — nothing else competes. Green, amber, and red never appear except to tell membership truth.</p></div></div>
+      </div>
+      <div class="panel" style="display:flex; flex-direction:column; gap:0;">
+        <div style="display:flex; gap:16px; padding:16px 0; border-bottom:1px solid var(--line);"><span class="mono" style="color:var(--accent); font-size:12px; padding-top:2px;">P4</span><div><b style="font-size:15px;">Reception-speed UI</b><p style="font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.55;">The scanner lives in near-black. Verdicts are full-screen, one-word readable at arm's length, with the member's name set in mono.</p></div></div>
+        <div style="display:flex; gap:16px; padding:16px 0; border-bottom:1px solid var(--line);"><span class="mono" style="color:var(--accent); font-size:12px; padding-top:2px;">P5</span><div><b style="font-size:15px;">Consequence asks first</b><p style="font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.55;">Renewals and publishes always pass through a review step. Short actions get sheets; important work gets full pages.</p></div></div>
+        <div style="display:flex; gap:16px; padding:16px 0;"><span class="mono" style="color:var(--accent); font-size:12px; padding-top:2px;">P6</span><div><b style="font-size:15px;">Localize by design</b><p style="font-size:13.5px; color:var(--ink-3); margin-top:4px; line-height:1.55;">Arabic is a first-class layout: IBM Plex Sans Arabic, mirrored grids, and room for names twice as long.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= LOGO ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">02 — Mark</div>
+    <div class="sec-head">
+      <h2>The meridian mark</h2>
+      <div class="note">A horizon line crossing a circle — the arc of a day. Monochrome by default; on dark it renders in pure white.</div>
+    </div>
+    <div class="panel">
+      <div class="lg-row" style="display:flex; gap:34px; align-items:center;">
+        <span class="logo" data-logo="64" style="color:var(--accent);"></span>
+        <div>
+          <div style="font-family:var(--disp); font-size:26px; font-weight:600; letter-spacing:.2em; text-transform:uppercase;">Meridian</div>
+          <div style="font-size:12px; color:var(--ink-3); letter-spacing:.14em; margin-top:6px; text-transform:uppercase;">Athletic Club · Nasser City</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:16px; align-items:center;">
+          <div style="display:flex; gap:12px; align-items:center; background:linear-gradient(155deg,#1B2130,#10131C); color:#EDEAF6; padding:15px 20px; border-radius:16px; border:1px solid rgba(138,146,255,.25);">
+            <span class="logo" data-logo="22"></span>
+            <span style="font-size:10.5px; letter-spacing:.2em; font-weight:600;">ON CARD</span>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center; background:#F6F6F6; color:#111111; padding:15px 20px; border-radius:16px;">
+            <span class="logo" data-logo="22"></span>
+            <span style="font-size:10.5px; letter-spacing:.2em; font-weight:600;">ON PAPER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COLOR ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">03 — Color</div>
+    <div class="sec-head">
+      <h2>Black, white, and nothing between</h2>
+      <div class="note">Contrast ratios measured against the surface they sit on. Every pairing clears WCAG AA for its text size.</div>
+    </div>
+    <div class="panel">
+      <div class="ph">Surfaces</div>
+      <div class="ds-row">
+        <div class="swatch"><div class="c" style="background:#0A0A0A; border-bottom:1px solid var(--line);"></div><div class="m"><div class="n">Ink Black</div><div class="h">#0A0A0A · bg</div></div></div>
+        <div class="swatch"><div class="c" style="background:#121212;"></div><div class="m"><div class="n">Surface</div><div class="h">#121212 · cards</div></div></div>
+        <div class="swatch"><div class="c" style="background:#1A1A1A;"></div><div class="m"><div class="n">Raised</div><div class="h">#1A1A1A · controls</div></div></div>
+        <div class="swatch"><div class="c" style="background:#F5F6F8;"></div><div class="m"><div class="n">QR Plate</div><div class="h">#F5F6F8 · scan contrast</div></div></div>
+        <div class="swatch"><div class="c" style="background:#F6F6F6;"></div><div class="m"><div class="n">Light Mode</div><div class="h">#F6F6F6 · .lt scope</div></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph">Ink & accent</div>
+      <div class="ds-row">
+        <div class="swatch"><div class="c" style="background:#FAFAFA;"></div><div class="m"><div class="n">Ink</div><div class="h">#FAFAFA · 18.1:1</div></div></div>
+        <div class="swatch"><div class="c" style="background:#BDBDBD;"></div><div class="m"><div class="n">Ink 2</div><div class="h">#BDBDBD · 11.2:1</div></div></div>
+        <div class="swatch"><div class="c" style="background:#7E7E7E;"></div><div class="m"><div class="n">Ink 3</div><div class="h">#7E7E7E · 5.0:1</div></div></div>
+        <div class="swatch"><div class="c" style="background:#F5F5F5;"></div><div class="m"><div class="n">Chalk</div><div class="h">#F5F5F5 · 15.8:1</div></div></div>
+        <div class="swatch"><div class="c" style="background:rgba(255,255,255,.1); border-bottom:1px solid var(--line);"></div><div class="m"><div class="n">Chalk Soft</div><div class="h">10% · fills</div></div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph">Semantic — status truth only</div>
+      <div class="ds-row">
+        <div class="swatch"><div class="c" style="background:#7CCB9B;"></div><div class="m"><div class="n">Active</div><div class="h">#7CCB9B · valid</div></div></div>
+        <div class="swatch"><div class="c" style="background:#DEB87C;"></div><div class="m"><div class="n">Expiring</div><div class="h">#DEB87C · ≤ 7 days</div></div></div>
+        <div class="swatch"><div class="c" style="background:#DE8A80;"></div><div class="m"><div class="n">Expired</div><div class="h">#DE8A80 · ended</div></div></div>
+        <div class="swatch"><div class="c" style="background:#7E7E7E;"></div><div class="m"><div class="n">Paused</div><div class="h">neutral · held</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TYPE ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">04 — Type</div>
+    <div class="sec-head">
+      <h2>Display certainty, body clarity</h2>
+      <div class="note">Space Grotesk carries headlines and every number that matters. Inter carries paragraphs. JetBrains Mono carries identity.</div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="ph">Scale · Space Grotesk</div>
+        <div class="typespec">
+          <div class="tr"><span class="spec">Display · 34/600 · −2%</span><span style="font-family:var(--disp); font-size:34px; font-weight:600; letter-spacing:-.02em;">Good evening, Layla</span></div>
+          <div class="tr"><span class="spec">H1 · 26/600</span><span style="font-family:var(--disp); font-size:26px; font-weight:600;">Premium Monthly</span></div>
+          <div class="tr"><span class="spec">H2 · 20/600</span><span style="font-family:var(--disp); font-size:20px; font-weight:600;">Membership</span></div>
+          <div class="tr"><span class="spec">Body · 15/400 Inter</span><span style="font-size:15px;">Valid until 24 Oct 2026 — renew at reception any day after 6 PM.</span></div>
+          <div class="tr"><span class="spec">Label · 11/600 caps</span><span style="font-size:11px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3);">Checked in at 7:32 PM</span></div>
+          <div class="tr"><span class="spec">Mono · 12.5/500</span><span class="mono" style="font-size:12.5px;">MRD-2481 · +20 10 2748 8531</span></div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="panel">
+          <div class="ph">Numerals · tabular everywhere</div>
+          <div style="display:flex; gap:34px; align-items:baseline;">
+            <span style="font-family:var(--disp); font-size:44px; font-weight:600; letter-spacing:-.02em;">34</span>
+            <span class="mono" style="font-size:20px;">MRD-2481</span>
+            <span class="mono" style="font-size:20px;">09:32 PM</span>
+            <span class="num" style="font-size:20px;">EGP 1,500</span>
+          </div>
+          <p style="font-size:13px; color:var(--ink-3); margin-top:16px; line-height:1.6;">Days left, member IDs, money, and clock times never reflow. The ring on Home and the KPI tiles in Admin share one numeral voice.</p>
+        </div>
+        <div class="panel">
+          <div class="ph">Editorial · Newsreader</div>
+          <p class="editorial" style="font-size:15.5px;">Summer schedule — from the first of October the studio timetable moves to its evening format…</p>
+        </div>
+        <div class="panel">
+          <div class="ph">Arabic · IBM Plex Sans Arabic · RTL mirrored</div>
+          <div class="ar" style="font-size:17px; line-height:1.8;">مساء الخير يا ليلى — عضويتكِ نشطة وتنتهي في ٢٤ أكتوبر ٢٠٢٦. آخر زيارة: اليوم ٧:٣٢ م.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SPACING / RADIUS ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">05 — Space & radius</div>
+    <div class="sec-head">
+      <h2>A 4-pt grid with air in it</h2>
+      <div class="note">Screen margins stay 22 px. Radii climb in four steps; corners stay honest, never blob-like.</div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="ph">Spacing tokens</div>
+        <div class="spacebar" style="display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">4</span><div style="height:13px; width:4px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">8</span><div style="height:13px; width:8px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">12</span><div style="height:13px; width:12px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">16</span><div style="height:13px; width:16px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">22</span><div style="height:13px; width:22px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">32</span><div style="height:13px; width:32px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+          <div style="display:flex; align-items:center; gap:16px;"><span class="mono" style="width:44px; font-size:11px; color:var(--ink-4);">48</span><div style="height:13px; width:48px; background:var(--accent-soft); border:1px solid rgba(138,146,255,.35); border-radius:3px;"></div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph">Radius tokens</div>
+        <div class="tokenline">
+          <div class="tk"><span class="r" style="border-radius:4px;"></span>10 · inputs</div>
+          <div class="tk"><span class="r" style="border-radius:6px;"></span>14 · cards</div>
+          <div class="tk"><span class="r" style="border-radius:9px;"></span>20 · panels</div>
+          <div class="tk"><span class="r" style="border-radius:12px;"></span>26 · sheets</div>
+          <div class="tk"><span class="r" style="border-radius:99px;"></span>pill · tags</div>
+        </div>
+        <p style="font-size:13px; color:var(--ink-3); margin-top:20px; line-height:1.65;">Depth comes from a single inset top highlight and one soft ambient shadow — never stacked, never noisy. Borders do most of the work.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ICONS ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">06 — Iconography</div>
+    <div class="sec-head">
+      <h2>One stroke weight, no decoration</h2>
+      <div class="note">1.7 px stroke, round caps, 24 px grid. No dumbbells, no lightning, no muscle silhouettes — interface icons only.</div>
+    </div>
+    <div class="panel" style="padding:0;">
+      <div class="icongrid" style="border:none; border-radius:var(--r-lg);">
+        <div class="cell"><i data-ic="home" data-size="22"></i><span>home</span></div>
+        <div class="cell"><i data-ic="card" data-size="22"></i><span>card</span></div>
+        <div class="cell"><i data-ic="qr" data-size="22"></i><span>qr</span></div>
+        <div class="cell"><i data-ic="scan" data-size="22"></i><span>scan</span></div>
+        <div class="cell"><i data-ic="clock" data-size="22"></i><span>visits</span></div>
+        <div class="cell"><i data-ic="bell" data-size="22"></i><span>notices</span></div>
+        <div class="cell"><i data-ic="user" data-size="22"></i><span>profile</span></div>
+        <div class="cell"><i data-ic="users" data-size="22"></i><span>members</span></div>
+        <div class="cell"><i data-ic="checkc" data-size="22"></i><span>valid</span></div>
+        <div class="cell"><i data-ic="alertc" data-size="22"></i><span>warn</span></div>
+        <div class="cell"><i data-ic="xc" data-size="22"></i><span>denied</span></div>
+        <div class="cell"><i data-ic="cal" data-size="22"></i><span>date</span></div>
+        <div class="cell"><i data-ic="receipt" data-size="22"></i><span>payment</span></div>
+        <div class="cell"><i data-ic="megaphone" data-size="22"></i><span>publish</span></div>
+        <div class="cell"><i data-ic="shield" data-size="22"></i><span>verified</span></div>
+        <div class="cell"><i data-ic="refresh" data-size="22"></i><span>renew</span></div>
+        <div class="cell"><i data-ic="wifioff" data-size="22"></i><span>offline</span></div>
+        <div class="cell"><i data-ic="search" data-size="22"></i><span>search</span></div>
+        <div class="cell"><i data-ic="edit" data-size="22"></i><span>edit</span></div>
+        <div class="cell"><i data-ic="copy" data-size="22"></i><span>copy id</span></div>
+        <div class="cell"><i data-ic="pause" data-size="22"></i><span>paused</span></div>
+        <div class="cell"><i data-ic="key" data-size="22"></i><span>otp</span></div>
+        <div class="cell"><i data-ic="globe" data-size="22"></i><span>locale</span></div>
+        <div class="cell"><i data-ic="sparkle" data-size="22"></i><span>success</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= COMPONENTS ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">07 — Components</div>
+    <div class="sec-head">
+      <h2>The working kit</h2>
+      <div class="note">Buttons, fields, tags, and lists as they ship in the app. States shown: default, pressed, loading, disabled, error.</div>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="ph">Buttons</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <button class="btn btn-primary">Continue<i data-ic="chev" data-size="18"></i></button>
+          <button class="btn btn-secondary">Cancel</button>
+          <div style="display:flex; gap:12px;"><button class="btn btn-quiet" style="flex:1;">Show QR code</button><button class="btn btn-danger" style="flex:1;">Sign out</button></div>
+          <button class="btn btn-primary loading"><span class="ld"></span><span>Verifying…</span></button>
+          <button class="btn btn-primary" disabled>Continue</button>
+        </div>
+        <p style="font-size:12.5px; color:var(--ink-3); margin-top:16px; line-height:1.6;">52 pt height, 16 px radius, press scale .97. Loading replaces the label with a spinner; disabled drops to 42% opacity.</p>
+      </div>
+      <div class="panel">
+        <div class="ph">Fields & validation</div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div class="field"><label>Phone number</label><div class="control"><span style="font-size:13.5px; font-weight:500; color:var(--ink-2); display:flex; align-items:center; gap:6px; border-right:1px solid var(--line); padding-right:11px;">🇪🇬 +20</span><input placeholder="10 1234 5678"></div></div>
+          <div class="field ok"><label>Member ID</label><div class="control"><input value="MRD-2481" class="mono" style="font-size:14.5px;"><span class="trail" style="color:var(--ok);">✓ Found</span></div><span class="ok-msg"><i data-ic="checkc" data-size="15"></i>Layla Hassan · Premium Monthly</span></div>
+          <div class="field err"><label>Emergency contact</label><div class="control"><input value="+20 12 007" class="mono" style="font-size:14.5px;"></div><span class="err-msg"><i data-ic="alertc" data-size="15"></i>Phone number looks short — check the digits.</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph">Status vocabulary — complete</div>
+        <div style="display:flex; flex-wrap:wrap; gap:10px;">
+          <span class="tag tag-ok"><span class="sdot"></span>Active</span>
+          <span class="tag tag-warn"><span class="sdot"></span>Expiring soon</span>
+          <span class="tag tag-bad"><span class="sdot"></span>Expired</span>
+          <span class="tag tag-muted"><span class="sdot"></span>Paused</span>
+          <span class="tag tag-warn"><span class="sdot"></span>Payment due</span>
+          <span class="tag tag-acc"><span class="sdot"></span>Reception</span>
+          <span class="tag tag-ok tag-live"><span class="sdot"></span>Live</span>
+        </div>
+        <p style="font-size:13px; color:var(--ink-3); margin-top:18px; line-height:1.6;">The entire status language of the product. An expired membership never borrows the active look — same words, different truth.</p>
+      </div>
+      <div class="panel">
+        <div class="ph">Validity timeline — the only chart</div>
+        <div class="tl" style="margin:18px 10px 8px;">
+          <div class="track"></div><div class="fill" style="width:44%;"></div>
+          <div class="pt" style="left:0;"></div><div class="pt" style="left:44%; box-shadow:0 0 0 5px var(--accent-soft);"></div><div class="pt off" style="left:100%;"></div>
+          <div class="lbl l"><div class="a">Start</div><div class="b">25 Aug</div></div>
+          <div class="lbl" style="left:44%;"><div class="a" style="color:var(--accent-hi);">Today</div><div class="b">20 Sep</div></div>
+          <div class="lbl r"><div class="a">Ends</div><div class="b">24 Oct</div></div>
+        </div>
+        <p style="font-size:13px; color:var(--ink-3); margin-top:14px; line-height:1.6;">Dates on a line, not a graph. Amber takes over at seven days, red at zero.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CARD + NAV ================= -->
+  <section class="sec">
+    <div class="kicker" style="margin-bottom:26px;">08 — Signature surfaces</div>
+    <div class="sec-head">
+      <h2>The card and the dock</h2>
+      <div class="note">Two objects carry the brand: the membership card, and the dock with its raised QR button.</div>
+    </div>
+    <div class="grid2">
+      <div class="panel" style="display:flex; align-items:center; justify-content:center; padding:34px;">
+        <div class="mcard" style="width:330px;">
+          <div class="mcard-top">
+            <div class="brandrow"><span class="logo" data-logo="20"></span><span class="wm">Meridian</span></div>
+            <span class="plan-chip">Premium</span>
+          </div>
+          <div class="holder"><div class="n">Layla Hassan</div><div class="id">MRD-2481</div></div>
+          <div class="mcard-foot">
+            <div class="stat"><div class="cap">Valid until</div><div class="v">24 Oct 2026</div></div>
+            <div class="qrs"><div class="qr" data-qr="MERIDIAN|MRD-2481|LH|ACT" data-size="34"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ph">Dock anatomy</div>
+        <div style="border:1px solid var(--line); border-radius:18px; overflow:hidden;">
+          <div style="background:var(--bg); padding:26px 0 0;">
+            <div class="tabbar" style="position:relative; padding-bottom:14px;">
+              <div class="tab on"><i data-ic="home" data-size="21"></i>Home</div>
+              <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+              <div class="tab-fab"><div class="fab"><i data-ic="qr" data-size="23"></i></div></div>
+              <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+              <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:13px; color:var(--ink-3); margin-top:16px; line-height:1.65;">Five destinations, one elevated action. The center button is the member card — reachable in a single tap from every screen, pressed against the safe area, large enough to hit without looking.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Meridian Athletic Club · Membership System V2</span>
+    <span>Space Grotesk · Inter · JetBrains Mono · IBM Plex Sans Arabic</span>
+  </footer>
+
+</main>
+
+<script src="assets/qrcode.js"></script>
+<script src="assets/shared.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>

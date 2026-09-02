@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian · Interactive Flows</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="logo" data-logo="27"></span><span class="wm">Meridian <span>· Membership System</span></span></a>
+    <nav class="site-nav">
+      <a href="index.html">Design System</a>
+      <a href="member.html">Member App</a>
+      <a href="admin.html">Admin</a>
+      <a href="flows.html" class="on">Flows</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="page-hero">
+    <div class="kicker">Behavior proof — tap through the real screens</div>
+    <h1>Flows, live</h1>
+    <p class="lede">Four working prototypes, wired with the same components as the static screens. These are the behaviors that matter most: signing in under pressure, status staying honest, and money asking twice.</p>
+  </section>
+
+  <section class="sec">
+    <div class="gallery" style="gap:56px 40px;">
+
+      <!-- F-01 SIGN IN -->
+      <figure class="shot">
+        <div class="phone" id="f1">
+          <div class="screen">
+
+            <div class="fstep on" data-f1="s1">
+              <div class="appbar"><button class="iconbtn" data-f1back disabled style="opacity:0; pointer-events:none;"><i data-ic="back" data-size="22"></i></button></div>
+              <div class="body">
+                <div>
+                  <div class="slabel" style="margin-bottom:12px;">Sign in</div>
+                  <h1 style="font-size:26px; font-weight:600; letter-spacing:-.015em;">Your phone number</h1>
+                  <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.6;">We'll text you a six-digit code.</p>
+                </div>
+                <div class="field" id="f1-phone-field">
+                  <label>Mobile number</label>
+                  <div class="control"><span style="font-size:14px; font-weight:600; color:var(--ink-2); display:flex; align-items:center; gap:7px; border-right:1px solid var(--line); padding-right:12px;">🇪🇬 +20</span><input id="f1-phone" inputmode="numeric" placeholder="10 2748 8531" class="mono" style="font-size:15px;"></div>
+                  <span class="err-msg"><i data-ic="alertc" data-size="15"></i>That number looks short — Egyptian mobiles have 10 digits after +20.</span>
+                </div>
+                <div style="margin-top:auto; padding-bottom:16px;">
+                  <button class="btn btn-primary btn-block" id="f1-send">Send code</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fstep" data-f1="s2">
+              <div class="appbar"><button class="iconbtn" data-f1goto="s1"><i data-ic="back" data-size="22"></i></button></div>
+              <div class="body">
+                <div>
+                  <div class="slabel" style="margin-bottom:12px;">Verification</div>
+                  <h1 style="font-size:26px; font-weight:600; letter-spacing:-.015em;">Enter the code</h1>
+                  <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.6;">Sent to <span class="mono" style="color:var(--ink-2);" id="f1-echo">+20 10 2748 8531</span>. It expires in 10 minutes.</p>
+                </div>
+                <div class="otp" id="f1-otp">
+                  <input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1"><input inputmode="numeric" maxlength="1">
+                </div>
+                <div class="banner err" id="f1-otperr" style="display:none;"><i data-ic="alertc" data-size="18"></i><div>That code doesn't match. Check the latest message.</div></div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--ink-3);">
+                  <span>Didn't get it?</span><span class="mono" style="color:var(--ink-2);" id="f1-timer">Resend in 0:45</span>
+                </div>
+                <div style="margin-top:auto; padding-bottom:16px;">
+                  <button class="btn btn-primary btn-block" id="f1-verify">Verify</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fstep" data-f1="s3">
+              <div class="body" style="align-items:center; justify-content:center; text-align:center;">
+                <div class="btn loading" style="width:64px; height:64px; border-radius:50%; background:var(--accent-soft); color:var(--accent-hi); border:none;"><span class="ld"></span></div>
+                <div style="margin-top:24px; font-size:15px; font-weight:600;">Signing you in…</div>
+                <div class="mono" style="font-size:12px; color:var(--ink-4); margin-top:8px;">verifying MRD-2481</div>
+              </div>
+            </div>
+
+            <div class="fstep" data-f1="s4">
+              <div class="body" style="align-items:center; justify-content:center; text-align:center;">
+                <div style="width:76px; height:76px; border-radius:50%; background:var(--ok-soft); border:1px solid rgba(76,212,145,.3); color:var(--ok); display:flex; align-items:center; justify-content:center; margin-bottom:24px;"><i data-ic="check" data-size="32"></i></div>
+                <h1 style="font-size:25px; font-weight:600;">Welcome back, Layla</h1>
+                <p style="font-size:14px; color:var(--ink-3); margin-top:10px;">Membership active · 34 days left</p>
+                <button class="btn btn-primary btn-block" style="margin-top:28px;" data-f1reset>Start over</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <figcaption>
+          <div class="t"><em>F-01</em>Sign-in flow</div>
+          <div class="d">Type a short number to see the inline error, then complete it. On the code screen, <b style="color:var(--ink-2);">246810</b> or <b style="color:var(--ink-2);">419346</b> succeed; anything else shows the mismatch banner.</div>
+        </figcaption>
+      </figure>
+
+      <!-- F-02 HOME → QR -->
+      <figure class="shot">
+        <div class="phone" id="f2">
+          <div class="screen">
+            <div class="fstep on" data-f2="home">
+              <div class="appbar">
+                <div><div class="slabel">Saturday · 20 Sep</div><div class="title" style="margin-top:4px; font-size:19px;">Good evening, Layla</div></div>
+                <div class="spacer"></div>
+                <button class="iconbtn"><i data-ic="bell" data-size="21"></i></button>
+              </div>
+              <div class="body scroll">
+                <div class="ringcard">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="115.6"/></svg>
+                    <div class="c"><div class="n">34</div><div class="u">Days left</div></div>
+                  </div>
+                  <div class="rc-info">
+                    <span class="tag tag-ok"><span class="sdot"></span>Active</span>
+                    <h3>Premium Monthly</h3>
+                    <p>Renews 24 Oct 2026</p>
+                  </div>
+                </div>
+                <div class="mcard" id="f2-card">
+                  <div class="mcard-top"><div class="brandrow"><span class="logo" data-logo="20"></span><span class="wm">Meridian</span></div><span class="plan-chip">Premium</span></div>
+                  <div class="holder"><div class="n">Layla Hassan</div><div class="id">MRD-2481</div></div>
+                  <div class="mcard-foot">
+                    <div class="stat"><div class="cap">Valid until</div><div class="v">24 Oct 2026</div></div>
+                    <div class="qrs"><div class="qr" data-qr="MERIDIAN|MRD-2481|LH|ACT" data-size="34"></div></div>
+                  </div>
+                </div>
+                <div class="week">
+                  <div class="wd on"><div class="dot"></div><span>Mon</span></div>
+                  <div class="wd on"><div class="dot"></div><span>Tue</span></div>
+                  <div class="wd"><div class="dot"></div><span>Wed</span></div>
+                  <div class="wd on"><div class="dot"></div><span>Thu</span></div>
+                  <div class="wd"><div class="dot"></div><span>Fri</span></div>
+                  <div class="wd today"><div class="dot"></div><span>Sat</span></div>
+                  <div class="wd"><div class="dot"></div><span>Sun</span></div>
+                </div>
+                <div style="font-size:11.5px; color:var(--ink-4); text-align:center; font-family:var(--mono);">tap the card — or the raised button below</div>
+              </div>
+              <div class="tabbar">
+                <div class="tab on"><i data-ic="home" data-size="21"></i>Home</div>
+                <div class="tab"><i data-ic="clock" data-size="21"></i>Visits</div>
+                <div class="tab-fab"><div class="fab" id="f2-fab"><i data-ic="qr" data-size="23"></i></div></div>
+                <div class="tab"><i data-ic="bell" data-size="21"></i>Notices</div>
+                <div class="tab"><i data-ic="user" data-size="21"></i>Profile</div>
+              </div>
+            </div>
+            <div class="fstep" data-f2="qr">
+              <div class="appbar">
+                <button class="iconbtn" data-f2close><i data-ic="close" data-size="21"></i></button>
+                <div class="spacer"></div>
+                <span class="tag tag-ok tag-live"><span class="sdot"></span>Live</span>
+              </div>
+              <div class="body" style="align-items:center; justify-content:center; gap:26px; text-align:center;">
+                <div>
+                  <div class="slabel" style="margin-bottom:10px;">Member card</div>
+                  <h1 style="font-size:24px; font-weight:600;">Layla Hassan</h1>
+                  <div class="mono" style="font-size:12.5px; color:var(--ink-3); margin-top:6px;">MRD-2481</div>
+                </div>
+                <div style="background:var(--plate); padding:18px; border-radius:24px; box-shadow:0 18px 50px rgba(0,0,0,.5);">
+                  <div class="qr" data-qr="MERIDIAN|MRD-2481|LH|ACT" data-size="196"></div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-3);">
+                  <i data-ic="shield" data-size="17" style="color:var(--ok);"></i>
+                  Active · Premium Monthly · until 24 Oct 2026
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>
+          <div class="t"><em>F-02</em>Home → QR card</div>
+          <div class="d">Tap the membership card or the raised white button — the live card opens instantly. That's the whole gesture the product is built around.</div>
+        </figcaption>
+      </figure>
+
+      <!-- F-03 STATE SWITCHER -->
+      <figure class="shot">
+        <div class="phone" id="f3">
+          <div class="screen">
+            <div class="appbar"><button class="iconbtn" style="opacity:0; pointer-events:none;"><i data-ic="back" data-size="22"></i></button><div class="title">Membership</div><div class="spacer"></div></div>
+            <div class="body scroll" id="f3-body">
+              <div class="banner" id="f3-banner"></div>
+              <div class="ringcard" style="flex-direction:column; align-items:flex-start; gap:18px;">
+                <div style="display:flex; align-items:center; gap:20px;">
+                  <div class="ring">
+                    <svg width="108" height="108" viewBox="0 0 108 108"><circle class="trk" cx="54" cy="54" r="46" fill="none" stroke-width="7"/><circle class="prg" id="f3-ring" cx="54" cy="54" r="46" fill="none" stroke-width="7" stroke-dasharray="288.9" stroke-dashoffset="115.6"/></svg>
+                    <div class="c"><div class="n" id="f3-n">34</div><div class="u" id="f3-u">Days left</div></div>
+                  </div>
+                  <div>
+                    <span class="tag" id="f3-tag"></span>
+                    <h3 style="font-size:18px; margin-top:10px;" id="f3-plan">Premium Monthly</h3>
+                    <p style="font-size:12.5px; color:var(--ink-3); margin-top:4px;" id="f3-sub">EGP 1,500 / month</p>
+                  </div>
+                </div>
+              </div>
+              <div class="kvs" id="f3-kvs"></div>
+              <div style="display:flex; flex-direction:column; gap:11px;" id="f3-cta"></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>
+          <div class="t"><em>F-03</em>State machine</div>
+          <div class="d">Same screen, four truths. Use the switcher below — watch the banner, ring, tags, and the primary action change together.</div>
+          <div class="chiprow" style="margin-top:12px; padding:0 4px;" id="f3-switch">
+            <span class="chip on" data-st="active">Active</span>
+            <span class="chip" data-st="expiring">Expiring</span>
+            <span class="chip" data-st="expired">Expired</span>
+            <span class="chip" data-st="due">Payment due</span>
+          </div>
+        </figcaption>
+      </figure>
+
+      <!-- F-04 ADMIN RENEWAL -->
+      <figure class="shot">
+        <div class="phone renewform" id="f4">
+          <div class="screen">
+
+            <div class="fstep on" data-f4="choose">
+              <div class="appbar"><div><div class="title">Renew membership</div><div class="sub mono">Layla Hassan · MRD-2481</div></div></div>
+              <div class="body">
+                <div style="display:flex; gap:6px; padding:0 2px;">
+                  <div style="flex:1; height:3px; border-radius:99px; background:var(--accent);"></div>
+                  <div style="flex:1; height:3px; border-radius:99px; background:var(--bg-3);"></div>
+                  <div style="flex:1; height:3px; border-radius:99px; background:var(--bg-3);"></div>
+                </div>
+                <div class="slabel">Step 1 of 3 · Choose plan</div>
+                <div class="plans" id="f4-plans">
+                  <div class="plan on" data-price="1,500" data-name="Premium Monthly"><div class="radio"></div><div><div class="t">Premium Monthly</div><div class="s">Current plan</div></div><div class="pr">1,500</div></div>
+                  <div class="plan" data-price="4,050" data-name="3-Month"><div class="radio"></div><div><div class="t">3-Month</div><div class="s">Save 10%</div></div><div class="pr">4,050</div></div>
+                  <div class="plan" data-price="15,000" data-name="Annual"><div class="radio"></div><div><div class="t">Annual</div><div class="s">Save 17%</div></div><div class="pr">15,000</div></div>
+                </div>
+                <div class="field"><label>Payment</label><div class="seg" id="f4-pay"><button class="on" data-pay="Cash">Cash</button><button data-pay="Card">Card</button><button data-pay="Wallet">Wallet</button></div></div>
+                <div style="margin-top:auto; padding-bottom:14px;">
+                  <button class="btn btn-primary btn-block" data-f4go="review">Review renewal</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fstep" data-f4="review">
+              <div class="appbar"><button class="iconbtn" data-f4go="choose"><i data-ic="back" data-size="22"></i></button><div><div class="title">Review</div><div class="sub mono">Step 2 of 3</div></div></div>
+              <div class="body">
+                <div style="display:flex; gap:6px; padding:0 2px;">
+                  <div style="flex:1; height:3px; border-radius:99px; background:var(--accent);"></div>
+                  <div style="flex:1; height:3px; border-radius:99px; background:var(--accent);"></div>
+                  <div style="flex:1; height:3px; border-radius:99px; background:var(--bg-3);"></div>
+                </div>
+                <div class="kvs" style="margin-top:6px;">
+                  <div class="kv"><span class="k">Member</span><span class="v">Layla Hassan</span></div>
+                  <div class="kv"><span class="k">Plan</span><span class="v" id="f4-r-plan">Premium Monthly</span></div>
+                  <div class="kv"><span class="k">Period</span><span class="v">25 Oct 2026 → <span id="f4-r-end">24 Nov 2026</span></span></div>
+                  <div class="kv"><span class="k">Payment</span><span class="v" id="f4-r-pay">Cash · at desk</span></div>
+                  <div class="kv" style="background:var(--accent-soft);"><span class="k" style="color:var(--ink); font-weight:600;">Total due</span><span class="v num" style="font-size:18px; color:var(--accent-hi);" id="f4-r-total">EGP 1,500</span></div>
+                </div>
+                <div style="margin-top:auto; display:flex; flex-direction:column; gap:11px; padding-bottom:14px;">
+                  <button class="btn btn-primary btn-block" id="f4-confirm">Confirm & record payment</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="fstep" data-f4="done">
+              <div class="body" style="align-items:center; justify-content:center; text-align:center;">
+                <div style="width:76px; height:76px; border-radius:50%; background:var(--ok-soft); border:1px solid rgba(76,212,145,.3); color:var(--ok); display:flex; align-items:center; justify-content:center; margin-bottom:24px;"><i data-ic="check" data-size="32"></i></div>
+                <div class="slabel" style="margin-bottom:12px;">Done</div>
+                <h1 style="font-size:25px; font-weight:600;">Renewed</h1>
+                <p style="font-size:14px; color:var(--ink-3); margin-top:10px; line-height:1.65; max-width:29ch;" id="f4-done-msg">Valid until 24 Nov 2026. EGP 1,500 recorded.</p>
+                <button class="btn btn-primary btn-block" style="margin-top:26px;" data-f4reset>New renewal</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <figcaption>
+          <div class="t"><em>F-04</em>Admin renewal</div>
+          <div class="d">Pick a plan and payment method, review the summary, confirm. The success screen carries the real numbers you chose.</div>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Meridian Athletic Club · Interactive Flows</span>
+    <span>Demo codes: 246810 · 419346</span>
+  </footer>
+
+</main>
+
+<script src="assets/qrcode.js"></script>
+<script src="assets/shared.js"></script>
+<script src="assets/flows.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>
