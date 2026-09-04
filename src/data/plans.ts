@@ -1,4 +1,4 @@
-import type { Plan, Club, AdminUser } from './types';
+import type { Plan, Club } from './types';
 
 export const PLANS: Plan[] = [
   {
@@ -51,11 +51,7 @@ export const CLUB: Club = {
   ],
 };
 
-export const ADMIN_USER: AdminUser = {
-  name: 'Sarah Kamal',
-  initials: 'SK',
-  reception: 'A',
-};
-
-/** The "current" member for the member app — Layla Hassan. */
-export const CURRENT_MEMBER_ID = 'MRD-2481';
+/**
+ * PLANS and CLUB are seed-matching fallbacks. The live values come from the
+ * `plans` and `club_config` tables via `usePlans()` and `useClub()`.
+ */

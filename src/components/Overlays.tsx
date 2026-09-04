@@ -1,12 +1,14 @@
 import * as React from 'react';
 import {
+  AccessibilityInfo,
+  Animated,
+  Easing,
+  Platform,
   View,
   Text,
   Pressable,
   Modal,
   StyleSheet,
-  ViewStyle,
-  TouchableOpacity,
 } from 'react-native';
 import { colors, useColors, radius, spacing, typography } from '@/theme/tokens';
 import { useApp } from '@/data/store';
@@ -28,19 +30,68 @@ export interface SheetProps {
 export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
+  const transition = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [mounted, setMounted] = React.useState(visible);
+  const [reduceMotion, setReduceMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+      if (active) setReduceMotion(value);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (visible) setMounted(true);
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (!mounted) return;
+    transition.stopAnimation();
+    Animated.timing(transition, {
+      toValue: visible ? 1 : 0,
+      duration: reduceMotion ? 120 : visible ? 240 : 170,
+      easing: visible ? Easing.bezier(0.23, 1, 0.32, 1) : Easing.in(Easing.quad),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(({ finished }) => {
+      if (finished && !visible) setMounted(false);
+    });
+  }, [mounted, reduceMotion, transition, visible]);
+
+  const translateY = transition.interpolate({ inputRange: [0, 1], outputRange: [36, 0] });
+  const scale = transition.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View
+        style={[sheetStyles.scrimColor, { opacity: transition, pointerEvents: 'none' }]}
+      />
       <Pressable style={sheetStyles.scrim} onPress={onClose}>
-        <Pressable style={[sheetStyles.sheet, { backgroundColor: c.surface }]} onPress={(e) => e.stopPropagation()}>
-          <View style={[sheetStyles.grip, { backgroundColor: c.lineStrong }]} />
-          {title ? (
-            <Text style={[sheetStyles.title, { color: c.ink }]}>{title}</Text>
-          ) : null}
-          {desc ? (
-            <Text style={[sheetStyles.desc, { color: c.ink2 }]}>{desc}</Text>
-          ) : null}
-          {children}
-        </Pressable>
+        <Animated.View
+          style={[
+            sheetStyles.sheetFrame,
+            {
+              opacity: transition,
+              transform: reduceMotion ? [] : [{ translateY }, { scale }],
+            },
+          ]}
+        >
+          <Pressable style={[sheetStyles.sheet, { backgroundColor: c.surface }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[sheetStyles.grip, { backgroundColor: c.lineStrong }]} />
+            {title ? (
+              <Text style={[sheetStyles.title, { color: c.ink }]}>{title}</Text>
+            ) : null}
+            {desc ? (
+              <Text style={[sheetStyles.desc, { color: c.ink2 }]}>{desc}</Text>
+            ) : null}
+            {children}
+          </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
@@ -50,9 +101,22 @@ const sheetStyles = StyleSheet.create({
   scrim: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(16,29,40,0.4)',
+  },
+  scrimColor: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(2,8,12,0.62)',
+  },
+  sheetFrame: {
+    width: '100%',
+    maxWidth: 390,
+    alignSelf: 'center',
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    overflow: 'hidden',
   },
   sheet: {
+    width: '100%',
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,

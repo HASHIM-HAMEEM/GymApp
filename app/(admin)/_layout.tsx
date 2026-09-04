@@ -1,41 +1,39 @@
 import * as React from 'react';
-import { Tabs, Redirect, useRouter } from 'expo-router';
-import { useColors } from '@/theme/tokens';
+import { Tabs, Redirect } from 'expo-router';
 import { TabBar, TabDef } from '@/components/Chrome';
 import { useApp } from '@/data/store';
 
 const TAB_ICONS: Record<string, TabDef> = {
-  today: { key: 'today', label: 'Today', icon: 'grid' },
-  members: { key: 'members', label: 'Members', icon: 'users' },
-  notices: { key: 'notices', label: 'Notices', icon: 'megaphone' },
-  profile: { key: 'profile', label: 'Profile', icon: 'user' },
+  today: { key: 'today', label: 'Today', icon: 'grid', href: '/(admin)/today' },
+  members: { key: 'members', label: 'Members', icon: 'users', href: '/(admin)/members' },
+  notices: { key: 'notices', label: 'Notices', icon: 'megaphone', href: '/(admin)/notices' },
+  profile: { key: 'profile', label: 'Profile', icon: 'user', href: '/(admin)/profile' },
 };
 
 interface TabBarProps {
   state: { routes: { name: string; key: string }[]; index: number };
-  navigation: { navigate: (name: string) => void };
 }
 
-function AdminTabBar({ state, navigation }: TabBarProps) {
-  const router = useRouter();
+function AdminTabBar({ state }: TabBarProps) {
   const active = state.routes[state.index].name;
   const tabs = state.routes
-    .filter((r: { name: string }) => TAB_ICONS[r.name])
-    .map((r: { name: string }) => TAB_ICONS[r.name]);
+    .filter((route: { name: string }) => TAB_ICONS[route.name])
+    .map((route: { name: string }) => TAB_ICONS[route.name]);
 
   return (
     <TabBar
       tabs={tabs}
       active={active}
-      onChange={(key) => navigation.navigate(key)}
-      fab={{ icon: 'scan', onPress: () => router.push('/(admin)/scanner') }}
+      fab={{ icon: 'scan', href: '/(admin)/scanner' }}
     />
   );
 }
 
 export default function AdminLayout() {
   const { role } = useApp();
-  if (role !== 'admin') return <Redirect href="/" />;
+  if (role !== 'admin') {
+    return <Redirect href={role === 'member' ? '/(member)/home' : '/welcome'} />;
+  }
 
   return (
     <Tabs

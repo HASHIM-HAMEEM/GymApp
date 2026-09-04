@@ -1,44 +1,41 @@
 import * as React from 'react';
-import { Tabs, Redirect, useRouter } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { useColors } from '@/theme/tokens';
 import { TabBar, TabDef } from '@/components/Chrome';
 import { useApp } from '@/data/store';
 
 const TAB_ICONS: Record<string, TabDef> = {
-  home: { key: 'home', label: 'Home', icon: 'home' },
-  visits: { key: 'visits', label: 'Visits', icon: 'clock' },
-  notices: { key: 'notices', label: 'Notices', icon: 'bell' },
-  profile: { key: 'profile', label: 'Profile', icon: 'user' },
+  home: { key: 'home', label: 'Home', icon: 'home', href: '/(member)/home' },
+  visits: { key: 'visits', label: 'Visits', icon: 'clock', href: '/(member)/visits' },
+  notices: { key: 'notices', label: 'Notices', icon: 'bell', href: '/(member)/notices' },
+  profile: { key: 'profile', label: 'Profile', icon: 'user', href: '/(member)/profile' },
 };
 
 interface TabBarProps {
   state: { routes: { name: string; key: string }[]; index: number };
-  navigation: { navigate: (name: string) => void };
 }
 
-function MemberTabBar({ state, navigation }: TabBarProps) {
-  const router = useRouter();
+function MemberTabBar({ state }: TabBarProps) {
   const active = state.routes[state.index].name;
   const tabs = state.routes
-    .filter((r: { name: string }) => TAB_ICONS[r.name])
-    .map((r: { name: string }) => TAB_ICONS[r.name]);
+    .filter((route: { name: string }) => TAB_ICONS[route.name])
+    .map((route: { name: string }) => TAB_ICONS[route.name]);
 
   return (
     <TabBar
       tabs={tabs}
       active={active}
-      onChange={(key) => navigation.navigate(key)}
-      fab={{ icon: 'qr', onPress: () => router.push('/qr') }}
+      fab={{ icon: 'qr', href: '/qr' }}
     />
   );
 }
 
 export default function MemberLayout() {
-  const { role, currentMember } = useApp();
-  const c = useColors(false);
+  const { role, darkMode } = useApp();
+  const c = useColors(darkMode);
 
-  if (role !== 'member' || !currentMember) {
-    return <Redirect href="/" />;
+  if (role !== 'member') {
+    return <Redirect href={role === 'admin' ? '/(admin)/today' : '/welcome'} />;
   }
 
   return (

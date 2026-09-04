@@ -60,11 +60,12 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
 }
 
 export interface ControlProps {
+  accessibilityLabel?: string;
   value?: string;
   defaultValue?: string;
   placeholder?: string;
   onChangeText?: (t: string) => void;
-  inputMode?: 'text' | 'tel' | 'email' | 'numeric';
+  inputMode?: 'text' | 'tel' | 'email' | 'numeric' | 'decimal';
   secure?: boolean;
   leading?: React.ReactNode; // e.g. country code prefix
   trailing?: React.ReactNode; // e.g. ✓ found
@@ -72,9 +73,17 @@ export interface ControlProps {
   multiline?: boolean;
   style?: ViewStyle;
   autoFocus?: boolean;
+  maxLength?: number;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  autoCorrect?: boolean;
+  autoComplete?: React.ComponentProps<typeof TextInput>['autoComplete'];
+  textContentType?: React.ComponentProps<typeof TextInput>['textContentType'];
+  returnKeyType?: React.ComponentProps<typeof TextInput>['returnKeyType'];
+  onSubmitEditing?: React.ComponentProps<typeof TextInput>['onSubmitEditing'];
 }
 
 export function Control({
+  accessibilityLabel,
   value,
   defaultValue,
   placeholder,
@@ -87,6 +96,13 @@ export function Control({
   multiline = false,
   style,
   autoFocus = false,
+  maxLength,
+  autoCapitalize,
+  autoCorrect,
+  autoComplete,
+  textContentType,
+  returnKeyType,
+  onSubmitEditing,
 }: ControlProps) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
@@ -101,6 +117,7 @@ export function Control({
     >
       {leading}
       <TextInput
+        accessibilityLabel={accessibilityLabel}
         value={value}
         defaultValue={defaultValue}
         placeholder={placeholder}
@@ -108,8 +125,15 @@ export function Control({
         onChangeText={onChangeText}
         inputMode={inputMode as any}
         secureTextEntry={secure}
+        maxLength={maxLength}
         multiline={multiline}
         autoFocus={autoFocus}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        autoComplete={autoComplete}
+        textContentType={textContentType}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
         style={{
           flex: 1,
           fontFamily: typography.fontFamily,

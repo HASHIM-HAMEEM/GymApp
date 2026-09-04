@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, typography, tracking, radius } from '@/theme/tokens';
+import { useColors, radius, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
-import { useApp } from '@/data/store';
+import { useNotices } from '@/data/api/queries';
+import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
 import type { Notice } from '@/data/types';
 
@@ -21,8 +22,10 @@ function catColor(c: any, category: Notice['category']) {
 
 export default function AdminNotices() {
   const router = useRouter();
-  const { notices, darkMode } = useApp();
+  const noticesQuery = useNotices(true);
+  const { darkMode } = useApp();
   const c = useColors(darkMode);
+  const notices = noticesQuery.data ?? [];
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -32,31 +35,37 @@ export default function AdminNotices() {
       />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body>
-          <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-            {notices.map((n, i) => {
-              const color = catColor(c, n.category);
-              return (
-                <Pressable
-                  key={n.id}
-                  onPress={() => router.push({ pathname: '/notice', params: { id: n.id } })}
-                  style={({ pressed }) => [
-                    styles.nrow,
-                    { borderColor: c.line },
-                    i === notices.length - 1 && { borderBottomWidth: 0 },
-                    pressed && { opacity: 0.6 },
-                  ]}
-                >
-                  <Text style={[styles.cat, { color }]}>{n.category}</Text>
-                  <View style={styles.grow}>
-                    <Text style={[styles.title, { color: c.ink }]} numberOfLines={2}>{n.title}</Text>
-                    <Text style={[styles.dt, { color: c.ink3 }]} numberOfLines={1}>
-                      {fmtShort(n.date)} · {n.audience} · {n.delivered.toLocaleString()} delivered
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
+          {notices.length === 0 ? (
+            <Text style={{ color: c.ink3, fontSize: 13, textAlign: 'center', paddingVertical: 24 }}>
+              {noticesQuery.isLoading ? 'Loading notices…' : 'No notices published yet. Compose the first one.'}
+            </Text>
+          ) : (
+            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              {notices.map((n, i) => {
+                const color = catColor(c, n.category);
+                return (
+                  <Pressable
+                    key={n.id}
+                    onPress={() => router.push({ pathname: '/notice', params: { id: n.id } })}
+                    style={({ pressed }) => [
+                      styles.nrow,
+                      { borderColor: c.line },
+                      i === notices.length - 1 && { borderBottomWidth: 0 },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Text style={[styles.cat, { color }]}>{n.category}</Text>
+                    <View style={styles.grow}>
+                      <Text style={[styles.title, { color: c.ink }]} numberOfLines={2}>{n.title}</Text>
+                      <Text style={[styles.dt, { color: c.ink3 }]} numberOfLines={1}>
+                        {fmtShort(n.date)} · {n.audience} · {n.delivered.toLocaleString()} delivered
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
         </Body>
       </ScrollView>
     </View>

@@ -1,15 +1,15 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, radius } from '@/theme/tokens';
+import { useColors, radius, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Monogram, StatusDot, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
 import { Chip } from '@/components/Overlays';
 import { EmptyState } from '@/components/Surfaces';
-import { useApp } from '@/data/store';
-import { searchMembers } from '@/data/members';
+import { useMembers } from '@/data/api/queries';
+import { useApp } from '@/providers/AppProvider';
 import { statusVisual, fmtShort } from '@/data/format';
 import type { MembershipStatus } from '@/data/types';
 
@@ -24,16 +24,14 @@ const FILTERS: { key: 'all' | MembershipStatus; label: string; dot?: 'ok' | 'war
 
 export default function AdminMembers() {
   const router = useRouter();
-  const { members, darkMode } = useApp();
-  const c = useColors(darkMode);
   const [query, setQuery] = React.useState('');
+  const deferredQuery = React.useDeferredValue(query);
   const [filter, setFilter] = React.useState<'all' | MembershipStatus>('all');
+  const membersQuery = useMembers(deferredQuery, filter);
+  const { darkMode } = useApp();
+  const c = useColors(darkMode);
 
-  const filtered = React.useMemo(() => {
-    let list = query ? searchMembers(query) : members;
-    if (filter !== 'all') list = list.filter((m) => m.membership?.status === filter);
-    return list;
-  }, [query, filter, members]);
+  const members = membersQuery.data ?? [];
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -46,8 +44,10 @@ export default function AdminMembers() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search name, member ID, or phone…"
+          placeholder="Search name, member ID, email, or phone…"
           placeholderTextColor={c.ink3}
+          autoCapitalize="none"
+          autoCorrect={false}
           style={[styles.searchInput, { color: c.ink }]}
         />
       </View>
@@ -61,19 +61,26 @@ export default function AdminMembers() {
         ))}
       </ScrollView>
 
-      {filtered.length === 0 ? (
+      {membersQuery.isLoading ? (
+        <Text style={{ color: c.ink3, fontSize: 13, textAlign: 'center', paddingVertical: 20 }}>
+          Loading members…
+        </Text>
+      ) : members.length === 0 ? (
         <EmptyState
           icon="search"
-          title={`No members match "${query}"`}
-          body="Check the spelling, or search by member ID or phone number."
+          title={query ? `No members match "${query}"` : 'No members in this view'}
+          body={query
+            ? 'Check the spelling, or search by member ID, email, or phone number.'
+            : 'Try a different status filter, or clear the search to see everyone.'}
           action={<Button variant="quiet" onPress={() => { setQuery(''); setFilter('all'); }}>Clear search</Button>}
         />
       ) : (
         <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
-          {filtered.map((m) => {
+          {members.map((m) => {
             const ms = m.membership;
             const vis = ms ? statusVisual(ms.status, ms, c) : null;
-            const lastVisit = m.visits.length > 0 ? m.visits[m.visits.length - 1] : null;
+            const invited = m.accountStatus === 'invited';
+            const lastVisit = m.lastVisitAt ? fmtShort(m.lastVisitAt.slice(0, 10)) : null;
             return (
               <Pressable
                 key={m.id}
@@ -85,17 +92,23 @@ export default function AdminMembers() {
                     <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={36} fontSize={12} />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.mname, { color: c.ink }]} numberOfLines={1}>{m.firstName} {m.lastName}</Text>
-                      <Text style={[styles.msub, { color: c.ink3 }]} numberOfLines={1}>{m.id} · {m.phone}</Text>
+                      <Text style={[styles.msub, { color: c.ink3 }]} numberOfLines={1}>{m.id} · {m.email}</Text>
                     </View>
                   </View>
-                  {vis ? <Tag variant={vis.tagVariant}>{vis.tagLabel}</Tag> : <Tag variant="muted">No plan</Tag>}
+                  {invited ? (
+                    <Tag variant="muted">Invited</Tag>
+                  ) : vis ? (
+                    <Tag variant={vis.tagVariant}>{vis.tagLabel}</Tag>
+                  ) : (
+                    <Tag variant="muted">No plan</Tag>
+                  )}
                 </View>
                 <View style={styles.mbottom}>
                   <Text style={[styles.mplan, { color: c.ink2 }]} numberOfLines={1}>{ms?.planName ?? 'No plan'}</Text>
                   <View style={styles.mmeta}>
                     <Text style={[styles.mexp, { color: c.ink }]}>{ms ? fmtShort(ms.expiryDate) : '-'}</Text>
                     <Text style={[styles.mdot, { color: c.ink3 }]}>·</Text>
-                    <Text style={[styles.mlast, { color: c.ink2 }]}>{lastVisit ? fmtShort(lastVisit.date) : 'no visits'}</Text>
+                    <Text style={[styles.mlast, { color: c.ink2 }]}>{lastVisit ?? 'no visits'}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -105,7 +118,9 @@ export default function AdminMembers() {
       )}
 
       <View style={styles.foot}>
-        <Text style={[styles.footText, { color: c.ink3 }]}>Showing {filtered.length} of {members.length} members</Text>
+        <Text style={[styles.footText, { color: c.ink3 }]}>
+          {membersQuery.isLoading ? ' ' : `Showing ${members.length}${members.length >= 100 ? '+' : ''} members`}
+        </Text>
       </View>
         </Body>
       </ScrollView>
@@ -114,7 +129,6 @@ export default function AdminMembers() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: spacing.screen },
   searchbar: {
     flexDirection: 'row',
     alignItems: 'center',

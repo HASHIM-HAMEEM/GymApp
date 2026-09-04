@@ -1,13 +1,14 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, tracking, radius } from '@/theme/tokens';
+import { useColors, spacing, typography, radius } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { EmptyState } from '@/components/Surfaces';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
-import { useApp } from '@/data/store';
-import { fmtShort, TODAY } from '@/data/format';
+import { useCurrentMember } from '@/data/api/queries';
+import { useApp } from '@/providers/AppProvider';
+import { TODAY } from '@/data/format';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -24,11 +25,12 @@ function sessionLabel(time: string) {
 
 export default function VisitsScreen() {
   const router = useRouter();
-  const { currentMember, darkMode } = useApp();
+  const memberQuery = useCurrentMember();
+  const { darkMode } = useApp();
   const c = useColors(darkMode);
-  if (!currentMember) return null;
-  const m = currentMember;
-  const visits = m.visits;
+  const [showSkeleton, setShowSkeleton] = React.useState(false);
+
+  const visits = memberQuery.data?.visits ?? [];
 
   const monthKeys = React.useMemo(() => {
     const set = new Set<string>();
@@ -40,26 +42,59 @@ export default function VisitsScreen() {
     monthKeys.find((k) => k === TODAY.slice(0, 7)) ?? monthKeys[0] ?? TODAY.slice(0, 7)
   );
 
-  const filtered = visits.filter((v) => v.date.slice(0, 7) === selectedMonth).sort((a, b) => b.date.localeCompare(a.date));
+  const filtered = visits
+    .filter((v) => v.date.slice(0, 7) === selectedMonth)
+    .sort((a, b) => b.date.localeCompare(a.date));
 
-  const titleMonth = labelFor(selectedMonth + '-01');
   const count = filtered.length;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         title="Visits"
-        right={<Text style={[styles.headStat, { color: c.ink3 }]}>{visits.length} this month</Text>}
+        right={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Pressable onPress={() => setShowSkeleton((v) => !v)}>
+              <Text style={{ fontFamily: typography.mono, fontSize: 11, color: showSkeleton ? c.accent : c.ink4 }}>
+                {showSkeleton ? 'M-20 Shimmer: ON' : 'M-20'}
+              </Text>
+            </Pressable>
+            <Text style={[styles.headStat, { color: c.ink3 }]}>{count} this month</Text>
+          </View>
+        }
       />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Body>
-          {visits.length === 0 ? (
+          {showSkeleton ? (
+            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              {[1, 2, 3, 4, 5].map((n, i) => (
+                <View
+                  key={n}
+                  style={[
+                    styles.vrow,
+                    { borderColor: c.line },
+                    i === 4 && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <View style={[styles.date, { backgroundColor: c.bg2, borderColor: c.line, opacity: 0.5 }]} />
+                  <View style={{ flex: 1, gap: 7 }}>
+                    <View style={{ height: 14, width: '55%', backgroundColor: c.bg2, borderRadius: 4 }} />
+                    <View style={{ height: 11, width: '38%', backgroundColor: c.bg2, borderRadius: 4, opacity: 0.6 }} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : visits.length === 0 ? (
             <EmptyState
               icon="clock"
               title="No visits yet"
               body="Once you check in at reception, your visits will appear here."
               action={
-                <Button variant="secondary" icon="qr" onPress={() => router.push('/qr')} style={{ marginTop: 22 }}>
+                <Button variant="secondary" icon="qr" href="/qr" style={{ marginTop: 22 }}>
                   Show my card
                 </Button>
               }
@@ -97,7 +132,7 @@ export default function VisitsScreen() {
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.time, { color: c.ink }]}>{sessionLabel(v.time)}</Text>
                       <Text style={[styles.loc, { color: c.ink3, fontFamily: typography.mono }]} numberOfLines={1}>
-                        {v.time} · Main entrance
+                        {v.time} · {v.method === 'qr' ? 'QR scan' : 'Front desk'} · Reception {v.reception}
                       </Text>
                     </View>
                     <Icon name="checkc" size={18} color={c.ok} />

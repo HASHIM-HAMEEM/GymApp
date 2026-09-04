@@ -5,11 +5,10 @@ import { useColors, spacing, typography, tracking, radius } from '@/theme/tokens
 import { AppBar, Body } from '@/components/Chrome';
 import { MembershipCard } from '@/components/MembershipCard';
 import { RingCard } from '@/components/RingCard';
-import { Tag } from '@/components/Tag';
 import { IconButton } from '@/components/Button';
-import { useApp } from '@/data/store';
-import { statusVisual, fmtLong, fmtShort, daysBetween, TODAY } from '@/data/format';
-import { planByName } from '@/data/plans';
+import { useApp } from '@/providers/AppProvider';
+import { useCurrentMember, useNotices, usePlans, useQrPass } from '@/data/api/queries';
+import { statusVisual, fmtLong, daysBetween, TODAY } from '@/data/format';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -49,18 +48,27 @@ function greeting() {
 
 export default function MemberHome() {
   const router = useRouter();
-  const { currentMember, notices, darkMode } = useApp();
+  const { configurationError, darkMode } = useApp();
+  const memberQuery = useCurrentMember();
+  const noticesQuery = useNotices();
+  const plansQuery = usePlans();
   const c = useColors(darkMode);
-  if (!currentMember) return null;
 
-  const m = currentMember;
-  const ms = m.membership;
-  const latestNotice = notices[0];
+  const m = memberQuery.data ?? null;
+  const ms = m?.membership ?? null;
+  const canShowQr = ms?.status === 'active' || ms?.status === 'expiring' || ms?.status === 'due';
+  const qrQuery = useQrPass(Boolean(canShowQr));
+
+  const latestNotice = noticesQuery.data?.[0];
   const vis = ms ? statusVisual(ms.status, ms, c) : null;
   const week = weekAround(TODAY);
 
+  const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
+  const price = plan?.priceEGP ?? ms?.amountDue ?? 1500;
+  const period = plan?.duration === 12 ? 'year' : plan?.duration === 3 ? '3 months' : 'month';
+
   const ringProgress = (() => {
-    if (!ms) return 0;
+    if (!ms || !ms.startDate) return 0;
     if (ms.status === 'expired') return 0;
     const total = daysBetween(ms.expiryDate, ms.startDate);
     const left = daysBetween(ms.expiryDate, TODAY);
@@ -69,87 +77,114 @@ export default function MemberHome() {
   })();
 
   const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, TODAY)) : 0;
-  const plan = ms ? planByName(ms.planName) : undefined;
-  const price = plan?.priceEGP ?? ms?.amountDue ?? 1500;
-  const period = plan?.duration === 12 ? 'year' : plan?.duration === 3 ? '3 months' : 'month';
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         right={
-          <IconButton name="bell" onPress={() => router.push('/notices')} />
+          <IconButton name="bell" onPress={() => router.push('/(member)/notices')} />
         }
       >
         <View>
           <Text style={[styles.slabel, { color: c.ink3 }]}>{formatTodayLabel(TODAY)}</Text>
-          <Text style={[styles.greeting, { color: c.ink }]}>{greeting()}, {m.firstName}</Text>
+          <Text style={[styles.greeting, { color: c.ink }]}>
+            {greeting()}{m ? `, ${m.firstName}` : ''}
+          </Text>
         </View>
       </AppBar>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Body>
+          {configurationError ? (
+            <Text style={[styles.configError, { color: c.ink2 }]}>{configurationError}</Text>
+          ) : null}
+
           {ms && vis ? (
             <RingCard
               value={String(daysLeft)}
-              unit={ms.status === 'paused' ? 'Days frozen' : 'Days left'}
+              unit={ms.status === 'paused' ? 'Days frozen' : ms.status === 'upcoming' ? 'Days to go' : 'Days left'}
               variant={vis.dotVariant}
               tag={{ label: vis.tagLabel, variant: vis.tagVariant }}
               title={ms.planName}
-              subtitle={`EGP ${price.toLocaleString()} / ${period}`}
+              subtitle={
+                ms.status === 'paused'
+                  ? `Frozen until ${fmtLong(ms.pauseEnds ?? ms.expiryDate)}\nUnpause at reception.`
+                  : ms.status === 'expired'
+                  ? `Expired ${fmtLong(ms.expiryDate)}\nRenew to restore access.`
+                  : ms.status === 'upcoming'
+                  ? `Begins ${fmtLong(ms.startDate)}\nAccess opens on the start date.`
+                  : ms.status === 'expiring'
+                  ? `Expires in ${daysLeft} days\nRenew at reception.`
+                  : `Renews ${fmtLong(ms.expiryDate)}\nat reception.`
+              }
               progress={ringProgress}
             />
           ) : null}
 
           <MembershipCard
-            name={`${m.firstName} ${m.lastName}`}
-            plan={ms ? ms.planName : 'No plan'}
-            validUntil={ms ? fmtLong(ms.expiryDate) : m.memberSince}
-            memberId={m.id}
-            tag={{ label: vis ? vis.tagLabel : 'No plan', variant: vis ? vis.tagVariant : 'muted' }}
-            onShowQr={() => router.push('/qr')}
-            showQr={!!ms}
+            name={m ? `${m.firstName} ${m.lastName}` : 'Meridian member'}
+            plan={ms ? ms.planName.replace(/ Monthly| Annual/i, '') : 'No plan'}
+            validUntil={ms ? fmtLong(ms.expiryDate) : m?.memberSince ?? '—'}
+            memberId={m?.id ?? 'MRD-····'}
+            variant={ms?.status === 'expiring' || ms?.status === 'due' ? 'warn' : ms?.status === 'expired' ? 'bad' : 'active'}
+            href={canShowQr ? '/qr' : undefined}
+            showQr={canShowQr && Boolean(qrQuery.data?.value)}
+            qrValue={qrQuery.data?.value}
           />
 
-          <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line }]}>
-            {week.map((wd) => {
-              const visited = m.visits.some((v) => v.date === wd.iso);
-              const isToday = wd.iso === TODAY;
-              const on = visited && !isToday;
-              return (
-                <View key={wd.iso} style={styles.wd}>
-                  <View
-                    style={[
-                      styles.dot,
-                      {
-                        borderColor: isToday ? c.accentHi : c.ink4,
-                        backgroundColor: on ? c.accent : 'transparent',
-                        shadowColor: on ? c.accentGlow : 'transparent',
-                        shadowOpacity: on ? 1 : 0,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 0 },
-                      },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.wdLabel,
-                      { color: isToday ? c.accentHi : c.ink4 },
-                    ]}
-                  >
-                    {wd.label}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+          {m ? (
+            <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              {week.map((wd) => {
+                const visited = m.visits.some((v) => v.date === wd.iso);
+                const isToday = wd.iso === TODAY;
+                const on = visited && !isToday;
+                return (
+                  <View key={wd.iso} style={styles.wd}>
+                    <View
+                      style={[
+                        styles.dot,
+                        {
+                          borderColor: isToday ? c.accentHi : on ? c.accent : 'rgba(233,238,248,0.22)',
+                          backgroundColor: on ? c.accent : 'transparent',
+                          shadowColor: on ? c.accentGlow : 'transparent',
+                          shadowOpacity: on ? 0.8 : 0,
+                          shadowRadius: 8,
+                          shadowOffset: { width: 0, height: 0 },
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[styles.wdLabel, { color: isToday ? c.accentHi : c.ink4 }]}
+                    >
+                      {wd.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {m && !ms ? (
+            <Text style={[styles.noPlan, { color: c.ink3 }]}>
+              No membership assigned yet. Reception can set one up in about two minutes — ask at the desk.
+            </Text>
+          ) : null}
 
           {latestNotice ? (
             <Pressable
               onPress={() => router.push(`/notice?id=${latestNotice.id}`)}
               style={[styles.noticeRow, { borderColor: c.line, backgroundColor: c.bg1 }]}
             >
-              <Text style={[styles.cat, { color: c.accentHi }]}>{latestNotice.category}</Text>
-              <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+              <Text
+                style={[styles.cat, { color: latestNotice.urgent ? c.bad : c.accentHi }]}
+              >
+                {latestNotice.category}
+              </Text>
+              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                 <Text style={[styles.nt, { color: c.ink }]} numberOfLines={1}>
                   {latestNotice.title}
                 </Text>
@@ -158,7 +193,7 @@ export default function MemberHome() {
                 </Text>
               </View>
               <Text style={[styles.ndt, { color: c.ink4, fontFamily: typography.mono }]}>
-                {fmtShort(latestNotice.date)}
+                {MONTHS[parseInt(latestNotice.date.slice(5, 7), 10) - 1]} {parseInt(latestNotice.date.slice(8), 10)}
               </Text>
             </Pressable>
           ) : null}
@@ -183,6 +218,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.015,
     marginTop: 4,
   },
+  configError: {
+    fontFamily: typography.fontFamily,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   week: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -206,10 +246,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.06,
     textTransform: 'uppercase',
   },
+  noPlan: {
+    fontFamily: typography.fontFamily,
+    fontSize: 13,
+    lineHeight: 19,
+  },
   noticeRow: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 15,
+    gap: 14,
+    padding: 16,
     borderRadius: radius.lg,
     borderWidth: 1,
     alignItems: 'flex-start',
@@ -218,13 +263,30 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 0.09,
+    letterSpacing: 0.9,
     textTransform: 'uppercase',
-    paddingTop: 4,
-    width: 62,
+    paddingTop: 3,
+    width: 76,
     flexShrink: 0,
   },
-  nt: { fontSize: 14.5, fontWeight: '600', lineHeight: 20 },
-  np: { fontSize: 13, marginTop: 2 },
-  ndt: { fontSize: 11, paddingTop: 3 },
+  nt: {
+    fontFamily: typography.display,
+    fontSize: 14.5,
+    fontWeight: '600',
+    lineHeight: 20,
+    letterSpacing: -0.1,
+  },
+  np: {
+    fontFamily: typography.fontFamily,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 3,
+  },
+  ndt: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    paddingTop: 3,
+    marginLeft: 6,
+    flexShrink: 0,
+  },
 });

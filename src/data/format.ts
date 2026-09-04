@@ -44,8 +44,8 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((da - db) / 86400000);
 }
 
-/** Today's ISO date (mocked to 2026-09-20 to match the design system). */
-export const TODAY = '2026-09-20';
+/** Today's ISO date in the club's timezone (Africa/Cairo). */
+export const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
 
 export interface StatusVisual {
   tagLabel: string;
@@ -121,6 +121,17 @@ export function statusVisual(status: MembershipStatus, membership: {
         endColor: c.accent,
         bannerVariant: 'warn',
         bannerText: `Payment due: EGP ${membership.amountDue?.toLocaleString() ?? '1,500'}. Your plan is active, but this month's payment hasn't been recorded.`,
+      };
+    case 'upcoming':
+      return {
+        tagLabel: 'Starts soon',
+        tagVariant: 'muted',
+        dotVariant: 'muted',
+        fillColor: c.line,
+        nowColor: c.ink3,
+        endColor: c.ink3,
+        bannerVariant: 'info',
+        bannerText: `Your plan begins soon and is valid until ${fmtLong(membership.expiryDate)}. Access opens on the start date.`,
       };
     case 'none':
     default:

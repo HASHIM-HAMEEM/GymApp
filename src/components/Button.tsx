@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
 } from 'react-native';
+import { Link, type Href } from 'expo-router';
 import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { useApp } from '@/data/store';
 import { Icon, IconName } from './Icon';
@@ -30,7 +31,9 @@ export interface ButtonProps {
   icon?: IconName;
   children: React.ReactNode;
   onPress?: () => void;
+  href?: Href;
   style?: ViewStyle;
+  textStyle?: TextStyle;
 }
 
 export function Button({
@@ -42,7 +45,9 @@ export function Button({
   icon,
   children,
   onPress,
+  href,
   style,
+  textStyle,
 }: ButtonProps) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
@@ -77,52 +82,59 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const handlePressIn = () => {
-    Animated.timing(scale, { toValue: 0.985, duration: 100, useNativeDriver: true }).start();
+    Animated.timing(scale, { toValue: 0.985, duration: 100, useNativeDriver: Platform.OS !== 'web' }).start();
   };
   const handlePressOut = () => {
-    Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+    Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: Platform.OS !== 'web' }).start();
   };
 
-  return (
-    <Animated.View style={{ transform: [{ scale }], ...(block ? { alignSelf: 'stretch', width: '100%' } as any : {}) }}>
-      <Pressable
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={onPress}
-        disabled={isDisabled}
-        style={({ pressed }) => [
-          styles.btnBase,
-          {
-            height,
-            paddingHorizontal: padH,
-            backgroundColor: bg,
-            borderColor: border,
-            borderRadius: r,
-            opacity: isDisabled ? 0.4 : 1,
-          },
-          style,
-        ]}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color={fg} />
-        ) : (
-          <View style={styles.btnInner}>
-            {icon && <Icon name={icon} size={size === 'sm' ? 16 : 19} color={fg} />}
-            <Text
-              style={{
+  const control = (
+    <Pressable
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={onPress}
+      disabled={isDisabled}
+      style={({ pressed }) => [
+        styles.btnBase,
+        {
+          height,
+          paddingHorizontal: padH,
+          backgroundColor: bg,
+          borderColor: border,
+          borderRadius: r,
+          opacity: isDisabled ? 0.4 : 1,
+        },
+        style,
+      ]}
+    >
+      {loading ? (
+        <ActivityIndicator size="small" color={fg} />
+      ) : (
+        <View style={styles.btnInner}>
+          {icon && <Icon name={icon} size={size === 'sm' ? 16 : 19} color={fg} />}
+          <Text
+            style={[
+              {
                 fontFamily: typography.fontFamily,
                 fontSize,
                 fontWeight: '600',
                 letterSpacing: -0.005,
                 color: fg,
                 marginLeft: icon ? 9 : 0,
-              }}
-            >
-              {children}
-            </Text>
-          </View>
-        )}
-      </Pressable>
+              },
+              textStyle,
+            ]}
+          >
+            {children}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], ...(block ? { alignSelf: 'stretch', width: '100%' } as any : {}) }}>
+      {href ? <Link href={href} asChild>{control}</Link> : control}
     </Animated.View>
   );
 }
@@ -188,22 +200,38 @@ export function IconButton({
   onPress,
   color,
   size = 24,
+  accessibilityLabel,
 }: {
   name: IconName;
   onPress?: () => void;
   color?: string;
   size?: number;
+  accessibilityLabel?: string;
 }) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
+  const fallbackLabel =
+    name === 'back'
+      ? 'Go back'
+      : name === 'close'
+        ? 'Close'
+        : name === 'search'
+          ? 'Search'
+          : name === 'refresh'
+            ? 'Refresh'
+            : name === 'plus'
+              ? 'Add'
+              : name;
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? fallbackLabel}
       onPress={onPress}
       hitSlop={12}
       style={({ pressed }) => ({
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
         opacity: pressed ? 0.5 : 1,

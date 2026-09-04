@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useColors, spacing, typography, radius } from '@/theme/tokens';
+import { useColors, radius, spacing, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
-import { useApp } from '@/data/store';
+import { useApp } from '@/providers/AppProvider';
+import { useMarkNoticeRead, useNotices } from '@/data/api/queries';
 import { fmtLong } from '@/data/format';
 import { CLUB } from '@/data/plans';
 import type { Notice } from '@/data/types';
@@ -22,15 +23,27 @@ function catColor(c: any, category: Notice['category']) {
 export default function NoticeDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { notices, darkMode } = useApp();
+  const { role, darkMode } = useApp();
+  const noticesQuery = useNotices(role === 'admin');
+  const markRead = useMarkNoticeRead();
   const c = useColors(darkMode);
+
+  const notices = noticesQuery.data ?? [];
   const n = notices.find((x) => x.id === id);
+
+  React.useEffect(() => {
+    if (role === 'member' && n && !n.read) {
+      markRead.mutate(n.id);
+    }
+  }, [role, n, markRead]);
 
   if (!n) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
         <AppBar title="Notice" onBack={() => router.back()} />
-        <Text style={{ color: c.ink2, padding: 20 }}>Notice not found.</Text>
+        <Text style={{ color: c.ink2, padding: 20 }}>
+          {noticesQuery.isLoading ? 'Loading the notice…' : 'Notice not found.'}
+        </Text>
       </View>
     );
   }
@@ -94,9 +107,9 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   paragraph: {
-    fontFamily: typography.fontFamily,
-    fontSize: 15.5,
-    lineHeight: 27,
+    fontFamily: typography.serif,
+    fontSize: 16,
+    lineHeight: 28,
   },
   foot: {
     paddingHorizontal: 16,
@@ -107,5 +120,6 @@ const styles = StyleSheet.create({
   footText: {
     fontFamily: typography.fontFamily,
     fontSize: 12.5,
+    lineHeight: 18,
   },
 });

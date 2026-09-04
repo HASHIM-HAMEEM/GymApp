@@ -2,66 +2,110 @@ import * as React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, spacing, typography, tracking } from '@/theme/tokens';
+import { AppBar } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
-import { Icon } from '@/components/Icon';
-import { useApp } from '@/data/store';
+import { Banner } from '@/components/Surfaces';
+import { useApp } from '@/providers/AppProvider';
 
+/**
+ * M-03 & M-04 Sign in — email & password with inline error state.
+ * Accounts are created by reception; members only enter credentials here.
+ */
 export default function SignIn() {
   const router = useRouter();
-  const { darkMode } = useApp();
+  const { darkMode, signIn, authError, clearAuthError, configurationError } = useApp();
   const c = useColors(darkMode);
-  const [phone, setPhone] = React.useState('');
-  const [error, setError] = React.useState(false);
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [formError, setFormError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
-  const submit = () => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.length < 8) {
-      setError(true);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const canSubmit = emailValid && password.length > 0;
+
+  const submit = async () => {
+    if (!emailValid) {
+      setFormError('Enter the email address reception has on file — the address is missing its domain.');
       return;
     }
-    setError(false);
+    setFormError(null);
+    clearAuthError();
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signIn(email, password);
+      // The root stack redirects once the session and profile load.
+    } catch {
+      // authError from the provider surfaces the banner below.
+    } finally {
       setLoading(false);
-      router.push({ pathname: '/otp', params: { phone: `+20 ${phone.trim()}` } });
-    }, 900);
+    }
   };
 
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-      <View style={{ flex: 1, justifyContent: 'center', gap: 8 }}>
-        <Text style={[styles.slabel, { color: c.ink3 }]}>Sign in</Text>
-        <Text style={[styles.h1, { color: c.ink }]}>Your phone number</Text>
-        <Text style={[styles.lede, { color: c.ink2 }]}>We'll text you a six-digit code.</Text>
-      </View>
+      <AppBar onBack={() => router.back()} />
+      <View style={styles.body}>
+        <View>
+          <Text style={[styles.slabel, { color: c.ink3 }]}>Sign in</Text>
+          <Text style={[styles.h1, { color: c.ink }]}>Your account</Text>
+          <Text style={[styles.lede, { color: c.ink3 }]}>
+            Sign in with the email and password you set when you accepted your membership invitation.
+          </Text>
+        </View>
 
-      <View style={{ gap: 14 }}>
         <Field
-          label="Mobile number"
-          error={error ? 'That number looks short — Egyptian mobiles have 10 digits after +20.' : undefined}
+          label="Email"
+          error={formError && !emailValid ? formError : undefined}
+          hint="The address where you received your Meridian invitation."
         >
           <Control
-            value={phone}
+            accessibilityLabel="Email"
+            value={email}
             onChangeText={(t) => {
-              setPhone(t);
-              setError(false);
+              setEmail(t);
+              if (formError) setFormError(null);
             }}
-            placeholder="10 2748 8531"
-            inputMode="numeric"
-            error={error}
-            leading={
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingRight: 12, borderRightWidth: 1, borderRightColor: c.line }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: c.ink2 }}>🇪🇬 +20</Text>
-              </View>
-            }
+            placeholder="name@example.com"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            returnKeyType="next"
+            error={Boolean(formError && !emailValid)}
           />
         </Field>
 
-        <View style={{ marginTop: 'auto', paddingBottom: 16 }}>
-          <Button block loading={loading} onPress={submit}>
-            Send code
+        <Field label="Password">
+          <Control
+            accessibilityLabel="Password"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Your password"
+            secure
+            autoComplete="current-password"
+            textContentType="password"
+            returnKeyType="done"
+            onSubmitEditing={canSubmit ? submit : undefined}
+          />
+        </Field>
+
+        {authError || configurationError ? (
+          <Banner variant="error">{authError ?? configurationError}</Banner>
+        ) : null}
+
+        <View style={styles.foot}>
+          <Button block loading={loading} disabled={!canSubmit} onPress={submit}>
+            Sign in
+          </Button>
+          <Button
+            variant="quiet"
+            block
+            textStyle={{ fontSize: 13.5 }}
+            href="/forgot-password"
+          >
+            Forgot your password?
           </Button>
         </View>
       </View>
@@ -72,16 +116,20 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
+  },
+  body: {
+    flex: 1,
     paddingHorizontal: spacing.screen,
-    paddingTop: 40,
-    paddingBottom: 34,
-    justifyContent: 'flex-end',
+    paddingTop: 8,
+    paddingBottom: 24,
+    justifyContent: 'space-between',
+    gap: 18,
   },
   slabel: {
     fontFamily: typography.fontFamily,
     fontSize: 12,
     fontWeight: '600',
-    letterSpacing: tracking.caps,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 12,
   },
@@ -89,14 +137,18 @@ const styles = StyleSheet.create({
     fontFamily: typography.display,
     fontSize: 26,
     fontWeight: '600',
-    letterSpacing: -0.015,
+    letterSpacing: -0.4,
     lineHeight: 32,
   },
   lede: {
     fontFamily: typography.fontFamily,
     fontSize: 14,
     marginTop: 10,
-    lineHeight: 23,
-    maxWidth: 30 * 8,
+    lineHeight: 22,
+  },
+  foot: {
+    marginTop: 'auto',
+    gap: 12,
+    paddingBottom: 12,
   },
 });

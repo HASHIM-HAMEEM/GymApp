@@ -1,82 +1,348 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, radius } from '@/theme/tokens';
+import * as Linking from 'expo-linking';
+import { useColors, radius, spacing, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
-import { Button } from '@/components/Button';
+import { Button, TextButton } from '@/components/Button';
 import { Monogram, SectionLabel, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
-import { Switch } from '@/components/Overlays';
-import { useApp } from '@/data/store';
-import { CLUB, ADMIN_USER } from '@/data/plans';
-import type { ColorSet } from '@/theme/tokens';
+import { Switch, Sheet } from '@/components/Overlays';
+import { Field, Control } from '@/components/Field';
+import { Banner } from '@/components/Surfaces';
+import { useApp } from '@/providers/AppProvider';
+import { useClub, useUpdateAdminProfile, useUpdateClub } from '@/data/api/queries';
+import { ApiCallError } from '@/data/api/queries';
+import { CLUB } from '@/data/plans';
+
+type ClubHours = { label: string; value: string };
 
 export default function AdminProfile() {
   const router = useRouter();
-  const { adminName, adminInitials, signOut, darkMode, toggleDarkMode } = useApp();
+  const { profile, adminName, adminInitials, signOut, darkMode, toggleDarkMode, authError, clearAuthError } = useApp();
+  const clubQuery = useClub();
+  const updateAdminProfile = useUpdateAdminProfile();
+  const updateClub = useUpdateClub();
   const c = useColors(darkMode);
+  const club = clubQuery.data
+    ? { ...CLUB, ...clubQuery.data, hours: clubQuery.data.hours ?? CLUB.hours }
+    : CLUB;
+
+  const [accountOpen, setAccountOpen] = React.useState(false);
+  const [clubOpen, setClubOpen] = React.useState(false);
+  const [signingOut, setSigningOut] = React.useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      router.replace('/welcome');
+    } catch {
+      clearAuthError();
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Profile" />
+      <AppBar title="Settings" />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
-      <View style={styles.head}>
-        <Monogram text={adminInitials} size={56} fontSize={18} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[styles.name, { color: c.ink }]} numberOfLines={1}>{adminName}</Text>
-          <Text style={[styles.sub, { color: c.ink3, fontFamily: typography.mono }]}>Front desk · Reception {ADMIN_USER.reception}</Text>
-        </View>
-        <Tag variant="accent">Admin</Tag>
-      </View>
+          {authError ? (
+            <Text style={{ color: c.bad, fontSize: 13, lineHeight: 19 }}>{authError}</Text>
+          ) : null}
 
-      <View>
-        <SectionLabel>Preferences</SectionLabel>
-        <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-          <View style={[styles.row, { borderColor: c.line }]}>
-            <Icon name="info" size={19} color={c.ink3} />
+          <View style={styles.head}>
+            <Monogram text={adminInitials || '··'} size={56} fontSize={18} />
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.rowTitle, { color: c.ink }]}>Dark mode</Text>
-              <Text style={[styles.rowSub, { color: c.ink3 }]}>Switch between light and dark theme</Text>
+              <Text style={[styles.name, { color: c.ink }]} numberOfLines={1}>{adminName || 'Front desk'}</Text>
+              <Text style={[styles.sub, { color: c.ink3, fontFamily: typography.mono }]}>
+                Front desk · Reception {profile?.reception ?? 'A'}
+              </Text>
             </View>
-            <Switch on={darkMode} onChange={toggleDarkMode} />
+            <Tag variant="accent">Admin</Tag>
           </View>
-        </View>
-      </View>
 
-      <View>
-        <SectionLabel>Your club</SectionLabel>
-        <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-          <Row icon="pin" title={CLUB.name} sub={`${CLUB.address}, ${CLUB.city}`} c={c} />
-          <Row
-            icon="clock"
-            title={`Mon–Thu ${CLUB.hours[0].value}`}
-            sub={`Fri ${CLUB.hours[1].value} · Sat ${CLUB.hours[2].value}`}
-            c={c}
-          />
-          <Row icon="phone" title={CLUB.phone} sub="Front desk" right={<Button size="sm" variant="secondary">Call</Button>} c={c} />
-        </View>
-      </View>
+          <View>
+            <SectionLabel>Your account</SectionLabel>
+            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              <Row icon="user" title="Display name" sub={adminName || 'Front desk'} onPress={() => setAccountOpen(true)} c={c} />
+              <Row icon="pin" title="Reception" sub={`Desk ${profile?.reception ?? 'A'}`} onPress={() => setAccountOpen(true)} c={c} last />
+            </View>
+            <Text style={[styles.hint, { color: c.ink4 }]}>
+              Shown on receipts and the activity log. Ask the club owner for sign-in email changes.
+            </Text>
+          </View>
 
-      <View>
-        <SectionLabel>Admin tools</SectionLabel>
-        <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-          <Row icon="users" title="Members" sub="View and manage all members" c={c} />
-          <Row icon="speak" title="Notices" sub="Send announcements to members" c={c} />
-          <Row icon="scan" title="Scanner" sub="Check in members by QR code" c={c} />
-        </View>
-      </View>
+          <View>
+            <View style={styles.sectionHead}>
+              <SectionLabel>Club details</SectionLabel>
+              <TextButton onPress={() => setClubOpen(true)}>Edit</TextButton>
+            </View>
+            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              <Row icon="pin" title={club.name} sub={`${club.address}, ${club.city}`} c={c} />
+              <Row
+                icon="clock"
+                title={`Mon–Thu ${club.hours[0]?.value ?? ''}`}
+                sub={`Fri ${club.hours[1]?.value ?? ''} · Sat ${club.hours[2]?.value ?? ''}`}
+                c={c}
+              />
+              <Row
+                icon="phone"
+                title={club.phone}
+                sub="Front desk"
+                right={
+                  <Button size="sm" variant="secondary" onPress={() => void Linking.openURL(`tel:${club.phone}`)}>
+                    Call
+                  </Button>
+                }
+                c={c}
+                last
+              />
+            </View>
+            <Text style={[styles.hint, { color: c.ink4 }]}>
+              Members see these details in the app — keep the address and phone current.
+            </Text>
+          </View>
 
-      <View style={{ paddingTop: 8 }}>
-        <Button variant="danger" block icon="logout" onPress={() => { signOut(); router.replace('/'); }}>
-          Sign out of Meridian
-        </Button>
-        <Text style={[styles.version, { color: c.ink3 }]}>Meridian Admin · v1.0</Text>
-      </View>
+          <View>
+            <SectionLabel>Preferences</SectionLabel>
+            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              <View style={[styles.row, { borderColor: c.line }]}>
+                <Icon name="info" size={19} color={c.ink3} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.rowTitle, { color: c.ink }]}>Dark mode</Text>
+                  <Text style={[styles.rowSub, { color: c.ink3 }]}>Switch between light and dark theme</Text>
+                </View>
+                <Switch on={darkMode} onChange={toggleDarkMode} />
+              </View>
+            </View>
+          </View>
+
+          <View style={{ paddingTop: 8 }}>
+            <Button variant="danger" block icon="logout" loading={signingOut} onPress={handleSignOut}>
+              Sign out of Meridian
+            </Button>
+            <Text style={[styles.version, { color: c.ink3 }]}>Meridian Admin · v2.0</Text>
+          </View>
         </Body>
       </ScrollView>
+
+      <AccountSheet
+        visible={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        displayName={adminName || 'Front desk'}
+        reception={(profile?.reception ?? 'A') as 'A' | 'B'}
+        saving={updateAdminProfile.isPending}
+        onSave={async (displayName, reception) => {
+          try {
+            await updateAdminProfile.mutateAsync({ displayName, reception });
+            setAccountOpen(false);
+          } catch {
+            /* banner shown inside sheet */
+          }
+        }}
+      />
+
+      <ClubSheet
+        visible={clubOpen}
+        onClose={() => setClubOpen(false)}
+        club={club}
+        hours={club.hours}
+        saving={updateClub.isPending}
+        onSave={async (details) => {
+          try {
+            await updateClub.mutateAsync(details);
+            setClubOpen(false);
+          } catch {
+            /* banner shown inside sheet */
+          }
+        }}
+      />
     </View>
+  );
+}
+
+function AccountSheet({
+  visible,
+  onClose,
+  displayName,
+  reception,
+  saving,
+  onSave,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  displayName: string;
+  reception: 'A' | 'B';
+  saving: boolean;
+  onSave: (displayName: string, reception: 'A' | 'B') => Promise<void>;
+}) {
+  const { darkMode } = useApp();
+  const c = useColors(darkMode);
+  const [name, setName] = React.useState(displayName);
+  const [desk, setDesk] = React.useState<'A' | 'B'>(reception);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (visible) {
+      setName(displayName);
+      setDesk(reception);
+      setError(null);
+    }
+  }, [visible, displayName, reception]);
+
+  const save = async () => {
+    if (!name.trim()) {
+      setError('Display name is required — it appears on receipts.');
+      return;
+    }
+    setError(null);
+    await onSave(name.trim(), desk);
+  };
+
+  return (
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title="Your account"
+      desc="Update how your name appears to members and which desk you work."
+    >
+      <View style={{ gap: 14, marginTop: 12 }}>
+        {error ? <Banner variant="error">{error}</Banner> : null}
+        <Field label="Display name">
+          <Control value={name} onChangeText={setName} placeholder="e.g. Sarah Kamal" />
+        </Field>
+        <Field label="Reception desk">
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(['A', 'B'] as const).map((desk_) => {
+              const on = desk_ === desk;
+              return (
+                <Pressable
+                  key={desk_}
+                  onPress={() => setDesk(desk_)}
+                  style={[
+                    styles.deskOption,
+                    { borderColor: on ? c.accent : c.line, backgroundColor: on ? c.accentSoft : c.bg1 },
+                  ]}
+                >
+                  <Text style={{ color: on ? c.accentHi : c.ink2, fontWeight: '600' }}>Desk {desk_}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Field>
+        <Button block loading={saving} onPress={save}>Save Changes</Button>
+        <Button variant="quiet" block onPress={onClose}>Cancel</Button>
+      </View>
+    </Sheet>
+  );
+}
+
+function ClubSheet({
+  visible,
+  onClose,
+  club,
+  hours,
+  saving,
+  onSave,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  club: { name: string; address: string; city: string; phone: string };
+  hours: ClubHours[];
+  saving: boolean;
+  onSave: (details: {
+    name: string;
+    address: string;
+    city: string;
+    phone: string;
+    monThuHours: string;
+    friHours: string;
+    satHours: string;
+  }) => Promise<void>;
+}) {
+  const { darkMode } = useApp();
+  const c = useColors(darkMode);
+  const [name, setName] = React.useState(club.name);
+  const [address, setAddress] = React.useState(club.address);
+  const [city, setCity] = React.useState(club.city);
+  const [phone, setPhone] = React.useState(club.phone);
+  const [monThu, setMonThu] = React.useState(hours[0]?.value ?? '');
+  const [fri, setFri] = React.useState(hours[1]?.value ?? '');
+  const [sat, setSat] = React.useState(hours[2]?.value ?? '');
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (visible) {
+      setName(club.name);
+      setAddress(club.address);
+      setCity(club.city);
+      setPhone(club.phone);
+      setMonThu(hours[0]?.value ?? '');
+      setFri(hours[1]?.value ?? '');
+      setSat(hours[2]?.value ?? '');
+      setError(null);
+    }
+  }, [visible, club.name, club.address, club.city, club.phone, hours]);
+
+  const save = async () => {
+    let bad: string | null = null;
+    if (!name.trim()) bad = 'Club name is required.';
+    else if (!address.trim()) bad = 'Club address is required.';
+    else if (!city.trim()) bad = 'City is required.';
+    else if (phone.replace(/\D/g, '').length < 7) bad = 'Enter a valid club phone number.';
+    else if (!monThu.trim() || !fri.trim() || !sat.trim()) bad = 'Fill in all three opening-hours entries.';
+    if (bad) {
+      setError(bad);
+      return;
+    }
+    setError(null);
+    await onSave({
+      name: name.trim(),
+      address: address.trim(),
+      city: city.trim(),
+      phone: phone.trim(),
+      monThuHours: monThu.trim(),
+      friHours: fri.trim(),
+      satHours: sat.trim(),
+    });
+  };
+
+  return (
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title="Club details"
+      desc="These details appear across the member app — membership screens, notices, and the reception card."
+    >
+      <View style={{ gap: 14, marginTop: 12 }}>
+        {error ? <Banner variant="error">{error}</Banner> : null}
+        <Field label="Club name">
+          <Control value={name} onChangeText={setName} placeholder="Meridian Athletic Club" />
+        </Field>
+        <Field label="Address">
+          <Control value={address} onChangeText={setAddress} placeholder="Street, area" />
+        </Field>
+        <Field label="City">
+          <Control value={city} onChangeText={setCity} placeholder="Cairo" />
+        </Field>
+        <Field label="Front desk phone" hint="Members see this on notices and membership screens.">
+          <Control value={phone} onChangeText={setPhone} inputMode="tel" placeholder="+20 2 2619 4400" />
+        </Field>
+        <Field label="Opening hours" hint="One entry per line: Mon–Thu, Fri, Sat.">
+          <Control value={monThu} onChangeText={setMonThu} placeholder="Mon–Thu · e.g. 6 AM–11 PM" />
+          <View style={{ height: 10 }} />
+          <Control value={fri} onChangeText={setFri} placeholder="Fri · e.g. 7 AM–9 PM" />
+          <View style={{ height: 10 }} />
+          <Control value={sat} onChangeText={setSat} placeholder="Sat · e.g. 6 AM–10 PM" />
+        </Field>
+        <Button block loading={saving} onPress={save}>Save Changes</Button>
+        <Button variant="quiet" block onPress={onClose}>Cancel</Button>
+      </View>
+    </Sheet>
   );
 }
 
@@ -85,28 +351,34 @@ function Row({
   title,
   sub,
   right,
+  onPress,
   c,
+  last,
 }: {
   icon: any;
   title: string;
   sub: string;
   right?: React.ReactNode;
-  c: ColorSet;
+  onPress?: () => void;
+  c: ReturnType<typeof useColors>;
+  last?: boolean;
 }) {
-  return (
-    <View style={[styles.row, { borderColor: c.line }]}>
+  const content = (
+    <View style={[styles.row, { borderColor: c.line }, last && { borderBottomWidth: 0 }]}>
       <Icon name={icon} size={19} color={c.ink3} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[styles.rowTitle, { color: c.ink }]} numberOfLines={1}>{title}</Text>
         <Text style={[styles.rowSub, { color: c.ink3 }]}>{sub}</Text>
       </View>
       {right}
+      {onPress && !right ? <Icon name="chev" size={16} color={c.ink4} /> : null}
     </View>
   );
+  if (onPress) return <Pressable onPress={onPress}>{content}</Pressable>;
+  return content;
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: spacing.screen },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -123,6 +395,19 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily,
     fontSize: 13,
     marginTop: 3,
+  },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  hint: {
+    fontFamily: typography.fontFamily,
+    fontSize: 11.5,
+    lineHeight: 16,
+    marginTop: 8,
+    paddingLeft: 3,
   },
   list: {
     borderRadius: radius.lg,
@@ -147,6 +432,14 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily,
     fontSize: 12.5,
     marginTop: 2,
+  },
+  deskOption: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   version: {
     fontFamily: typography.fontFamily,

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Link, type Href } from 'expo-router';
 import { colors, useColors, spacing, typography, tracking } from '@/theme/tokens';
 import { Icon, IconName } from './Icon';
 import { IconButton } from './Button';
@@ -14,7 +15,7 @@ import { useApp } from '@/data/store';
 
 export function StatusBar({ dark = false }: { dark?: boolean }) {
   const insets = useSafeAreaInsets();
-  const ink = dark ? colors.dkInk : colors.ink;
+  const ink = useColors(dark).ink;
 
   if (Platform.OS !== 'web') {
     return <View style={{ height: insets.top }} />;
@@ -146,17 +147,17 @@ export interface TabDef {
   key: string;
   label: string;
   icon: IconName;
+  href: Href;
 }
 
 export interface TabBarProps {
   tabs: TabDef[];
   active: string;
-  onChange: (key: string) => void;
-  fab?: { icon: IconName; onPress: () => void };
+  fab?: { icon: IconName; href: Href };
   dark?: boolean;
 }
 
-export function TabBar({ tabs, active, onChange, fab, dark = false }: TabBarProps) {
+export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
   const insets = useSafeAreaInsets();
   const { darkMode } = useApp();
   const isDark = dark || darkMode;
@@ -168,22 +169,22 @@ export function TabBar({ tabs, active, onChange, fab, dark = false }: TabBarProp
   const TabItem = ({ t }: { t: TabDef }) => {
     const on = t.key === active;
     return (
-      <Pressable
-        onPress={() => onChange(t.key)}
-        style={{ flex: 1, alignItems: 'center', gap: 5, paddingVertical: 6 }}
-      >
-        <Icon name={t.icon} size={23} color={on ? c.accent : c.ink3} stroke={on ? 1.9 : 1.6} />
-        <Text
-          style={{
-            fontFamily: typography.fontFamily,
-            fontSize: 10.5,
-            fontWeight: on ? '600' : '500',
-            color: on ? c.accent : c.ink3,
-          }}
-        >
-          {t.label}
-        </Text>
-      </Pressable>
+      <Link href={t.href} asChild>
+        <Pressable style={{ flex: 1, alignItems: 'center', gap: 5, paddingTop: 3 }}>
+          <Icon name={t.icon} size={22} color={on ? c.accentHi : c.ink4} stroke={on ? 2 : 1.6} />
+          <Text
+            style={{
+              fontFamily: typography.fontFamily,
+              fontSize: 10,
+              fontWeight: '600',
+              letterSpacing: 0.3,
+              color: on ? c.accentHi : c.ink4,
+            }}
+          >
+            {t.label}
+          </Text>
+        </Pressable>
+      </Link>
     );
   };
 
@@ -191,42 +192,46 @@ export function TabBar({ tabs, active, onChange, fab, dark = false }: TabBarProp
     <View
       style={{
         flexDirection: 'row',
-        alignItems: 'flex-start',
-        backgroundColor: c.bg1,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: Platform.OS === 'web' ? 'rgba(17, 20, 27, 0.94)' : c.bg1,
         borderTopWidth: 1,
         borderTopColor: c.line,
         paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 8,
-        paddingTop: 6,
-        paddingHorizontal: 8,
+        paddingTop: 8,
+        paddingHorizontal: 14,
       }}
     >
       {left.map((t) => (
         <TabItem key={t.key} t={t} />
       ))}
       {fab ? (
-        <View style={{ width: 76, alignItems: 'center' }}>
-          <Pressable
-            onPress={fab.onPress}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: c.accent,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: -22,
-              shadowColor: c.accentGlow,
-              shadowOpacity: 1,
-              shadowRadius: 24,
-              shadowOffset: { width: 0, height: 8 },
-              elevation: 8,
-            }}
-          >
-            <Icon name={fab.icon} size={26} color={c.accentInk} />
-          </Pressable>
+        <View style={{ width: 68, alignItems: 'center' }}>
+          <Link href={fab.href} asChild>
+            <Pressable
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 18,
+                backgroundColor: c.accent,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: -24,
+                borderWidth: 4,
+                borderColor: c.bg,
+                shadowColor: c.accentGlow,
+                shadowOpacity: 0.9,
+                shadowRadius: 20,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 8,
+              }}
+            >
+              <Icon name={fab.icon} size={24} color={c.accentInk} />
+            </Pressable>
+          </Link>
         </View>
       ) : (
-        <View style={{ width: 76 }} />
+        <View style={{ width: 68 }} />
       )}
       {right.map((t) => (
         <TabItem key={t.key} t={t} />

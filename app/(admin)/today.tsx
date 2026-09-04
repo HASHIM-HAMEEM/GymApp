@@ -1,24 +1,23 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, tracking, radius } from '@/theme/tokens';
+import { useColors, radius, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
-import { Monogram, StatusDot, SectionLabel, Tag } from '@/components/Tag';
+import { Monogram, SectionLabel, StatusDot, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
-import { useApp } from '@/data/store';
-import { expiringSoon, expiredMembers, activeMembers, recentCheckIns } from '@/data/members';
+import { useApp } from '@/providers/AppProvider';
+import { useDashboard } from '@/data/api/queries';
 import { fmtShort, daysBetween, TODAY } from '@/data/format';
+import { CLUB } from '@/data/plans';
 import type { ColorSet } from '@/theme/tokens';
 
 export default function AdminToday() {
   const router = useRouter();
   const { adminName, darkMode } = useApp();
+  const dashboardQuery = useDashboard();
   const c = useColors(darkMode);
-  const expiring = expiringSoon();
-  const expired = expiredMembers();
-  const active = activeMembers();
-  const recent = recentCheckIns(5);
+  const data = dashboardQuery.data;
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -27,11 +26,21 @@ export default function AdminToday() {
     return 'Good evening';
   })();
 
+  const expiring = data?.expiring_list ?? [];
+  const recent = data?.recent_check_ins ?? [];
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title="Today" />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body>
+
+      <View style={{ gap: 4 }}>
+        <Text style={[styles.hi, { color: c.ink }]}>
+          {greeting}{adminName ? `, ${adminName.split(' ')[0]}` : ''}
+        </Text>
+        <Text style={[styles.sub, { color: c.ink3 }]}>{CLUB.name} · front desk</Text>
+      </View>
 
       <View style={styles.actions}>
         <Button variant="secondary" icon="userplus" onPress={() => router.push('/member-new')}>New member</Button>
@@ -42,7 +51,7 @@ export default function AdminToday() {
         <StatCell
           label="Active"
           dot="ok"
-          value={active.length}
+          value={data?.active_members ?? 0}
           sub="in good standing"
           c={c}
           borderRight
@@ -51,7 +60,7 @@ export default function AdminToday() {
         <StatCell
           label="Expiring"
           dot="warn"
-          value={expiring.length}
+          value={data?.expiring_soon ?? 0}
           sub="within 7 days"
           valueColor={c.warn}
           c={c}
@@ -60,7 +69,7 @@ export default function AdminToday() {
         <StatCell
           label="Expired"
           dot="bad"
-          value={expired.length}
+          value={data?.expired_members ?? 0}
           sub="access paused"
           valueColor={c.bad}
           c={c}
@@ -69,11 +78,31 @@ export default function AdminToday() {
         <StatCell
           label="Check-ins"
           icon="checkc"
-          value={recent.length}
-          sub={recent[0] ? `last ${recent[0].visit.time}` : 'none today'}
+          value={data?.check_ins_today ?? 0}
+          sub={recent[0] ? `last ${new Date(recent[0].checked_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'none today'}
           c={c}
         />
       </View>
+
+      {(data?.pending_invitations ?? 0) > 0 ? (
+        <Pressable
+          onPress={() => router.push('/(admin)/members')}
+          style={({ pressed }) => [
+            styles.inviteRow,
+            { borderColor: c.line, backgroundColor: c.bg1 },
+            pressed && { opacity: 0.6 },
+          ]}
+        >
+          <Monogram text="IV" size={36} fontSize={12} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[styles.inviteTitle, { color: c.ink }]}>Invitations waiting</Text>
+            <Text style={[styles.inviteSub, { color: c.ink3 }]}>
+              {data?.pending_invitations} member{data?.pending_invitations === 1 ? '' : 's'} {data?.pending_invitations === 1 ? "hasn't" : "haven't"} accepted their email invitation. Resend from their profile.
+            </Text>
+          </View>
+          <Icon name="chev" size={16} color={c.ink4} />
+        </Pressable>
+      ) : null}
 
       <View>
         <View style={styles.sectionHead}>
@@ -89,26 +118,26 @@ export default function AdminToday() {
         ) : (
           <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
             {expiring.slice(0, 4).map((m) => {
-              const days = m.membership ? daysBetween(m.membership.expiryDate, TODAY) : 0;
+              const days = m.end_date ? daysBetween(m.end_date, TODAY) : 0;
               return (
                 <Pressable
-                  key={m.id}
-                  onPress={() => router.push({ pathname: '/member-detail', params: { id: m.id } })}
+                  key={m.member_id}
+                  onPress={() => router.push({ pathname: '/member-detail', params: { id: m.member_number } })}
                   style={({ pressed }) => [styles.expRow, { borderColor: c.line }, pressed && { opacity: 0.6 }]}
                 >
                   <View style={styles.expTop}>
                     <View style={styles.expLeft}>
-                      <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={36} fontSize={12} />
+                      <Monogram text={`${m.first_name[0]}${m.last_name[0]}`.toUpperCase()} size={36} fontSize={12} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.expName, { color: c.ink }]} numberOfLines={1}>{m.firstName} {m.lastName}</Text>
-                        <Text style={[styles.expSub, { color: c.ink3 }]} numberOfLines={1}>{m.membership?.planName ?? '-'} · {m.id}</Text>
+                        <Text style={[styles.expName, { color: c.ink }]} numberOfLines={1}>{m.first_name} {m.last_name}</Text>
+                        <Text style={[styles.expSub, { color: c.ink3 }]} numberOfLines={1}>{m.plan_name ?? 'No plan'} · {m.member_number}</Text>
                       </View>
                     </View>
                     <Tag variant="warn">{Math.max(0, days)}d</Tag>
                   </View>
                   <View style={styles.expBottom}>
-                    <Text style={[styles.expDate, { color: c.ink2 }]}>Ends {m.membership ? fmtShort(m.membership.expiryDate) : '-'}</Text>
-                    <Button size="sm" onPress={() => router.push({ pathname: '/renew', params: { id: m.id } })}>Renew</Button>
+                    <Text style={[styles.expDate, { color: c.ink2 }]}>Ends {m.end_date ? fmtShort(m.end_date) : '-'}</Text>
+                    <Button size="sm" onPress={() => router.push({ pathname: '/renew', params: { id: m.member_number } })}>Renew</Button>
                   </View>
                 </Pressable>
               );
@@ -125,14 +154,18 @@ export default function AdminToday() {
           </View>
         ) : (
           <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
-            {recent.map(({ member, visit }) => (
-              <View key={member.id + visit.id} style={[styles.ciRow, { borderColor: c.line }]}>
-                <Monogram text={`${member.firstName[0]}${member.lastName[0]}`.toUpperCase()} size={32} fontSize={11} />
+            {recent.map((ci) => (
+              <View key={ci.member_number + ci.checked_in_at} style={[styles.ciRow, { borderColor: c.line }]}>
+                <Monogram text={`${ci.first_name[0]}${ci.last_name[0]}`.toUpperCase()} size={32} fontSize={11} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.ciName, { color: c.ink }]} numberOfLines={1}>{member.firstName} {member.lastName}</Text>
-                  <Text style={[styles.ciSub, { color: c.ink3 }]} numberOfLines={1}>Reception {visit.reception}</Text>
+                  <Text style={[styles.ciName, { color: c.ink }]} numberOfLines={1}>{ci.first_name} {ci.last_name}</Text>
+                  <Text style={[styles.ciSub, { color: c.ink3 }]} numberOfLines={1}>
+                    {ci.source === 'qr' ? 'QR scan' : 'Front desk'} · Reception {ci.reception ?? 'A'}
+                  </Text>
                 </View>
-                <Text style={[styles.ciTime, { color: c.ink }]}>{visit.time}</Text>
+                <Text style={[styles.ciTime, { color: c.ink }]}>
+                  {new Date(ci.checked_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                </Text>
               </View>
             ))}
           </View>
@@ -173,7 +206,6 @@ function StatCell({ label, dot, icon, value, sub, valueColor, c, borderRight, bo
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: spacing.screen },
   hi: {
     fontFamily: typography.fontFamily,
     fontSize: 24,
@@ -183,7 +215,6 @@ const styles = StyleSheet.create({
   sub: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
-    marginTop: 4,
   },
   actions: { flexDirection: 'row', gap: 10 },
   statGrid: {
@@ -224,6 +255,25 @@ const styles = StyleSheet.create({
   statSub: {
     fontFamily: typography.fontFamily,
     fontSize: 12,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: 14,
+  },
+  inviteTitle: {
+    fontFamily: typography.fontFamily,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  inviteSub: {
+    fontFamily: typography.fontFamily,
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginTop: 2,
   },
   sectionHead: {
     flexDirection: 'row',

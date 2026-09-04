@@ -9,21 +9,11 @@ export default function RootHTML({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
         <title>Meridian Athletic Club</title>
 
-        {/* General Sans — Indian Type Foundry / Fontshare (free) */}
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap"
-          rel="stylesheet"
-        />
-        {/* Newsreader — Google Fonts (serif for editorial / notice body) */}
+        {/* Fonts — Space Grotesk, Inter, JetBrains Mono, Newsreader, IBM Plex Sans Arabic */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap"
-          rel="stylesheet"
-        />
-        {/* IBM Plex Sans Arabic — for Arabic member names */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
 
@@ -38,7 +28,9 @@ export default function RootHTML({ children }: { children: React.ReactNode }) {
           }
           body {
             overflow: hidden;
-            background: #F5F3EC;
+            background: #0A0A0A;
+            color: #FAFAFA;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           }
           #root {
             display: flex;
@@ -50,9 +42,10 @@ export default function RootHTML({ children }: { children: React.ReactNode }) {
             font-variant-numeric: tabular-nums;
             font-feature-settings: 'tnum' 1;
           }
-          /* Proper text selection color — forest tint */
+          /* Clean white text selection */
           ::selection {
-            background: rgba(45, 92, 72, 0.16);
+            background: rgba(255, 255, 255, 0.16);
+            color: #FFFFFF;
           }
           /* Hide scrollbars on web for native feel */
           ::-webkit-scrollbar { display: none; }

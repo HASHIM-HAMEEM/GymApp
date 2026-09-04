@@ -1,21 +1,32 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, tracking, radius } from '@/theme/tokens';
+import { useColors, radius, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
 import { Monogram } from '@/components/Tag';
 import { Switch } from '@/components/Overlays';
 import { Icon } from '@/components/Icon';
-import { useApp } from '@/data/store';
+import { useApp } from '@/providers/AppProvider';
+import { useCurrentMember } from '@/data/api/queries';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { currentMember, signOut, darkMode, toggleDarkMode } = useApp();
+  const { signOut, darkMode, toggleDarkMode, authError, clearAuthError } = useApp();
+  const memberQuery = useCurrentMember();
   const c = useColors(darkMode);
-  if (!currentMember) return null;
-  const m = currentMember;
-  const initials = `${m.firstName[0] ?? ''}${m.lastName[0] ?? ''}`.toUpperCase();
+  const m = memberQuery.data ?? null;
+
+  const initials = m ? `${m.firstName[0] ?? ''}${m.lastName[0] ?? ''}`.toUpperCase() : '··';
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.replace('/welcome');
+    } catch {
+      clearAuthError();
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -23,31 +34,44 @@ export default function ProfileScreen() {
         title="Profile"
         right={<TextButton onPress={() => router.push('/edit-profile')}>Edit</TextButton>}
       />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Body>
+          {authError ? (
+            <Text style={{ color: c.bad, fontSize: 13, lineHeight: 19 }}>{authError}</Text>
+          ) : null}
+
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 6 }}>
             <Monogram text={initials} size={62} fontSize={20} />
             <View>
-              <Text style={[styles.name, { color: c.ink }]}>{m.firstName} {m.lastName}</Text>
+              <Text style={[styles.name, { color: c.ink }]}>
+                {m ? `${m.firstName} ${m.lastName}` : 'Loading…'}
+              </Text>
               <Text style={[styles.sub, { color: c.ink3, fontFamily: typography.mono }]}>
-                {m.id} · joined {m.memberSince}
+                {m ? `${m.id} · joined ${m.memberSince}` : ''}
               </Text>
             </View>
           </View>
 
           <View style={[styles.list, { borderColor: c.line, backgroundColor: c.bg1 }]}>
-            <ProfileRow label="Phone" value={m.phone} />
-            <ProfileRow label="Email" value={m.email || '—'} />
-            <ProfileRow label="Date of birth" value={m.dateOfBirth || '—'} />
-            <ProfileRow label="Aadhar" value={m.aadharNumber || '—'} />
-            <ProfileRow label="Address" value={m.address || '—'} last />
+            <ProfileRow label="Email" value={m?.email ?? ''} />
+            <ProfileRow label="Phone" value={m?.phone || '—'} />
+            <ProfileRow label="Date of birth" value={m?.dateOfBirth || '—'} />
+            {m?.emergencyName ? (
+              <ProfileRow label="Emergency" value={`${m.emergencyName} · ${m.emergencyPhone ?? ''}`} />
+            ) : null}
+            <ProfileRow label="National ID" value={m?.nationalId || '—'} />
+            <ProfileRow label="Address" value={m?.address || '—'} last />
           </View>
 
           <View style={[styles.list, { borderColor: c.line, backgroundColor: c.bg1 }]}>
             <IconRow icon="moon" label="Dark mode" value={darkMode ? 'On' : 'Off'} right={<Switch on={darkMode} onChange={toggleDarkMode} />} />
             <IconRow icon="globe" label="Language" value="English" />
             <IconRow icon="shield" label="Privacy & data" />
-            <IconRow icon="logout" label="Sign out" danger onPress={() => { signOut(); router.replace('/'); }} last />
+            <IconRow icon="logout" label="Sign out" danger onPress={handleSignOut} last />
           </View>
         </Body>
       </ScrollView>

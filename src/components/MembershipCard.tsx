@@ -1,14 +1,14 @@
 import * as React from 'react';
-import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
-import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
+import { View, Text, Pressable, StyleSheet, ViewStyle, Platform } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
+import { Link, type Href } from 'expo-router';
+import { colors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { Logo } from './Logo';
-import { Icon } from './Icon';
 import { Tag, TagVariant } from './Tag';
-import { useApp } from '@/data/store';
 
 /* ------------------------------------------------------------------ */
-/* Membership card — dark physical object, always dark                 */
-/* V2: radial + linear gradient, white wordmark, plan chip.            */
+/* Membership card — signature luxury physical object, always dark     */
+/* Ported with exact radial + linear gradients and mini QR plate.     */
 /* ------------------------------------------------------------------ */
 
 export interface MembershipCardProps {
@@ -17,9 +17,12 @@ export interface MembershipCardProps {
   validUntil?: string;
   memberSince?: string;
   memberId: string;
+  variant?: 'active' | 'warn' | 'bad';
   tag?: { label: string; variant?: TagVariant };
   onShowQr?: () => void;
+  href?: Href;
   showQr?: boolean;
+  qrValue?: string;
   style?: ViewStyle;
 }
 
@@ -29,153 +32,210 @@ export function MembershipCard({
   validUntil,
   memberSince,
   memberId,
+  variant = 'active',
   tag,
   onShowQr,
+  href,
   showQr = true,
+  qrValue,
   style,
 }: MembershipCardProps) {
-  return (
+  const borderColor =
+    variant === 'warn'
+      ? 'rgba(222, 184, 124, 0.38)'
+      : variant === 'bad'
+      ? 'rgba(222, 138, 128, 0.38)'
+      : 'rgba(255, 255, 255, 0.2)';
+
+  const cardGradientStyle = Platform.select({
+    web: {
+      backgroundImage:
+        variant === 'warn'
+          ? 'radial-gradient(130% 150% at 100% 0%, rgba(222, 184, 124, .13) 0%, rgba(222, 184, 124, 0) 52%), linear-gradient(155deg, #211C14 0%, #16130D 58%, #100E0A 100%)'
+          : variant === 'bad'
+          ? 'radial-gradient(130% 150% at 100% 0%, rgba(222, 138, 128, .13) 0%, rgba(222, 138, 128, 0) 52%), linear-gradient(155deg, #221415 0%, #171112 58%, #110D0D 100%)'
+          : 'radial-gradient(130% 150% at 100% 0%, rgba(255, 255, 255, .1) 0%, rgba(255, 255, 255, 0) 52%), linear-gradient(155deg, #242424 0%, #161616 58%, #101010 100%)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 34px rgba(0,0,0,0.38)',
+    } as any,
+    default: {
+      backgroundColor:
+        variant === 'warn' ? '#1B1610' : variant === 'bad' ? '#1C1213' : '#161616',
+    },
+  });
+
+  const qrPayload = qrValue ?? `MERIDIAN|${memberId}|INACTIVE`;
+
+  const CardInner = (
     <View
       style={[
-        {
-          backgroundColor: '#161616',
-          borderRadius: 22,
-          padding: 22,
-          paddingBottom: 20,
-          overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.2)',
-          minHeight: 188,
-          justifyContent: 'space-between',
-        },
+        styles.card,
+        cardGradientStyle,
+        { borderColor },
         style,
       ]}
     >
       <View>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+        <View style={styles.topRow}>
+          <View style={styles.brandRow}>
             <Logo size={20} color="#FFFFFF" strokeWidth={2.6} />
-            <Text
-              style={{
-                fontFamily: typography.display,
-                fontSize: 11,
-                fontWeight: '600',
-                letterSpacing: 0.24,
-                color: 'rgba(242,244,248,0.92)',
-                textTransform: 'uppercase',
-              }}
-            >
-              Meridian
-            </Text>
+            <Text style={styles.wordmark}>Meridian</Text>
           </View>
-          <Text
-            style={{
-              fontFamily: typography.display,
-              fontSize: 10.5,
-              fontWeight: '600',
-              letterSpacing: 0.1,
-              color: '#EDEDED',
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.28)',
-              paddingHorizontal: 11,
-              paddingVertical: 6,
-              borderRadius: 999,
-              textTransform: 'uppercase',
-            }}
-          >
-            {plan}
-          </Text>
+          <Text style={styles.planChip}>{plan}</Text>
         </View>
 
-        <Text
-          style={{
-            fontFamily: typography.display,
-            fontSize: 21,
-            fontWeight: '600',
-            letterSpacing: -0.01,
-            color: '#F2F4F8',
-            marginTop: 22,
-            lineHeight: 26,
-          }}
-          numberOfLines={2}
-        >
-          {name}
-        </Text>
-        <Text
-          style={{
-            fontFamily: typography.mono,
-            fontSize: 12.5,
-            letterSpacing: 0.08,
-            color: 'rgba(242,244,248,0.55)',
-            marginTop: 5,
-          }}
-        >
-          {memberId}
-        </Text>
+        <View style={styles.holder}>
+          <Text style={styles.holderName} numberOfLines={2}>
+            {name}
+          </Text>
+          <Text style={styles.holderId}>{memberId}</Text>
+        </View>
       </View>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          marginTop: 20,
-          paddingTop: 16,
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(242,244,248,0.14)',
-        }}
-      >
-        <View>
-          <Text
-            style={{
-              fontFamily: typography.fontFamily,
-              fontSize: 9.5,
-              fontWeight: '600',
-              letterSpacing: 0.16,
-              color: 'rgba(242,244,248,0.45)',
-              textTransform: 'uppercase',
-            }}
-          >
-            Valid until
-          </Text>
-          <Text
-            style={{
-              fontFamily: typography.display,
-              fontSize: 14,
-              fontWeight: '600',
-              color: '#F2F4F8',
-              marginTop: 4,
-            }}
-          >
-            {validUntil ?? memberSince}
-          </Text>
+      <View style={styles.footRow}>
+        <View style={styles.stat}>
+          <Text style={styles.statCap}>Valid until</Text>
+          <Text style={styles.statVal}>{validUntil ?? memberSince ?? '—'}</Text>
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          {tag ? (
-            <Tag variant={tag.variant ?? 'accent'}>{tag.label}</Tag>
-          ) : null}
-          {showQr && onShowQr ? (
-            <Pressable
-              onPress={onShowQr}
-              style={({ pressed }) => ({
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.2)',
-                opacity: pressed ? 0.7 : 1,
-              })}
-            >
-              <Icon name="qr" size={22} color="#F2F4F8" />
-            </Pressable>
-          ) : null}
-        </View>
+        {showQr ? (
+          <View style={styles.qrPlate}>
+            <QRCode
+              value={qrPayload}
+              size={34}
+              color="#10131A"
+              backgroundColor={colors.plate}
+              quietZone={4}
+              ecl="M"
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );
+
+  if (href) {
+    return (
+      <Link href={href} asChild>
+        <Pressable style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.985 : 1 }] }]}>
+          {CardInner}
+        </Pressable>
+      </Link>
+    );
+  }
+
+  if (onShowQr) {
+    return (
+      <Pressable
+        onPress={onShowQr}
+        style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.985 : 1 }] }]}
+      >
+        {CardInner}
+      </Pressable>
+    );
+  }
+
+  return CardInner;
 }
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 22,
+    padding: 22,
+    paddingBottom: 20,
+    overflow: 'hidden',
+    borderWidth: 1,
+    minHeight: 188,
+    justifyContent: 'space-between',
+    backgroundColor: '#161616',
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  wordmark: {
+    fontFamily: typography.display,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 2.6,
+    color: 'rgba(242,244,248,0.92)',
+    textTransform: 'uppercase',
+  },
+  planChip: {
+    fontFamily: typography.display,
+    fontSize: 10.5,
+    fontWeight: '600',
+    letterSpacing: 1.1,
+    color: '#EDEDED',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 999,
+    textTransform: 'uppercase',
+  },
+  holder: {
+    marginTop: 22,
+  },
+  holderName: {
+    fontFamily: typography.display,
+    fontSize: 21,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    color: '#F2F4F8',
+    lineHeight: 26,
+  },
+  holderId: {
+    fontFamily: typography.mono,
+    fontSize: 12.5,
+    letterSpacing: 1.0,
+    color: 'rgba(242,244,248,0.55)',
+    marginTop: 5,
+  },
+  footRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  stat: {
+    gap: 4,
+  },
+  statCap: {
+    fontFamily: typography.fontFamily,
+    fontSize: 9.5,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    color: 'rgba(242,244,248,0.45)',
+    textTransform: 'uppercase',
+  },
+  statVal: {
+    fontFamily: typography.display,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#F2F4F8',
+  },
+  qrPlate: {
+    width: 46,
+    height: 46,
+    borderRadius: 11,
+    backgroundColor: colors.plate,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }
+      : {
+          shadowColor: '#000000',
+          shadowOpacity: 0.3,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 4,
+        }),
+  },
+});

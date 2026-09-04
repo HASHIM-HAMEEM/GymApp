@@ -4,6 +4,8 @@ import { Svg, G, Circle } from 'react-native-svg';
 import { useColors, spacing, typography, radius } from '@/theme/tokens';
 import { Tag, TagVariant } from './Tag';
 
+import { useApp } from '@/data/store';
+
 export type RingVariant = 'ok' | 'warn' | 'bad' | 'muted';
 
 export interface RingCardProps {
@@ -20,7 +22,8 @@ export interface RingCardProps {
 const CIRCUMFERENCE = 2 * Math.PI * 46; // r=46
 
 export function RingCard({ value, unit, variant, tag, title, subtitle, progress, children }: RingCardProps) {
-  const c = useColors(true); // ring cards always sit on bg-1 in dark / light
+  const { darkMode } = useApp();
+  const c = useColors(darkMode);
   const offset = CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, progress)));
 
   const stroke =
@@ -33,7 +36,7 @@ export function RingCard({ value, unit, variant, tag, title, subtitle, progress,
       <View style={styles.row}>
         <View style={styles.ring}>
           <Svg width={108} height={108} viewBox="0 0 108 108">
-            <G rotation={-90} originX={54} originY={54}>
+            <G transform="rotate(-90 54 54)">
               <Circle
                 cx={54}
                 cy={54}
@@ -79,9 +82,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: radius.lg,
     padding: 20,
-    gap: 18,
+    gap: 16,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 22 },
   ring: { width: 108, height: 108, position: 'relative' },
   center: {
     position: 'absolute',
@@ -94,30 +97,31 @@ const styles = StyleSheet.create({
   },
   n: {
     fontFamily: typography.display,
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '600',
-    letterSpacing: -0.02,
-    lineHeight: 30,
+    letterSpacing: -0.6,
+    lineHeight: 34,
   },
   u: {
     fontFamily: typography.fontFamily,
     fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 0.1,
+    letterSpacing: 1.0,
     textTransform: 'uppercase',
-    marginTop: 5,
+    marginTop: 4,
   },
-  info: { flex: 1, minWidth: 0, gap: 6 },
+  info: { flex: 1, minWidth: 0, justifyContent: 'center' },
   title: {
-    fontFamily: typography.fontFamily,
+    fontFamily: typography.display,
     fontSize: 17,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 8,
+    marginBottom: 3,
   },
   subtitle: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   tail: { marginTop: 2 },
 });

@@ -1,10 +1,11 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, tracking, radius } from '@/theme/tokens';
+import { useColors, radius, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { EmptyState } from '@/components/Surfaces';
-import { useApp } from '@/data/store';
+import { useNotices } from '@/data/api/queries';
+import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
 import type { Notice } from '@/data/types';
 
@@ -25,8 +26,10 @@ function catColor(c: any, category: Notice['category']) {
 
 export default function NoticesScreen() {
   const router = useRouter();
-  const { notices, darkMode } = useApp();
+  const noticesQuery = useNotices();
+  const { darkMode } = useApp();
   const c = useColors(darkMode);
+  const notices = noticesQuery.data ?? [];
   const unreadCount = notices.filter((n) => !n.read).length;
 
   if (notices.length === 0) {
@@ -48,7 +51,11 @@ export default function NoticesScreen() {
           ) : null
         }
       />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
         <Body>
           <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
             {notices.map((n, i) => {

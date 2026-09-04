@@ -9,7 +9,7 @@ export default function Splash() {
 
   React.useEffect(() => {
     const t = setTimeout(() => {
-      router.replace('/signin');
+      router.replace('/welcome');
     }, 2200);
     return () => clearTimeout(t);
   }, [router]);
