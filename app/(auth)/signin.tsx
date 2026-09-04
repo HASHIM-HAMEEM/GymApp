@@ -14,7 +14,7 @@ import { useApp } from '@/providers/AppProvider';
  */
 export default function SignIn() {
   const router = useRouter();
-  const { darkMode, signIn, authError, clearAuthError, configurationError } = useApp();
+  const { darkMode, signIn, authError, clearAuthError, configurationError, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -26,7 +26,7 @@ export default function SignIn() {
 
   const submit = async () => {
     if (!emailValid) {
-      setFormError('Enter the email address reception has on file — the address is missing its domain.');
+      setFormError(t('auth.emailDomainError'));
       return;
     }
     setFormError(null);
@@ -47,26 +47,26 @@ export default function SignIn() {
       <AppBar onBack={() => router.back()} />
       <View style={styles.body}>
         <View>
-          <Text style={[styles.slabel, { color: c.ink3 }]}>Sign in</Text>
-          <Text style={[styles.h1, { color: c.ink }]}>Your account</Text>
-          <Text style={[styles.lede, { color: c.ink3 }]}>
-            Sign in with the email and password you set when you accepted your membership invitation.
+          <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.signIn')}</Text>
+          <Text style={[styles.h1, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.yourAccount')}</Text>
+          <Text style={[styles.lede, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {t('auth.signInIntro')}
           </Text>
         </View>
 
         <Field
-          label="Email"
+          label={t('auth.email')}
           error={formError && !emailValid ? formError : undefined}
-          hint="The address where you received your Meridian invitation."
+          hint={t('auth.emailHint')}
         >
           <Control
-            accessibilityLabel="Email"
+            accessibilityLabel={t('auth.email')}
             value={email}
             onChangeText={(t) => {
               setEmail(t);
               if (formError) setFormError(null);
             }}
-            placeholder="name@example.com"
+            placeholder={t('auth.emailPlaceholder')}
             inputMode="email"
             autoCapitalize="none"
             autoCorrect={false}
@@ -77,12 +77,12 @@ export default function SignIn() {
           />
         </Field>
 
-        <Field label="Password">
+        <Field label={t('auth.password')}>
           <Control
-            accessibilityLabel="Password"
+            accessibilityLabel={t('auth.password')}
             value={password}
             onChangeText={setPassword}
-            placeholder="Your password"
+            placeholder={t('auth.passwordPlaceholder')}
             secure
             autoComplete="current-password"
             textContentType="password"
@@ -92,12 +92,16 @@ export default function SignIn() {
         </Field>
 
         {authError || configurationError ? (
-          <Banner variant="error">{authError ?? configurationError}</Banner>
+          <Banner variant="error" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <Text style={{ writingDirection: isRtl ? 'rtl' : 'ltr' }}>
+              {authError ? t('auth.invalidCredentials') : t('common.configurationError')}
+            </Text>
+          </Banner>
         ) : null}
 
         <View style={styles.foot}>
           <Button block loading={loading} disabled={!canSubmit} onPress={submit}>
-            Sign in
+            {t('auth.signIn')}
           </Button>
           <Button
             variant="quiet"
@@ -105,7 +109,7 @@ export default function SignIn() {
             textStyle={{ fontSize: 13.5 }}
             href="/forgot-password"
           >
-            Forgot your password?
+            {t('auth.forgotPassword')}
           </Button>
         </View>
       </View>

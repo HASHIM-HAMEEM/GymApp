@@ -1,78 +1,77 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, radius, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
 import { Monogram } from '@/components/Tag';
-import { Switch } from '@/components/Overlays';
-import { Icon } from '@/components/Icon';
+import { DeveloperCredit, PreferencesGroup } from '@/components/SettingsSection';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember } from '@/data/api/queries';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { signOut, darkMode, toggleDarkMode, authError, clearAuthError } = useApp();
+  const { signOut, darkMode, authError, clearAuthError, isRtl, t } = useApp();
   const memberQuery = useCurrentMember();
   const c = useColors(darkMode);
   const m = memberQuery.data ?? null;
+  const [signingOut, setSigningOut] = React.useState(false);
 
   const initials = m ? `${m.firstName[0] ?? ''}${m.lastName[0] ?? ''}`.toUpperCase() : '··';
 
   const handleSignOut = async () => {
+    setSigningOut(true);
     try {
       await signOut();
       router.replace('/welcome');
     } catch {
       clearAuthError();
+    } finally {
+      setSigningOut(false);
     }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
-        title="Profile"
-        right={<TextButton onPress={() => router.push('/edit-profile')}>Edit</TextButton>}
+        title={t('profile.title')}
+        right={<TextButton onPress={() => router.push('/edit-profile')}>{t('settings.edit')}</TextButton>}
       />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        <Body>
+        <Body style={{ gap: 16 }}>
           {authError ? (
             <Text style={{ color: c.bad, fontSize: 13, lineHeight: 19 }}>{authError}</Text>
           ) : null}
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 6 }}>
+          <View style={[styles.head, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
             <Monogram text={initials} size={62} fontSize={20} />
-            <View>
-              <Text style={[styles.name, { color: c.ink }]}>
-                {m ? `${m.firstName} ${m.lastName}` : 'Loading…'}
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.name, { color: c.ink, textAlign: isRtl ? 'right' : 'left' }]}>
+                {m ? `${m.firstName} ${m.lastName}` : t('common.loading')}
               </Text>
-              <Text style={[styles.sub, { color: c.ink3, fontFamily: typography.mono }]}>
-                {m ? `${m.id} · joined ${m.memberSince}` : ''}
+              <Text style={[styles.sub, { color: c.ink3, textAlign: isRtl ? 'right' : 'left' }]}>
+                {m ? `${m.id} · ${t('profile.joined', { date: m.memberSince })}` : ''}
               </Text>
             </View>
           </View>
 
           <View style={[styles.list, { borderColor: c.line, backgroundColor: c.bg1 }]}>
-            <ProfileRow label="Email" value={m?.email ?? ''} />
-            <ProfileRow label="Phone" value={m?.phone || '—'} />
-            <ProfileRow label="Date of birth" value={m?.dateOfBirth || '—'} />
+            <ProfileRow label={t('profile.email')} value={m?.email ?? ''} />
+            <ProfileRow label={t('profile.phone')} value={m?.phone || '—'} />
+            <ProfileRow label={t('profile.dateOfBirth')} value={m?.dateOfBirth || '—'} />
             {m?.emergencyName ? (
-              <ProfileRow label="Emergency" value={`${m.emergencyName} · ${m.emergencyPhone ?? ''}`} />
+              <ProfileRow label={t('profile.emergency')} value={`${m.emergencyName} · ${m.emergencyPhone ?? ''}`} />
             ) : null}
-            <ProfileRow label="National ID" value={m?.nationalId || '—'} />
-            <ProfileRow label="Address" value={m?.address || '—'} last />
+            <ProfileRow label={t('profile.nationalId')} value={m?.nationalId || '—'} />
+            <ProfileRow label={t('profile.address')} value={m?.address || '—'} last />
           </View>
 
-          <View style={[styles.list, { borderColor: c.line, backgroundColor: c.bg1 }]}>
-            <IconRow icon="moon" label="Dark mode" value={darkMode ? 'On' : 'Off'} right={<Switch on={darkMode} onChange={toggleDarkMode} />} />
-            <IconRow icon="globe" label="Language" value="English" />
-            <IconRow icon="shield" label="Privacy & data" />
-            <IconRow icon="logout" label="Sign out" danger onPress={handleSignOut} last />
-          </View>
+          <PreferencesGroup onSignOut={() => void handleSignOut()} signingOut={signingOut} />
+          <DeveloperCredit />
         </Body>
       </ScrollView>
     </View>
@@ -80,57 +79,36 @@ export default function ProfileScreen() {
 }
 
 function ProfileRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   return (
-    <View style={[styles.prow, { borderBottomWidth: last ? 0 : 1, borderColor: c.line }]}>
-      <Text style={[styles.k, { color: c.ink3, width: 92, flexShrink: 0 }]}>{label}</Text>
-      <Text style={[styles.v, { color: c.ink, flex: 1 }]} numberOfLines={1}>
+    <View
+      style={[
+        styles.profileRow,
+        { borderBottomWidth: last ? 0 : 1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
+      ]}
+    >
+      <Text style={[styles.key, { color: c.ink3, textAlign: isRtl ? 'right' : 'left' }]}>{label}</Text>
+      <Text style={[styles.value, { color: c.ink, textAlign: isRtl ? 'left' : 'right' }]} numberOfLines={1}>
         {value}
       </Text>
     </View>
   );
 }
 
-function IconRow({
-  icon,
-  label,
-  value,
-  danger,
-  onPress,
-  right,
-  last,
-}: {
-  icon: any;
-  label: string;
-  value?: string;
-  danger?: boolean;
-  onPress?: () => void;
-  right?: React.ReactNode;
-  last?: boolean;
-}) {
-  const { darkMode } = useApp();
-  const c = useColors(darkMode);
-  const content = (
-    <View style={[styles.prow, { borderBottomWidth: last ? 0 : 1, borderColor: c.line, gap: 12 }]}>
-      <Icon name={icon} size={18} color={danger ? c.bad : c.ink3} />
-      <Text style={[styles.k, { color: danger ? c.bad : c.ink3, flex: 1 }]}>{label}</Text>
-      {value ? <Text style={[styles.v, { color: c.ink2, fontSize: 13 }]}>{value}</Text> : null}
-      {right ? right : null}
-      {!danger && !right ? <Icon name="chev" size={16} color={c.ink4} /> : null}
-    </View>
-  );
-  if (onPress) return <Pressable onPress={onPress}>{content}</Pressable>;
-  return content;
-}
-
 const styles = StyleSheet.create({
+  head: {
+    alignItems: 'center',
+    gap: 16,
+    padding: 6,
+  },
   name: {
     fontFamily: typography.display,
     fontSize: 20,
     fontWeight: '600',
   },
   sub: {
+    fontFamily: typography.mono,
     fontSize: 12,
     marginTop: 5,
   },
@@ -139,21 +117,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
-  prow: {
-    flexDirection: 'row',
+  profileRow: {
+    minHeight: 52,
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
+    gap: 12,
   },
-  k: {
+  key: {
+    width: 105,
+    flexShrink: 0,
     fontFamily: typography.fontFamily,
     fontSize: 13,
-    color: '#999',
   },
-  v: {
+  value: {
+    flex: 1,
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '500',
   },
 });

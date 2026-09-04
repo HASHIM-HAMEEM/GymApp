@@ -21,14 +21,14 @@ export function Banner({
   children: React.ReactNode;
   style?: ViewStyle;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const { bg, fg, icon } = bannerVisuals(variant, c);
   return (
     <View
       style={[
         bannerStyles.base,
-        { backgroundColor: bg, borderColor: fg + '33' },
+        { backgroundColor: bg, borderColor: fg + '33', flexDirection: isRtl ? 'row-reverse' : 'row' },
         style,
       ]}
     >
@@ -40,6 +40,7 @@ export function Banner({
           fontSize: 13.5,
           color: fg,
           lineHeight: 19,
+          writingDirection: isRtl ? 'rtl' : 'ltr',
         }}
       >
         {children}
@@ -142,8 +143,9 @@ export function EmptyState({
   body?: string;
   action?: React.ReactNode;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
   return (
     <View style={{ alignItems: 'center', gap: 12, paddingVertical: 30, paddingHorizontal: 18 }}>
       <View
@@ -167,6 +169,7 @@ export function EmptyState({
           fontWeight: '600',
           color: c.ink,
           textAlign: 'center',
+          writingDirection: textDir,
         }}
       >
         {title}
@@ -180,6 +183,7 @@ export function EmptyState({
             textAlign: 'center',
             lineHeight: 22,
             maxWidth: 30 * 8,
+            writingDirection: textDir,
           }}
         >
           {body}
@@ -227,12 +231,13 @@ export function KVRow({
   label: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
   return (
     <View
       style={{
-        flexDirection: 'row',
+        flexDirection: isRtl ? 'row-reverse' : 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 12,
@@ -243,13 +248,14 @@ export function KVRow({
         borderColor: c.line,
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
+      <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
         {icon ? <Icon name={icon} size={18} color={c.ink3} /> : null}
         <Text
           style={{
             fontFamily: typography.fontFamily,
             fontSize: 14,
             color: c.ink2,
+            writingDirection: textDir,
           }}
         >
           {label}
@@ -263,7 +269,8 @@ export function KVRow({
             fontWeight: '500',
             letterSpacing: tracking.ui,
             color: c.ink,
-            textAlign: 'right',
+            textAlign: isRtl ? 'left' : 'right',
+            writingDirection: textDir,
           }}
         >
           {children}

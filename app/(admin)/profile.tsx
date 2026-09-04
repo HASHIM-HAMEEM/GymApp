@@ -7,7 +7,8 @@ import { AppBar, Body } from '@/components/Chrome';
 import { Button, TextButton } from '@/components/Button';
 import { Monogram, SectionLabel, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
-import { Switch, Sheet } from '@/components/Overlays';
+import { Sheet } from '@/components/Overlays';
+import { DeveloperCredit, PreferencesGroup } from '@/components/SettingsSection';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
@@ -19,7 +20,7 @@ type ClubHours = { label: string; value: string };
 
 export default function AdminProfile() {
   const router = useRouter();
-  const { profile, adminName, adminInitials, signOut, darkMode, toggleDarkMode, authError, clearAuthError } = useApp();
+  const { profile, adminName, adminInitials, signOut, darkMode, authError, clearAuthError, isRtl, t } = useApp();
   const clubQuery = useClub();
   const updateAdminProfile = useUpdateAdminProfile();
   const updateClub = useUpdateClub();
@@ -46,7 +47,7 @@ export default function AdminProfile() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Settings" />
+      <AppBar title={t('settings.title')} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
@@ -54,7 +55,7 @@ export default function AdminProfile() {
             <Text style={{ color: c.bad, fontSize: 13, lineHeight: 19 }}>{authError}</Text>
           ) : null}
 
-          <View style={styles.head}>
+          <View style={[styles.head, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
             <Monogram text={adminInitials || '··'} size={56} fontSize={18} />
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.name, { color: c.ink }]} numberOfLines={1}>{adminName || 'Front desk'}</Text>
@@ -66,20 +67,20 @@ export default function AdminProfile() {
           </View>
 
           <View>
-            <SectionLabel>Your account</SectionLabel>
+            <SectionLabel>{t('settings.yourAccount')}</SectionLabel>
             <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              <Row icon="user" title="Display name" sub={adminName || 'Front desk'} onPress={() => setAccountOpen(true)} c={c} />
-              <Row icon="pin" title="Reception" sub={`Desk ${profile?.reception ?? 'A'}`} onPress={() => setAccountOpen(true)} c={c} last />
+              <Row icon="user" title={t('settings.displayName')} sub={adminName || t('settings.frontDesk')} onPress={() => setAccountOpen(true)} c={c} />
+              <Row icon="pin" title={t('settings.reception')} sub={t('settings.desk', { desk: profile?.reception ?? 'A' })} onPress={() => setAccountOpen(true)} c={c} last />
             </View>
             <Text style={[styles.hint, { color: c.ink4 }]}>
-              Shown on receipts and the activity log. Ask the club owner for sign-in email changes.
+              {t('admin.accountHint')}
             </Text>
           </View>
 
           <View>
             <View style={styles.sectionHead}>
-              <SectionLabel>Club details</SectionLabel>
-              <TextButton onPress={() => setClubOpen(true)}>Edit</TextButton>
+              <SectionLabel>{t('settings.clubDetails')}</SectionLabel>
+              <TextButton onPress={() => setClubOpen(true)}>{t('settings.edit')}</TextButton>
             </View>
             <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
               <Row icon="pin" title={club.name} sub={`${club.address}, ${club.city}`} c={c} />
@@ -95,7 +96,7 @@ export default function AdminProfile() {
                 sub="Front desk"
                 right={
                   <Button size="sm" variant="secondary" onPress={() => void Linking.openURL(`tel:${club.phone}`)}>
-                    Call
+                    {t('settings.call')}
                   </Button>
                 }
                 c={c}
@@ -103,30 +104,16 @@ export default function AdminProfile() {
               />
             </View>
             <Text style={[styles.hint, { color: c.ink4 }]}>
-              Members see these details in the app — keep the address and phone current.
+              {t('admin.clubHint')}
             </Text>
           </View>
 
           <View>
-            <SectionLabel>Preferences</SectionLabel>
-            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              <View style={[styles.row, { borderColor: c.line }]}>
-                <Icon name="info" size={19} color={c.ink3} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.rowTitle, { color: c.ink }]}>Dark mode</Text>
-                  <Text style={[styles.rowSub, { color: c.ink3 }]}>Switch between light and dark theme</Text>
-                </View>
-                <Switch on={darkMode} onChange={toggleDarkMode} />
-              </View>
-            </View>
+            <SectionLabel>{t('settings.preferences')}</SectionLabel>
+            <PreferencesGroup onSignOut={() => void handleSignOut()} signingOut={signingOut} />
           </View>
 
-          <View style={{ paddingTop: 8 }}>
-            <Button variant="danger" block icon="logout" loading={signingOut} onPress={handleSignOut}>
-              Sign out of Meridian
-            </Button>
-            <Text style={[styles.version, { color: c.ink3 }]}>Meridian Admin · v2.0</Text>
-          </View>
+          <DeveloperCredit />
         </Body>
       </ScrollView>
 

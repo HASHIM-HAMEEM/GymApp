@@ -3,9 +3,11 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, typography, tracking } from '@/theme/tokens';
 import { Logo } from '@/components/Logo';
+import { useApp } from '@/providers/AppProvider';
 
 export default function Splash() {
   const router = useRouter();
+  const { t, isRtl } = useApp();
 
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -18,10 +20,10 @@ export default function Splash() {
     <View style={styles.wrap}>
       <View style={{ alignItems: 'center', marginTop: -20 }}>
         <Logo size={64} strokeWidth={3} />
-        <Text style={styles.wm}>Meridian</Text>
-        <Text style={styles.cap}>Athletic Club</Text>
+        <Text style={[styles.wm, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>Meridian</Text>
+        <Text style={[styles.cap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.athleticClub')}</Text>
       </View>
-      <Text style={styles.foot}>Membership · V2.0</Text>
+      <Text style={[styles.foot, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.version')}</Text>
     </View>
   );
 }

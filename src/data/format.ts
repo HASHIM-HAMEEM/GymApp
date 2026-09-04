@@ -1,40 +1,87 @@
 import type { MembershipStatus } from './types';
 import { colors, type ColorSet } from '@/theme/tokens';
+import type { Language } from '@/lib/i18n';
+import { translate } from '@/lib/i18n';
+
+const EN_MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const EN_DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const UR_MONTHS_SHORT = ['جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'];
+const UR_DAYS_SHORT = ['اتوار', 'پیر', 'منگل', 'بدھ', 'جمعرات', 'جمعہ', 'ہفتہ'];
+
+function monthShort(m: number, language?: Language): string {
+  return (language === 'ur' ? UR_MONTHS_SHORT : EN_MONTHS_SHORT)[m - 1] ?? '';
+}
+
+function dayShort(d: number, language?: Language): string {
+  return (language === 'ur' ? UR_DAYS_SHORT : EN_DAYS_SHORT)[d] ?? '';
+}
 
 /** Format an ISO date (YYYY-MM-DD) as "24 Sep 2026". */
-export function fmtLong(iso: string): string {
+export function fmtLong(iso: string, language?: Language): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   const [, y, mo, d] = m;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${parseInt(d, 10)} ${months[parseInt(mo, 10) - 1]} ${y}`;
+  return `${parseInt(d, 10)} ${monthShort(parseInt(mo, 10), language)} ${y}`;
 }
 
 /** Format an ISO date as "24 Sep". */
-export function fmtShort(iso: string): string {
+export function fmtShort(iso: string, language?: Language): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   const [, , mo, d] = m;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${parseInt(d, 10)} ${months[parseInt(mo, 10) - 1]}`;
+  return `${parseInt(d, 10)} ${monthShort(parseInt(mo, 10), language)}`;
+}
+
+export function fmtMonthDay(iso: string, language?: Language): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const [, , mo, d] = m;
+  return language === 'ur' ? `${parseInt(d, 10)} ${monthShort(parseInt(mo, 10), language)}` : `${monthShort(parseInt(mo, 10), language)} ${parseInt(d, 10)}`;
 }
 
 /** Format an ISO datetime (YYYY-MM-DDTHH:mm) as "18 Sep 2026 · 6:41 PM". */
-export function fmtDateTime(iso: string): string {
+export function fmtDateTime(iso: string, language?: Language): string {
   const [date, time] = iso.split('T');
-  const t = time ? formatTime(time) : '';
-  return `${fmtLong(date)}${t ? ' · ' + t : ''}`;
+  const t = time ? formatTime(time.slice(0, 5), language) : '';
+  return `${fmtLong(date, language)}${t ? ' · ' + t : ''}`;
+}
+
+export function fmtTime(iso: string, language?: Language): string {
+  const time = iso.split('T')[1]?.slice(0, 5);
+  if (!time) return '';
+  return formatTime(time, language);
 }
 
 /** "19:32" → "7:32 PM" */
-export function formatTime(t: string): string {
+export function formatTime(t: string, language?: Language): string {
+  if (language === 'ur') {
+    const formatted = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (formatted) {
+      const marker = formatted[3].toUpperCase() === 'PM' ? 'شام' : 'صبح';
+      return `${formatted[1]}:${formatted[2]} ${marker}`;
+    }
+  }
   const m = t.match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return t;
   let h = parseInt(m[1], 10);
   const min = m[2];
-  const ampm = h >= 12 ? 'PM' : 'AM';
+  const ampm = h >= 12 ? (language === 'ur' ? 'شام' : 'PM') : language === 'ur' ? 'صبح' : 'AM';
   h = h % 12 || 12;
   return `${h}:${min} ${ampm}`;
+}
+
+export function fmtDayName(dayIndex: number, language?: Language): string {
+  return dayShort(dayIndex, language);
+}
+
+export function fmtTodayLabel(iso: string, language?: Language): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const [, , mo, d] = m;
+  const day = dayShort(new Date(iso + 'T00:00:00').getDay(), language);
+  const date = `${parseInt(d, 10)} ${monthShort(parseInt(mo, 10), language)}`;
+  return language === 'ur' ? `${date} · ${day}` : `${day} · ${date}`;
 }
 
 /** Days between two ISO dates (positive if a after b). */
@@ -63,13 +110,15 @@ export function statusVisual(status: MembershipStatus, membership: {
   amountDue?: number;
   pauseEnds?: string;
   graceUntil?: string;
-}, cs?: ColorSet): StatusVisual {
+}, cs?: ColorSet, language: Language = 'en'): StatusVisual {
   const c = cs ?? colors as ColorSet;
   const days = daysBetween(membership.expiryDate, TODAY);
+  const egpAmount = translate(language, 'common.egpAmount', { amount: membership.amountDue?.toLocaleString() ?? '1,500' });
+
   switch (status) {
     case 'active':
       return {
-        tagLabel: 'Active',
+        tagLabel: translate(language, 'status.active'),
         tagVariant: 'ok',
         dotVariant: 'ok',
         fillColor: c.accent,
@@ -78,29 +127,29 @@ export function statusVisual(status: MembershipStatus, membership: {
       };
     case 'expiring':
       return {
-        tagLabel: `Expiring soon`,
+        tagLabel: translate(language, 'status.expiring'),
         tagVariant: 'warn',
         dotVariant: 'warn',
         fillColor: c.warnDot,
         nowColor: c.warnDot,
         endColor: c.accent,
         bannerVariant: 'warn',
-        bannerText: `Your plan ends in ${Math.max(0, days)} days, on ${fmtLong(membership.expiryDate)}. Renew at reception to keep your access.`,
+        bannerText: translate(language, 'status.expiringBanner', { days: Math.max(0, days), date: fmtLong(membership.expiryDate, language) }),
       };
     case 'expired':
       return {
-        tagLabel: 'Expired',
+        tagLabel: translate(language, 'status.expired'),
         tagVariant: 'bad',
         dotVariant: 'bad',
         fillColor: c.lineStrong,
         nowColor: c.ink3,
         endColor: c.badDot,
         bannerVariant: 'error',
-        bannerText: `This membership expired on ${fmtLong(membership.expiryDate)}, ${Math.abs(days)} days ago. Access is paused until renewal.`,
+        bannerText: translate(language, 'status.expiredBanner', { days: Math.abs(days), date: fmtLong(membership.expiryDate, language) }),
       };
     case 'paused':
       return {
-        tagLabel: 'Paused',
+        tagLabel: translate(language, 'status.paused'),
         tagVariant: 'muted',
         dotVariant: 'muted',
         fillColor: c.ink3,
@@ -108,35 +157,35 @@ export function statusVisual(status: MembershipStatus, membership: {
         endColor: c.ink3,
         bannerVariant: 'info',
         bannerText: membership.pauseEnds
-          ? `Your membership is paused until ${fmtShort(membership.pauseEnds)} at your request. Access resumes automatically.`
-          : 'Your membership is paused at your request.',
+          ? translate(language, 'status.pausedUntilBanner', { date: fmtShort(membership.pauseEnds, language) })
+          : translate(language, 'status.pausedBanner'),
       };
     case 'due':
       return {
-        tagLabel: 'Payment due',
+        tagLabel: translate(language, 'status.due'),
         tagVariant: 'warn',
         dotVariant: 'warn',
         fillColor: c.accent,
         nowColor: c.accent,
         endColor: c.accent,
         bannerVariant: 'warn',
-        bannerText: `Payment due: EGP ${membership.amountDue?.toLocaleString() ?? '1,500'}. Your plan is active, but this month's payment hasn't been recorded.`,
+        bannerText: translate(language, 'status.dueBanner', { amount: egpAmount }),
       };
     case 'upcoming':
       return {
-        tagLabel: 'Starts soon',
+        tagLabel: translate(language, 'status.upcoming'),
         tagVariant: 'muted',
         dotVariant: 'muted',
         fillColor: c.line,
         nowColor: c.ink3,
         endColor: c.ink3,
         bannerVariant: 'info',
-        bannerText: `Your plan begins soon and is valid until ${fmtLong(membership.expiryDate)}. Access opens on the start date.`,
+        bannerText: translate(language, 'status.upcomingBanner', { date: fmtLong(membership.expiryDate, language) }),
       };
     case 'none':
     default:
       return {
-        tagLabel: 'No plan',
+        tagLabel: translate(language, 'status.none'),
         tagVariant: 'muted',
         dotVariant: 'muted',
         fillColor: c.line,

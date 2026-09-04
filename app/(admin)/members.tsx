@@ -12,15 +12,7 @@ import { useMembers } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { statusVisual, fmtShort } from '@/data/format';
 import type { MembershipStatus } from '@/data/types';
-
-const FILTERS: { key: 'all' | MembershipStatus; label: string; dot?: 'ok' | 'warn' | 'bad' | 'muted' }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active', dot: 'ok' },
-  { key: 'expiring', label: 'Expiring soon', dot: 'warn' },
-  { key: 'expired', label: 'Expired', dot: 'bad' },
-  { key: 'paused', label: 'Paused', dot: 'muted' },
-  { key: 'due', label: 'Payment due', dot: 'warn' },
-];
+import type { Language } from '@/lib/i18n';
 
 export default function AdminMembers() {
   const router = useRouter();
@@ -28,87 +20,97 @@ export default function AdminMembers() {
   const deferredQuery = React.useDeferredValue(query);
   const [filter, setFilter] = React.useState<'all' | MembershipStatus>('all');
   const membersQuery = useMembers(deferredQuery, filter);
-  const { darkMode } = useApp();
+  const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
+
+  const filters = [
+    { key: 'all' as const, label: t('adminMembers.filterAll') },
+    { key: 'active' as const, label: t('status.active'), dot: 'ok' as const },
+    { key: 'expiring' as const, label: t('status.expiring'), dot: 'warn' as const },
+    { key: 'expired' as const, label: t('status.expired'), dot: 'bad' as const },
+    { key: 'paused' as const, label: t('status.paused'), dot: 'muted' as const },
+    { key: 'due' as const, label: t('status.due'), dot: 'warn' as const },
+  ];
 
   const members = membersQuery.data ?? [];
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Members" right={<Button size="sm" variant="secondary" icon="userplus" onPress={() => router.push('/member-new')}>New</Button>} />
+      <AppBar title={t('adminMembers.title')} right={<Button size="sm" variant="secondary" icon="userplus" onPress={() => router.push('/member-new')}>{t('adminMembers.new')}</Button>} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 14 }}>
 
-      <View style={[styles.searchbar, { backgroundColor: c.bg2, borderColor: c.line2 }]}>
+      <View style={[styles.searchbar, { backgroundColor: c.bg2, borderColor: c.line2, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
         <Icon name="search" size={19} color={c.ink3} />
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search name, member ID, email, or phone…"
+          placeholder={t('adminMembers.searchPlaceholder')}
           placeholderTextColor={c.ink3}
           autoCapitalize="none"
           autoCorrect={false}
-          style={[styles.searchInput, { color: c.ink }]}
+          style={[styles.searchInput, { color: c.ink, textAlign: isRtl ? 'right' : 'left', writingDirection: textDir }]}
         />
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}>
-        {FILTERS.map((f) => (
+        {filters.map((f) => (
           <Chip key={f.key} on={filter === f.key} onPress={() => setFilter(f.key)}>
             {f.dot ? <StatusDot variant={f.dot} size={7} /> : null}
-            {f.label}
+            <Text style={{ writingDirection: textDir }}>{f.label}</Text>
           </Chip>
         ))}
       </ScrollView>
 
       {membersQuery.isLoading ? (
-        <Text style={{ color: c.ink3, fontSize: 13, textAlign: 'center', paddingVertical: 20 }}>
-          Loading members…
+        <Text style={{ color: c.ink3, fontSize: 13, textAlign: 'center', paddingVertical: 20, writingDirection: textDir }}>
+          {t('adminMembers.loading')}
         </Text>
       ) : members.length === 0 ? (
         <EmptyState
           icon="search"
-          title={query ? `No members match "${query}"` : 'No members in this view'}
+          title={query ? t('adminMembers.noMatch', { query }) : t('adminMembers.noView')}
           body={query
-            ? 'Check the spelling, or search by member ID, email, or phone number.'
-            : 'Try a different status filter, or clear the search to see everyone.'}
-          action={<Button variant="quiet" onPress={() => { setQuery(''); setFilter('all'); }}>Clear search</Button>}
+            ? t('adminMembers.searchHelp')
+            : t('adminMembers.filterHelp')}
+          action={<Button variant="quiet" onPress={() => { setQuery(''); setFilter('all'); }}>{t('adminMembers.clearSearch')}</Button>}
         />
       ) : (
         <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
           {members.map((m) => {
             const ms = m.membership;
-            const vis = ms ? statusVisual(ms.status, ms, c) : null;
+            const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
             const invited = m.accountStatus === 'invited';
-            const lastVisit = m.lastVisitAt ? fmtShort(m.lastVisitAt.slice(0, 10)) : null;
+            const lastVisit = m.lastVisitAt ? fmtShort(m.lastVisitAt.slice(0, 10), language) : null;
             return (
               <Pressable
                 key={m.id}
                 onPress={() => router.push({ pathname: '/member-detail', params: { id: m.id } })}
                 style={({ pressed }) => [styles.mrow, { borderColor: c.line }, pressed && { opacity: 0.6 }]}
               >
-                <View style={styles.mtop}>
-                  <View style={styles.mleft}>
+                <View style={[styles.mtop, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                  <View style={[styles.mleft, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                     <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={36} fontSize={12} />
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={[styles.mname, { color: c.ink }]} numberOfLines={1}>{m.firstName} {m.lastName}</Text>
-                      <Text style={[styles.msub, { color: c.ink3 }]} numberOfLines={1}>{m.id} · {m.email}</Text>
+                      <Text style={[styles.mname, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>{m.firstName} {m.lastName}</Text>
+                      <Text style={[styles.msub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{m.id} · {m.email}</Text>
                     </View>
                   </View>
                   {invited ? (
-                    <Tag variant="muted">Invited</Tag>
+                    <Tag variant="muted">{t('common.invited')}</Tag>
                   ) : vis ? (
                     <Tag variant={vis.tagVariant}>{vis.tagLabel}</Tag>
                   ) : (
-                    <Tag variant="muted">No plan</Tag>
+                    <Tag variant="muted">{t('common.noPlan')}</Tag>
                   )}
                 </View>
                 <View style={styles.mbottom}>
-                  <Text style={[styles.mplan, { color: c.ink2 }]} numberOfLines={1}>{ms?.planName ?? 'No plan'}</Text>
+                  <Text style={[styles.mplan, { color: c.ink2, writingDirection: textDir }]} numberOfLines={1}>{ms?.planName ?? t('common.noPlan')}</Text>
                   <View style={styles.mmeta}>
-                    <Text style={[styles.mexp, { color: c.ink }]}>{ms ? fmtShort(ms.expiryDate) : '-'}</Text>
+                    <Text style={[styles.mexp, { color: c.ink, writingDirection: textDir }]}>{ms ? fmtShort(ms.expiryDate, language) : '-'}</Text>
                     <Text style={[styles.mdot, { color: c.ink3 }]}>·</Text>
-                    <Text style={[styles.mlast, { color: c.ink2 }]}>{lastVisit ?? 'no visits'}</Text>
+                    <Text style={[styles.mlast, { color: c.ink2, writingDirection: textDir }]}>{lastVisit ?? t('adminMembers.noVisits')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -118,8 +120,8 @@ export default function AdminMembers() {
       )}
 
       <View style={styles.foot}>
-        <Text style={[styles.footText, { color: c.ink3 }]}>
-          {membersQuery.isLoading ? ' ' : `Showing ${members.length}${members.length >= 100 ? '+' : ''} members`}
+        <Text style={[styles.footText, { color: c.ink3, writingDirection: textDir }]}>
+          {membersQuery.isLoading ? ' ' : t(members.length >= 100 ? 'adminMembers.showingMore' : 'adminMembers.showing', { count: members.length })}
         </Text>
       </View>
         </Body>

@@ -8,22 +8,24 @@ import { Monogram, SectionLabel, StatusDot, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
 import { useDashboard } from '@/data/api/queries';
-import { fmtShort, daysBetween, TODAY } from '@/data/format';
+import { fmtShort, fmtTime, daysBetween, TODAY } from '@/data/format';
 import { CLUB } from '@/data/plans';
 import type { ColorSet } from '@/theme/tokens';
+import type { Language } from '@/lib/i18n';
 
 export default function AdminToday() {
   const router = useRouter();
-  const { adminName, darkMode } = useApp();
+  const { adminName, darkMode, t, isRtl, language } = useApp();
   const dashboardQuery = useDashboard();
   const c = useColors(darkMode);
   const data = dashboardQuery.data;
+  const textDir = isRtl ? 'rtl' : 'ltr';
 
   const greeting = (() => {
     const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return t('member.greetingMorning');
+    if (h < 18) return t('member.greetingAfternoon');
+    return t('member.greetingEvening');
   })();
 
   const expiring = data?.expiring_list ?? [];
@@ -31,55 +33,55 @@ export default function AdminToday() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Today" />
+      <AppBar title={t('adminToday.title')} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body>
 
       <View style={{ gap: 4 }}>
-        <Text style={[styles.hi, { color: c.ink }]}>
-          {greeting}{adminName ? `, ${adminName.split(' ')[0]}` : ''}
+        <Text style={[styles.hi, { color: c.ink, writingDirection: textDir }]}>
+          {t('adminToday.greetingWithName', { greeting, name: adminName ? adminName.split(' ')[0] : '' })}
         </Text>
-        <Text style={[styles.sub, { color: c.ink3 }]}>{CLUB.name} · front desk</Text>
+        <Text style={[styles.sub, { color: c.ink3, writingDirection: textDir }]}>{t('adminToday.clubDesk', { club: CLUB.name })}</Text>
       </View>
 
       <View style={styles.actions}>
-        <Button variant="secondary" icon="userplus" onPress={() => router.push('/member-new')}>New member</Button>
-        <Button icon="scan" onPress={() => router.push('/(admin)/scanner')}>Scan code</Button>
+        <Button variant="secondary" icon="userplus" onPress={() => router.push('/member-new')}>{t('adminToday.newMember')}</Button>
+        <Button icon="scan" onPress={() => router.push('/(admin)/scanner')}>{t('adminToday.scanCode')}</Button>
       </View>
 
       <View style={[styles.statGrid, { backgroundColor: c.surface, borderColor: c.line }]}>
         <StatCell
-          label="Active"
+          label={t('status.active')}
           dot="ok"
           value={data?.active_members ?? 0}
-          sub="in good standing"
+          sub={t('adminToday.activeSub')}
           c={c}
           borderRight
           borderBottom
         />
         <StatCell
-          label="Expiring"
+          label={t('adminToday.expiring')}
           dot="warn"
           value={data?.expiring_soon ?? 0}
-          sub="within 7 days"
+          sub={t('adminToday.expiringSub')}
           valueColor={c.warn}
           c={c}
           borderBottom
         />
         <StatCell
-          label="Expired"
+          label={t('status.expired')}
           dot="bad"
           value={data?.expired_members ?? 0}
-          sub="access paused"
+          sub={t('adminToday.expiredSub')}
           valueColor={c.bad}
           c={c}
           borderRight
         />
         <StatCell
-          label="Check-ins"
+          label={t('adminToday.checkIns')}
           icon="checkc"
           value={data?.check_ins_today ?? 0}
-          sub={recent[0] ? `last ${new Date(recent[0].checked_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'none today'}
+          sub={recent[0] ? t('adminToday.lastAt', { time: fmtTime(recent[0].checked_in_at, language) }) : t('adminToday.noneToday')}
           c={c}
         />
       </View>
@@ -89,15 +91,17 @@ export default function AdminToday() {
           onPress={() => router.push('/(admin)/members')}
           style={({ pressed }) => [
             styles.inviteRow,
-            { borderColor: c.line, backgroundColor: c.bg1 },
+            { borderColor: c.line, backgroundColor: c.bg1, flexDirection: isRtl ? 'row-reverse' : 'row' },
             pressed && { opacity: 0.6 },
           ]}
         >
           <Monogram text="IV" size={36} fontSize={12} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={[styles.inviteTitle, { color: c.ink }]}>Invitations waiting</Text>
-            <Text style={[styles.inviteSub, { color: c.ink3 }]}>
-              {data?.pending_invitations} member{data?.pending_invitations === 1 ? '' : 's'} {data?.pending_invitations === 1 ? "hasn't" : "haven't"} accepted their email invitation. Resend from their profile.
+            <Text style={[styles.inviteTitle, { color: c.ink, writingDirection: textDir }]}>{t('adminToday.invitationsWaiting')}</Text>
+            <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
+              {data?.pending_invitations === 1
+                ? t('adminToday.invitationOne')
+                : t('adminToday.invitationMany', { count: data?.pending_invitations })}
             </Text>
           </View>
           <Icon name="chev" size={16} color={c.ink4} />
@@ -106,14 +110,14 @@ export default function AdminToday() {
 
       <View>
         <View style={styles.sectionHead}>
-          <SectionLabel>Attention · next 7 days</SectionLabel>
+          <SectionLabel>{t('adminToday.attention')}</SectionLabel>
           {expiring.length > 0 ? (
-            <Button size="sm" variant="quiet" onPress={() => router.push('/(admin)/members')}>View all</Button>
+            <Button size="sm" variant="quiet" onPress={() => router.push('/(admin)/members')}>{t('adminToday.viewAll')}</Button>
           ) : null}
         </View>
         {expiring.length === 0 ? (
           <View style={[styles.empty, { backgroundColor: c.bg1, borderColor: c.line }]}>
-            <Text style={[styles.emptyText, { color: c.ink3 }]}>No members expiring this week.</Text>
+            <Text style={[styles.emptyText, { color: c.ink3, writingDirection: textDir }]}>{t('adminToday.noExpiring')}</Text>
           </View>
         ) : (
           <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
@@ -125,19 +129,19 @@ export default function AdminToday() {
                   onPress={() => router.push({ pathname: '/member-detail', params: { id: m.member_number } })}
                   style={({ pressed }) => [styles.expRow, { borderColor: c.line }, pressed && { opacity: 0.6 }]}
                 >
-                  <View style={styles.expTop}>
-                    <View style={styles.expLeft}>
+                  <View style={[styles.expTop, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                    <View style={[styles.expLeft, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                       <Monogram text={`${m.first_name[0]}${m.last_name[0]}`.toUpperCase()} size={36} fontSize={12} />
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={[styles.expName, { color: c.ink }]} numberOfLines={1}>{m.first_name} {m.last_name}</Text>
-                        <Text style={[styles.expSub, { color: c.ink3 }]} numberOfLines={1}>{m.plan_name ?? 'No plan'} · {m.member_number}</Text>
+                        <Text style={[styles.expName, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>{m.first_name} {m.last_name}</Text>
+                        <Text style={[styles.expSub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{m.plan_name ?? t('common.noPlan')} · {m.member_number}</Text>
                       </View>
                     </View>
-                    <Tag variant="warn">{Math.max(0, days)}d</Tag>
+                    <Tag variant="warn">{t('adminToday.daysShort', { count: Math.max(0, days) })}</Tag>
                   </View>
                   <View style={styles.expBottom}>
-                    <Text style={[styles.expDate, { color: c.ink2 }]}>Ends {m.end_date ? fmtShort(m.end_date) : '-'}</Text>
-                    <Button size="sm" onPress={() => router.push({ pathname: '/renew', params: { id: m.member_number } })}>Renew</Button>
+                    <Text style={[styles.expDate, { color: c.ink2, writingDirection: textDir }]}>{t('adminToday.ends', { date: m.end_date ? fmtShort(m.end_date, language) : '-' })}</Text>
+                    <Button size="sm" onPress={() => router.push({ pathname: '/renew', params: { id: m.member_number } })}>{t('adminToday.renew')}</Button>
                   </View>
                 </Pressable>
               );
@@ -147,24 +151,24 @@ export default function AdminToday() {
       </View>
 
       <View>
-        <SectionLabel>Recent check-ins</SectionLabel>
+        <SectionLabel>{t('adminToday.recentCheckIns')}</SectionLabel>
         {recent.length === 0 ? (
           <View style={[styles.empty, { backgroundColor: c.bg1, borderColor: c.line }]}>
-            <Text style={[styles.emptyText, { color: c.ink3 }]}>No check-ins recorded today.</Text>
+            <Text style={[styles.emptyText, { color: c.ink3, writingDirection: textDir }]}>{t('adminToday.noCheckIns')}</Text>
           </View>
         ) : (
           <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
             {recent.map((ci) => (
-              <View key={ci.member_number + ci.checked_in_at} style={[styles.ciRow, { borderColor: c.line }]}>
+              <View key={ci.member_number + ci.checked_in_at} style={[styles.ciRow, { flexDirection: isRtl ? 'row-reverse' : 'row', borderColor: c.line }]}>
                 <Monogram text={`${ci.first_name[0]}${ci.last_name[0]}`.toUpperCase()} size={32} fontSize={11} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.ciName, { color: c.ink }]} numberOfLines={1}>{ci.first_name} {ci.last_name}</Text>
-                  <Text style={[styles.ciSub, { color: c.ink3 }]} numberOfLines={1}>
-                    {ci.source === 'qr' ? 'QR scan' : 'Front desk'} · Reception {ci.reception ?? 'A'}
+                  <Text style={[styles.ciName, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>{ci.first_name} {ci.last_name}</Text>
+                  <Text style={[styles.ciSub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>
+                    {t('adminToday.checkInDetail', { source: ci.source === 'qr' ? t('visits.qrScan') : t('visits.frontDesk'), reception: ci.reception ?? 'A' })}
                   </Text>
                 </View>
-                <Text style={[styles.ciTime, { color: c.ink }]}>
-                  {new Date(ci.checked_in_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                <Text style={[styles.ciTime, { color: c.ink, writingDirection: textDir }]}>
+                  {fmtTime(ci.checked_in_at, language)}
                 </Text>
               </View>
             ))}
@@ -188,19 +192,20 @@ function StatCell({ label, dot, icon, value, sub, valueColor, c, borderRight, bo
   borderRight?: boolean;
   borderBottom?: boolean;
 }) {
+  const { isRtl } = useApp();
   return (
     <View style={[
       styles.statCell,
       borderRight && { borderRightColor: c.line },
       borderBottom && { borderBottomColor: c.line },
     ]}>
-      <View style={styles.statLabelRow}>
+      <View style={[styles.statLabelRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
         {dot ? <StatusDot variant={dot} size={7} /> : null}
         {icon ? <Icon name={icon} size={13} color={c.ink3} /> : null}
-        <Text style={[styles.statLabel, { color: c.ink3 }]}>{label}</Text>
+        <Text style={[styles.statLabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{label}</Text>
       </View>
-      <Text style={[styles.statValue, { color: valueColor ?? c.ink }]}>{value}</Text>
-      <Text style={[styles.statSub, { color: c.ink3 }]}>{sub}</Text>
+      <Text style={[styles.statValue, { color: valueColor ?? c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{value}</Text>
+      <Text style={[styles.statSub, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{sub}</Text>
     </View>
   );
 }

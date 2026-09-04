@@ -11,6 +11,7 @@ import { Sheet } from '@/components/Overlays';
 import { useCurrentMember, useQrPass, useRegenerateQrPass } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { fmtLong } from '@/data/format';
+import type { Language } from '@/lib/i18n';
 
 /**
  * M-09, M-10 & M-11:
@@ -18,10 +19,14 @@ import { fmtLong } from '@/data/format';
  * - M-10 QR pass (Expired): plate dims, badge says Won't scan, renew CTA.
  * - M-11 Sheet (Regenerate): rotating immediately invalidates saved copies.
  */
+function qrDate(iso: string, language: Language): string {
+  return fmtLong(iso, language);
+}
+
 export default function QrScreen() {
   const router = useRouter();
   const memberQuery = useCurrentMember();
-  const { darkMode } = useApp();
+  const { t, isRtl, language, darkMode } = useApp();
   const c = useColors(darkMode);
   const [regenOpen, setRegenOpen] = React.useState(false);
   const [secondsLeft, setSecondsLeft] = React.useState(0);
@@ -59,28 +64,45 @@ export default function QrScreen() {
     }
   };
 
+  const unavailableText = qrQuery.isError
+    ? t('qr.issueFailed')
+    : ms?.status === 'paused'
+    ? t('qr.membershipPaused')
+    : ms?.status === 'upcoming'
+    ? t('qr.planStarts', { date: ms ? qrDate(ms.startDate, language) : t('common.notAvailable') })
+    : ms?.status === 'expired'
+    ? t('qr.expired', { date: ms ? qrDate(ms.expiryDate, language) : t('common.notAvailable') })
+    : t('qr.noActive');
+
+  const activeText =
+    ms && pass
+      ? t('qr.activePass', { plan: ms.planName, date: qrDate(ms.expiryDate, language), seconds: secondsLeft })
+      : ms
+      ? `${t('status.active')} · ${ms.planName} · ${t('membership.validUntil', { date: qrDate(ms.expiryDate, language) })}`
+      : t('qr.noActive');
+
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
       <AppBar
         onClose={() => router.back()}
         right={
           unavailable ? (
-            <Tag variant="bad">Unavailable</Tag>
+            <Tag variant="bad">{t('qr.unavailable')}</Tag>
           ) : pass ? (
-            <Tag variant="ok">Live</Tag>
+            <Tag variant="ok">{t('qr.live')}</Tag>
           ) : (
-            <Tag variant="muted">Loading…</Tag>
+            <Tag variant="muted">{t('common.loading')}</Tag>
           )
         }
       />
 
       <View style={styles.body}>
         <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.slabel, { color: c.ink3 }]}>Member card</Text>
-          <Text style={[styles.name, { color: c.ink }]}>
-            {m ? `${m.firstName} ${m.lastName}` : 'Meridian member'}
+          <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('qr.memberCard')}</Text>
+          <Text style={[styles.name, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {m ? `${m.firstName} ${m.lastName}` : t('member.meridianMember')}
           </Text>
-          <Text style={[styles.id, { color: c.ink3 }]}>{m?.id ?? 'MRD-····'}</Text>
+          <Text style={[styles.id, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{m?.id ?? 'MRD-····'}</Text>
         </View>
 
         <View style={[styles.plate, { opacity: unavailable ? 0.28 : 1 }]}>
@@ -100,30 +122,14 @@ export default function QrScreen() {
 
         <View style={{ alignItems: 'center' }}>
           {unavailable ? (
-            <View style={styles.statusRow}>
+            <View style={[styles.statusRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
               <Icon name="xc" size={17} color={c.bad} />
-              <Text style={[styles.statusText, { color: c.bad }]}>
-                {qrQuery.isError
-                  ? 'A live pass could not be issued — reconnect or ask reception'
-                  : ms?.status === 'paused'
-                    ? 'Membership paused — see reception'
-                    : ms?.status === 'upcoming'
-                      ? `Plan starts ${fmtLong(ms.startDate)}`
-                      : ms?.status === 'expired'
-                        ? `Expired ${fmtLong(ms.expiryDate)} · Renew to reactivate`
-                        : 'No active membership — ask reception'}
-              </Text>
+              <Text style={[styles.statusText, { color: c.bad, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{unavailableText}</Text>
             </View>
           ) : (
-            <View style={styles.statusRow}>
+            <View style={[styles.statusRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
               <Icon name="shield" size={17} color={c.ok} />
-              <Text style={[styles.statusText, { color: c.ink3 }]}>
-                Active · {ms?.planName ?? 'Premium'} · until{' '}
-                <Text style={{ color: c.ink2, fontWeight: '600' }}>
-                  {ms ? fmtLong(ms.expiryDate) : '—'}
-                </Text>
-                {pass ? ` · pass expires in ${secondsLeft}s` : ''}
-              </Text>
+              <Text style={[styles.statusText, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{activeText}</Text>
             </View>
           )}
         </View>
@@ -132,7 +138,7 @@ export default function QrScreen() {
       <View style={styles.foot}>
         {unavailable ? (
           <Button block onPress={() => router.push('/(member)/membership')}>
-            Membership options
+            {t('qr.membershipOptions')}
           </Button>
         ) : (
           <Button
@@ -142,7 +148,7 @@ export default function QrScreen() {
             loading={qrQuery.isFetching || regeneratePass.isPending}
             onPress={() => setRegenOpen(true)}
           >
-            Regenerate code
+            {t('qr.regenerateCode')}
           </Button>
         )}
       </View>
@@ -150,15 +156,15 @@ export default function QrScreen() {
       <Sheet
         visible={regenOpen}
         onClose={() => setRegenOpen(false)}
-        title="Regenerate code"
-        desc="Rotating your QR pass immediately invalidates any saved copies. A fresh one-time code will be issued for your card."
+        title={t('qr.regenerateCode')}
+        desc={t('qr.regenerateBody')}
       >
         <View style={{ gap: 10, marginTop: 12 }}>
           <Button block loading={regeneratePass.isPending} onPress={handleRegenerate}>
-            Regenerate pass
+            {t('qr.regeneratePass')}
           </Button>
           <Button variant="quiet" block onPress={() => setRegenOpen(false)}>
-            Keep current
+            {t('qr.keepCurrent')}
           </Button>
         </View>
       </Sheet>

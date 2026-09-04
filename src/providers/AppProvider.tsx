@@ -1,8 +1,17 @@
 import * as React from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Session, User } from '@supabase/supabase-js';
+import { getLocales } from 'expo-localization';
 import { authRedirectUrl, isSupabaseConfigured, listenForAuthRefresh, requireSupabase, supabase } from '@/lib/supabase';
-import type { AppProfile, Role } from '@/data/types';
+import type { AppProfile, Language, Role } from '@/data/types';
+import { translate, type TranslationKey } from '@/lib/i18n';
+import {
+  openNotificationSettings,
+  registerPushDevice,
+  requestNotificationPermission,
+  unregisterPushDevice,
+  type NotificationState,
+} from '@/lib/notifications';
 
 interface AppState {
   session: Session | null;
@@ -15,6 +24,10 @@ interface AppState {
   adminName: string;
   adminInitials: string;
   darkMode: boolean;
+  language: Language;
+  isRtl: boolean;
+  t: (key: TranslationKey, options?: Record<string, unknown>) => string;
+  notificationState: NotificationState;
 }
 
 interface AppActions {
@@ -22,7 +35,8 @@ interface AppActions {
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   setPassword: (password: string, completeInvite?: boolean) => Promise<void>;
-  updateEmail: (email: string) => Promise<void>;
+  setLanguage: (language: Language) => Promise<void>;
+  requestNotifications: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   clearAuthError: () => void;
   toggleDarkMode: () => void;
@@ -55,6 +69,7 @@ function mapProfile(row: Record<string, unknown>): AppProfile {
     reception: row.reception === 'B' ? 'B' : row.reception === 'A' ? 'A' : undefined,
     status: row.account_state === 'suspended' ? 'suspended' : row.account_state === 'active' ? 'active' : 'invited',
     mustSetPassword: Boolean(row.must_set_password),
+    preferredLanguage: row.preferred_language === 'ur' ? 'ur' : 'en',
   };
 }
 
@@ -62,7 +77,7 @@ async function loadProfile(userId: string) {
   const client = requireSupabase();
   const { data, error } = await client
     .from('profiles')
-    .select('id, role, account_state, must_set_password, display_name, reception')
+    .select('id, role, account_state, must_set_password, display_name, reception, preferred_language')
     .eq('id', userId)
     .single();
   if (error) throw error;
@@ -75,6 +90,11 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = React.useState(!isSupabaseConfigured);
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [darkMode, setDarkMode] = React.useState(true);
+  const [language, setLanguageState] = React.useState<Language>(
+    getLocales()[0]?.languageCode === 'ur' ? 'ur' : 'en',
+  );
+  const [notificationState, setNotificationState] = React.useState<NotificationState>('prompt');
+  const pushToken = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!supabase) return;
@@ -98,6 +118,37 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [cache]);
 
+  React.useEffect(() => {
+    let active = true;
+    void requestNotificationPermission()
+      .then((state) => {
+        if (active) setNotificationState(state);
+      })
+      .catch(() => {
+        if (active) setNotificationState('unconfigured');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!session) return;
+    let active = true;
+    void registerPushDevice()
+      .then((result) => {
+        if (!active) return;
+        pushToken.current = result.token ?? null;
+        setNotificationState(result.state);
+      })
+      .catch(() => {
+        if (active) setNotificationState('unconfigured');
+      });
+    return () => {
+      active = false;
+    };
+  }, [session]);
+
   const profileQuery = useQuery({
     queryKey: ['profile', session?.user.id],
     queryFn: () => loadProfile(session!.user.id),
@@ -110,6 +161,12 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
       setAuthError('This account is not connected to a Meridian profile. Ask an administrator for help.');
     }
   }, [profileQuery.error]);
+
+  React.useEffect(() => {
+    if (profileQuery.data?.preferredLanguage) {
+      setLanguageState(profileQuery.data.preferredLanguage);
+    }
+  }, [profileQuery.data?.preferredLanguage]);
 
   const signIn = React.useCallback(async (email: string, password: string) => {
     setAuthError(null);
@@ -125,6 +182,10 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = React.useCallback(async () => {
     setAuthError(null);
+    if (pushToken.current) {
+      await unregisterPushDevice(pushToken.current).catch(() => undefined);
+      pushToken.current = null;
+    }
     const { error } = await requireSupabase().auth.signOut({ scope: 'local' });
     if (error) throw error;
     cache.clear();
@@ -148,19 +209,43 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     await cache.invalidateQueries({ queryKey: ['profile'] });
   }, [cache]);
 
-  const updateEmail = React.useCallback(async (email: string) => {
-    const { error } = await requireSupabase().auth.updateUser(
-      { email: email.trim().toLowerCase() },
-      { emailRedirectTo: authRedirectUrl },
-    );
-    if (error) throw error;
-  }, []);
+  const setLanguage = React.useCallback(async (nextLanguage: Language) => {
+    const previousLanguage = language;
+    setLanguageState(nextLanguage);
+    if (!session) return;
+    const { error } = await requireSupabase().rpc('set_preferred_language', {
+      p_language: nextLanguage,
+    });
+    if (error) {
+      setLanguageState(previousLanguage);
+      throw error;
+    }
+    await cache.invalidateQueries({ queryKey: ['profile', session.user.id] });
+  }, [cache, language, session]);
+
+  const requestNotifications = React.useCallback(async () => {
+    const permission = await requestNotificationPermission();
+    setNotificationState(permission);
+    if (permission === 'denied') {
+      await openNotificationSettings();
+      return;
+    }
+    if (session) {
+      const result = await registerPushDevice();
+      pushToken.current = result.token ?? null;
+      setNotificationState(result.state);
+    }
+  }, [session]);
 
   const refreshProfile = React.useCallback(async () => {
     await cache.invalidateQueries({ queryKey: ['profile', session?.user.id] });
   }, [cache, session?.user.id]);
 
   const profile = profileQuery.data ?? null;
+  const t = React.useCallback(
+    (key: TranslationKey, options?: Record<string, unknown>) => translate(language, key, options),
+    [language],
+  );
   const value = React.useMemo<AppContextValue>(() => ({
     session,
     user: session?.user ?? null,
@@ -174,11 +259,16 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     adminName: profile?.role === 'admin' ? profile.displayName : '',
     adminInitials: profile?.role === 'admin' ? profile.initials : '',
     darkMode,
+    language,
+    isRtl: language === 'ur',
+    t,
+    notificationState,
     signIn,
     signOut,
     sendPasswordReset,
     setPassword,
-    updateEmail,
+    setLanguage,
+    requestNotifications,
     refreshProfile,
     clearAuthError: () => setAuthError(null),
     toggleDarkMode: () => setDarkMode((value) => !value),
@@ -189,11 +279,15 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     profileQuery.isLoading,
     authError,
     darkMode,
+    language,
+    t,
+    notificationState,
     signIn,
     signOut,
     sendPasswordReset,
     setPassword,
-    updateEmail,
+    setLanguage,
+    requestNotifications,
     refreshProfile,
   ]);
 

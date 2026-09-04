@@ -170,15 +170,19 @@ export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
     const on = t.key === active;
     return (
       <Link href={t.href} asChild>
-        <Pressable style={{ flex: 1, alignItems: 'center', gap: 5, paddingTop: 3 }}>
-          <Icon name={t.icon} size={22} color={on ? c.accentHi : c.ink4} stroke={on ? 2 : 1.6} />
+        <Pressable
+          accessibilityLabel={t.label}
+          style={{ flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          <Icon name={t.icon} size={22} color={on ? c.accentHi : c.ink3} stroke={on ? 2 : 1.7} />
           <Text
+            numberOfLines={1}
             style={{
               fontFamily: typography.fontFamily,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: '600',
-              letterSpacing: 0.3,
-              color: on ? c.accentHi : c.ink4,
+              letterSpacing: 0.2,
+              color: on ? c.accentHi : c.ink2,
             }}
           >
             {t.label}
@@ -194,12 +198,12 @@ export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: Platform.OS === 'web' ? 'rgba(17, 20, 27, 0.94)' : c.bg1,
+        backgroundColor: c.bg1,
         borderTopWidth: 1,
-        borderTopColor: c.line,
-        paddingBottom: Platform.OS === 'web' ? 24 : insets.bottom + 8,
+        borderTopColor: c.line2,
+        paddingBottom: Platform.OS === 'web' ? 12 : Math.max(insets.bottom, 8),
         paddingTop: 8,
-        paddingHorizontal: 14,
+        paddingHorizontal: 12,
       }}
     >
       {left.map((t) => (
@@ -218,7 +222,7 @@ export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
                 justifyContent: 'center',
                 marginTop: -24,
                 borderWidth: 4,
-                borderColor: c.bg,
+                borderColor: c.bg1,
                 shadowColor: c.accentGlow,
                 shadowOpacity: 0.9,
                 shadowRadius: 20,

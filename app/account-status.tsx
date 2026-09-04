@@ -9,7 +9,7 @@ import { Banner } from '@/components/Surfaces';
 
 export default function AccountStatus() {
   const router = useRouter();
-  const { profile, authError, signOut, darkMode } = useApp();
+  const { profile, authError, signOut, darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const suspended = profile?.status === 'suspended';
   const [signingOut, setSigningOut] = React.useState(false);
@@ -28,18 +28,20 @@ export default function AccountStatus() {
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
       <View style={styles.center}>
         <Logo size={48} strokeWidth={2.8} />
-        <Text style={[styles.title, { color: c.ink }]}>
-          {suspended ? 'Account access paused' : 'Account setup incomplete'}
+        <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+          {suspended ? t('accountStatus.suspendedTitle') : t('accountStatus.incompleteTitle')}
         </Text>
-        <Text style={[styles.body, { color: c.ink2 }]}>
-          {suspended
-            ? 'Reception has paused this account. Your membership history is safe, but the app stays locked until an administrator restores access.'
-            : 'This sign-in is valid, but it is not linked to a Meridian profile. Ask reception to check the account invitation.'}
+        <Text style={[styles.body, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+          {suspended ? t('accountStatus.suspendedBody') : t('accountStatus.incompleteBody')}
         </Text>
-        {authError ? <Banner variant="error">{authError}</Banner> : null}
+        {authError ? (
+          <Banner variant="error" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <Text style={{ writingDirection: isRtl ? 'rtl' : 'ltr' }}>{authError}</Text>
+          </Banner>
+        ) : null}
       </View>
       <Button block loading={signingOut} onPress={leave}>
-        Sign out
+        {t('settings.signOut')}
       </Button>
     </View>
   );

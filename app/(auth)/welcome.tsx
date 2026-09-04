@@ -104,6 +104,7 @@ function StarField({ light }: { light: boolean }) {
 }
 
 function ChromeMark({ light }: { light: boolean }) {
+  const { t, isRtl } = useApp();
   return (
     <View style={styles.chromeMark}>
       <Svg width={92} height={92} viewBox="0 0 92 92" fill="none">
@@ -129,7 +130,7 @@ function ChromeMark({ light }: { light: boolean }) {
         <Path d="M29 25c8-7 22-10 34-3" stroke="#FFFFFF" strokeOpacity="0.78" strokeWidth="2.2" strokeLinecap="round" />
       </Svg>
       <Text style={[styles.brandName, { color: light ? '#18242D' : '#EDF5FA' }]}>MERIDIAN</Text>
-      <Text style={[styles.brandSub, { color: light ? '#63727D' : '#8294A0' }]}>ATHLETIC CLUB</Text>
+      <Text style={[styles.brandSub, { color: light ? '#63727D' : '#8294A0', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.athleticClub')}</Text>
     </View>
   );
 }
@@ -148,6 +149,7 @@ function MiniDumbbell({ color }: { color: string }) {
 }
 
 function CharmFace({ kind, light }: { kind: CharmKind; light: boolean }) {
+  const { t, isRtl } = useApp();
   const ink = light ? '#1C2A34' : '#F4F8FB';
   const quiet = light ? '#5C6E7C' : '#91A5B3';
 
@@ -173,8 +175,8 @@ function CharmFace({ kind, light }: { kind: CharmKind; light: boolean }) {
       <Text style={[styles.charmStrong, { color: ink }]}>
         {kind === 'plate' ? '45' : kind === 'time' ? '06:30' : 'M·01'}
       </Text>
-      <Text style={[styles.charmSmall, { color: quiet }]}>
-        {kind === 'plate' ? 'KG' : kind === 'time' ? 'TRAIN' : 'MEMBER'}
+      <Text style={[styles.charmSmall, { color: quiet, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+        {kind === 'plate' ? 'KG' : kind === 'time' ? t('welcome.train') : t('welcome.member')}
       </Text>
     </View>
   );
@@ -347,6 +349,7 @@ function PathArrow({ color }: { color: string }) {
 }
 
 function PrimaryAction({ onPress, light, disabled }: { onPress: () => void; light: boolean; disabled: boolean }) {
+  const { t, isRtl } = useApp();
   const scale = React.useRef(new Animated.Value(1)).current;
   const animate = (toValue: number, duration: number) => {
     Animated.timing(scale, {
@@ -361,7 +364,7 @@ function PrimaryAction({ onPress, light, disabled }: { onPress: () => void; ligh
     <Animated.View style={{ transform: [{ scale }], alignSelf: 'stretch' }}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Sign in to Meridian"
+        accessibilityLabel={t('welcome.signInAccessibility')}
         disabled={disabled}
         onPress={onPress}
         onPressIn={() => animate(0.97, 100)}
@@ -371,11 +374,12 @@ function PrimaryAction({ onPress, light, disabled }: { onPress: () => void; ligh
           {
             backgroundColor: light ? '#10171C' : '#F4F7F9',
             opacity: disabled ? 0.72 : pressed ? 0.9 : 1,
+            flexDirection: isRtl ? 'row-reverse' : 'row',
           },
         ]}
       >
-        <Text style={[styles.primaryText, { color: light ? '#FFFFFF' : '#070A0C' }]}>Member sign in</Text>
-        <View style={[styles.arrowCircle, { backgroundColor: light ? '#FFFFFF' : '#12191E' }]}>
+        <Text style={[styles.primaryText, { color: light ? '#FFFFFF' : '#070A0C', writingDirection: isRtl ? 'rtl' : 'ltr', paddingLeft: isRtl ? 0 : 34, paddingRight: isRtl ? 34 : 0 }]}>{t('welcome.memberSignIn')}</Text>
+        <View style={[styles.arrowCircle, { backgroundColor: light ? '#FFFFFF' : '#12191E', transform: [{ scaleX: isRtl ? -1 : 1 }] }]}>
           <PathArrow color={light ? '#11181D' : '#FFFFFF'} />
         </View>
       </Pressable>
@@ -392,7 +396,7 @@ export default function Welcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { darkMode } = useApp();
+  const { darkMode, t, isRtl } = useApp();
   const reducedMotion = useReducedMotion();
   const [deskInfoOpen, setDeskInfoOpen] = React.useState(false);
   const [exiting, setExiting] = React.useState(false);

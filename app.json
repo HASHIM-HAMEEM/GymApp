@@ -5,16 +5,19 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "scheme": "meridian",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.hashimhameem.meridian",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.hashimhameem.meridian",
+      "permissions": ["android.permission.POST_NOTIFICATIONS"],
       "adaptiveIcon": {
         "backgroundColor": "#F5F3EC",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -42,6 +45,22 @@
           "cameraPermission": "Allow Meridian to scan member QR passes.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#121212",
+          "defaultChannel": "club-notices"
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": false,
+          "supportedLocales": ["en", "ur"]
         }
       ]
     ],

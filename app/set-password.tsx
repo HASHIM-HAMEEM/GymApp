@@ -10,16 +10,6 @@ import { useApp } from '@/providers/AppProvider';
 
 const MIN_LENGTH = 10;
 
-function passwordProblem(password: string): string | null {
-  if (password.length < MIN_LENGTH) {
-    return `Use at least ${MIN_LENGTH} characters — longer passwords are stronger.`;
-  }
-  if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-    return 'Mix upper case, lower case, and at least one digit.';
-  }
-  return null;
-}
-
 /**
  * Invite acceptance and password recovery both land here with a fresh
  * session. Completing the password also finishes member onboarding, which
@@ -27,7 +17,7 @@ function passwordProblem(password: string): string | null {
  */
 export default function SetPassword() {
   const router = useRouter();
-  const { session, profile, setPassword, darkMode } = useApp();
+  const { session, profile, setPassword, darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const [password, setPasswordValue] = React.useState('');
   const [confirm, setConfirmValue] = React.useState('');
@@ -36,6 +26,17 @@ export default function SetPassword() {
   const [done, setDone] = React.useState(false);
 
   const isInviteFlow = Boolean(profile?.mustSetPassword);
+
+  function passwordProblem(password: string): string | null {
+    if (password.length < MIN_LENGTH) {
+      return t('setPassword.minLength', { count: MIN_LENGTH });
+    }
+    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      return t('setPassword.mixCase');
+    }
+    return null;
+  }
+
   const problem = password ? passwordProblem(password) : null;
   const mismatch = confirm.length > 0 && confirm !== password;
   const canSubmit = password.length >= MIN_LENGTH && !problem && !mismatch && !loading && !done;
@@ -57,7 +58,7 @@ export default function SetPassword() {
       return;
     }
     if (confirm !== password) {
-      setError('The two passwords do not match. Retype the confirmation field.');
+      setError(t('setPassword.mismatch'));
       return;
     }
     setError(null);
@@ -66,24 +67,33 @@ export default function SetPassword() {
       await setPassword(password, isInviteFlow);
       setDone(true);
     } catch {
-      setError('The password could not be saved. Check your connection and try again.');
+      setError(t('setPassword.saveFailed'));
     } finally {
       setLoading(false);
     }
   };
 
+  const titleStyle = {
+    fontFamily: typography.display,
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.01,
+    color: c.ink,
+    writingDirection: isRtl ? 'rtl' : 'ltr',
+  } as const;
+
   if (done) {
     return (
       <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-        <AppBar title="Password set" />
+        <AppBar>
+          <Text style={titleStyle}>{t('setPassword.passwordSet')}</Text>
+        </AppBar>
         <View style={styles.doneBody}>
-          <Text style={[styles.doneTitle, { color: c.ink }]}>
-            {isInviteFlow ? 'Welcome to Meridian' : 'Password updated'}
+          <Text style={[styles.doneTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {isInviteFlow ? t('setPassword.welcome') : t('setPassword.updated')}
           </Text>
-          <Text style={[styles.doneBodyText, { color: c.ink2 }]}>
-            {isInviteFlow
-              ? 'Your membership account is active. Taking you to your membership…'
-              : 'Your new password is ready. Taking you to sign in…'}
+          <Text style={[styles.doneBodyText, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {isInviteFlow ? t('setPassword.inviteDone') : t('setPassword.recoveryDone')}
           </Text>
         </View>
       </View>
@@ -92,27 +102,31 @@ export default function SetPassword() {
 
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-      <AppBar title="Set password" />
+      <AppBar>
+        <Text style={titleStyle}>{t('setPassword.title')}</Text>
+      </AppBar>
       <View style={styles.body}>
         <View>
-          <Text style={[styles.h1, { color: c.ink }]}>
-            {isInviteFlow ? 'Choose a password' : 'Choose a new password'}
+          <Text style={[styles.h1, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {isInviteFlow ? t('setPassword.choose') : t('setPassword.chooseNew')}
           </Text>
-          <Text style={[styles.lede, { color: c.ink3 }]}>
-            {isInviteFlow
-              ? 'This password unlocks your member app together with your verified email.'
-              : 'Pick something you have not used before. You will use it with your account email.'}
+          <Text style={[styles.lede, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {isInviteFlow ? t('setPassword.inviteIntro') : t('setPassword.recoveryIntro')}
           </Text>
         </View>
 
-        <Field label="Password" error={error ?? undefined} hint={`At least ${MIN_LENGTH} characters with upper case, lower case, and a digit.`}>
+        <Field
+          label={t('auth.password')}
+          error={error ?? undefined}
+          hint={t('setPassword.hint', { count: MIN_LENGTH })}
+        >
           <Control
             value={password}
             onChangeText={(t) => {
               setPasswordValue(t);
               if (error) setError(null);
             }}
-            placeholder="New password"
+            placeholder={t('setPassword.newPlaceholder')}
             secure
             autoComplete="new-password"
             textContentType="newPassword"
@@ -122,8 +136,8 @@ export default function SetPassword() {
         </Field>
 
         <Field
-          label="Confirm password"
-          error={mismatch ? 'The two passwords do not match. Retype the confirmation field.' : undefined}
+          label={t('setPassword.confirmLabel')}
+          error={mismatch ? t('setPassword.mismatch') : undefined}
         >
           <Control
             value={confirm}
@@ -131,7 +145,7 @@ export default function SetPassword() {
               setConfirmValue(t);
               if (error) setError(null);
             }}
-            placeholder="Repeat the password"
+            placeholder={t('setPassword.repeatPlaceholder')}
             secure
             autoComplete="new-password"
             textContentType="newPassword"
@@ -141,11 +155,15 @@ export default function SetPassword() {
           />
         </Field>
 
-        {error ? <Banner variant="error">{error}</Banner> : null}
+        {error ? (
+          <Banner variant="error" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <Text style={{ writingDirection: isRtl ? 'rtl' : 'ltr' }}>{error}</Text>
+          </Banner>
+        ) : null}
 
         <View style={styles.foot}>
           <Button block loading={loading} disabled={!canSubmit} onPress={submit}>
-            {isInviteFlow ? 'Activate membership' : 'Save password'}
+            {isInviteFlow ? t('setPassword.activate') : t('setPassword.save')}
           </Button>
         </View>
       </View>

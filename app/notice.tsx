@@ -7,6 +7,7 @@ import { useApp } from '@/providers/AppProvider';
 import { useMarkNoticeRead, useNotices } from '@/data/api/queries';
 import { fmtLong } from '@/data/format';
 import { CLUB } from '@/data/plans';
+import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
 
 function catColor(c: any, category: Notice['category']) {
@@ -20,10 +21,25 @@ function catColor(c: any, category: Notice['category']) {
   }
 }
 
+function noticeCategoryKey(category: Notice['category']): TranslationKey {
+  switch (category) {
+    case 'Urgent': return 'noticeCategory.urgent';
+    case 'Schedule': return 'noticeCategory.schedule';
+    case 'Hours': return 'noticeCategory.hours';
+    case 'Facilities': return 'noticeCategory.facilities';
+    case 'Renewal': return 'noticeCategory.renewal';
+    default: return 'noticeCategory.renewal';
+  }
+}
+
+function noticeDate(iso: string, language: Language): string {
+  return fmtLong(iso, language);
+}
+
 export default function NoticeDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { role, darkMode } = useApp();
+  const { role, t, isRtl, language, darkMode } = useApp();
   const noticesQuery = useNotices(role === 'admin');
   const markRead = useMarkNoticeRead();
   const c = useColors(darkMode);
@@ -40,9 +56,11 @@ export default function NoticeDetail() {
   if (!n) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="Notice" onBack={() => router.back()} />
-        <Text style={{ color: c.ink2, padding: 20 }}>
-          {noticesQuery.isLoading ? 'Loading the notice…' : 'Notice not found.'}
+        <AppBar onBack={() => router.back()}>
+          <Text style={[styles.appBarTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notice.title')}</Text>
+        </AppBar>
+        <Text style={{ color: c.ink2, padding: 20, writingDirection: isRtl ? 'rtl' : 'ltr' }}>
+          {noticesQuery.isLoading ? t('notice.loading') : t('notice.notFound')}
         </Text>
       </View>
     );
@@ -52,24 +70,26 @@ export default function NoticeDetail() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Notice" onBack={() => router.back()} />
+      <AppBar onBack={() => router.back()}>
+        <Text style={[styles.appBarTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notice.title')}</Text>
+      </AppBar>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 18 }}>
           <View>
-            <Text style={[styles.kicker, { color }]}>{n.category}</Text>
-            <Text style={[styles.title, { color: c.ink }]}>{n.title}</Text>
-            <Text style={[styles.byline, { color: c.ink3 }]}>
-              {n.author} · {fmtLong(n.date)}
+            <Text style={[styles.kicker, { color, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(noticeCategoryKey(n.category))}</Text>
+            <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{n.title}</Text>
+            <Text style={[styles.byline, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+              {t('notice.byline', { author: n.author, date: noticeDate(n.date, language) })}
             </Text>
           </View>
 
           <View style={[styles.body, { borderTopColor: c.line }]}>
-            <Text style={[styles.paragraph, { color: c.ink }]}>{n.body}</Text>
+            <Text style={[styles.paragraph, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{n.body}</Text>
           </View>
 
           <View style={[styles.foot, { backgroundColor: c.bg1, borderColor: c.line }]}>
-            <Text style={[styles.footText, { color: c.ink3 }]}>
-              Questions? The front desk answers at {CLUB.phone}.
+            <Text style={[styles.footText, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+              {t('notice.questions', { phone: CLUB.phone })}
             </Text>
           </View>
         </Body>
@@ -79,6 +99,12 @@ export default function NoticeDetail() {
 }
 
 const styles = StyleSheet.create({
+  appBarTitle: {
+    fontFamily: typography.display,
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.01,
+  },
   kicker: {
     fontFamily: typography.mono,
     fontSize: 11,

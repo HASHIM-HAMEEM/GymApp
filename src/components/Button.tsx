@@ -14,6 +14,7 @@ import { Link, type Href } from 'expo-router';
 import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { useApp } from '@/data/store';
 import { Icon, IconName } from './Icon';
+import type { TranslationKey } from '@/lib/i18n';
 
 /* ------------------------------------------------------------------ */
 /* Button                                                              */
@@ -49,7 +50,7 @@ export function Button({
   style,
   textStyle,
 }: ButtonProps) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const scale = React.useRef(new Animated.Value(1)).current;
 
@@ -110,7 +111,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator size="small" color={fg} />
       ) : (
-        <View style={styles.btnInner}>
+        <View style={[styles.btnInner, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
           {icon && <Icon name={icon} size={size === 'sm' ? 16 : 19} color={fg} />}
           <Text
             style={[
@@ -120,7 +121,9 @@ export function Button({
                 fontWeight: '600',
                 letterSpacing: -0.005,
                 color: fg,
-                marginLeft: icon ? 9 : 0,
+                marginLeft: icon && !isRtl ? 9 : 0,
+                marginRight: icon && isRtl ? 9 : 0,
+                writingDirection: isRtl ? 'rtl' : 'ltr',
               },
               textStyle,
             ]}
@@ -208,20 +211,22 @@ export function IconButton({
   size?: number;
   accessibilityLabel?: string;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
-  const fallbackLabel =
+  const fallbackKey: TranslationKey =
     name === 'back'
-      ? 'Go back'
+      ? 'common.back'
       : name === 'close'
-        ? 'Close'
+        ? 'common.close'
         : name === 'search'
-          ? 'Search'
+          ? 'common.search'
           : name === 'refresh'
-            ? 'Refresh'
-            : name === 'plus'
-              ? 'Add'
-              : name;
+            ? 'common.refresh'
+            : name === 'plus' || name === 'add'
+              ? 'common.add'
+              : 'common.iconButton';
+  const fallbackLabel = t(fallbackKey);
+  const mirrorIcon = isRtl && (name === 'back' || name === 'chev' || name === 'next' || name === 'prev');
   return (
     <Pressable
       accessibilityRole="button"
@@ -237,7 +242,9 @@ export function IconButton({
         opacity: pressed ? 0.5 : 1,
       })}
     >
-      <Icon name={name} size={size} color={color ?? c.ink} />
+      <View style={mirrorIcon ? { transform: [{ scaleX: -1 }] } : undefined}>
+        <Icon name={name} size={size} color={color ?? c.ink} />
+      </View>
     </Pressable>
   );
 }

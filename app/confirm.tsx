@@ -18,10 +18,10 @@ type Phase = 'verifying' | 'done' | 'error';
 export default function Confirm() {
   const router = useRouter();
   const params = useLocalSearchParams<{ token_hash?: string; type?: string; next?: string }>();
-  const { darkMode } = useApp();
+  const { darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const [phase, setPhase] = React.useState<Phase>('verifying');
-  const [message, setMessage] = React.useState('Verifying your email link…');
+  const [message, setMessage] = React.useState(t('confirm.verifying'));
 
   React.useEffect(() => {
     const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : '';
@@ -32,8 +32,8 @@ export default function Confirm() {
       setPhase('error');
       setMessage(
         !tokenHash || !type
-          ? 'This link is incomplete or was altered. Open the invitation or reset email again and tap the button inside it.'
-          : 'Connect Supabase by copying .env.example to .env.local and adding the project URL and publishable key.',
+          ? t('confirm.incompleteLink')
+          : t('common.configurationError'),
       );
       return;
     }
@@ -45,27 +45,25 @@ export default function Confirm() {
         if (!active) return;
         if (error) {
           setPhase('error');
-          setMessage(
-            'This link has expired or was already used. Ask reception to resend the invitation, or request a fresh reset email.',
-          );
+          setMessage(t('confirm.expiredLink'));
           return;
         }
         setPhase('done');
         setMessage(
           type === 'invite'
-            ? 'Email verified. Choose a password to activate your membership.'
-            : 'Email verified. Choose a new password for your account.',
+            ? t('confirm.inviteVerified')
+            : t('confirm.recoveryVerified'),
         );
       })
       .catch(() => {
         if (!active) return;
         setPhase('error');
-        setMessage('The verification request failed. Check your connection and open the email link again.');
+        setMessage(t('confirm.requestFailed'));
       });
     return () => {
       active = false;
     };
-  }, [params.token_hash, params.type]);
+  }, [params.token_hash, params.type, t]);
 
   React.useEffect(() => {
     if (phase !== 'done') return;
@@ -88,16 +86,16 @@ export default function Confirm() {
             <Icon name={phase === 'done' ? 'check' : 'alertc'} size={36} color={phase === 'done' ? c.ok : c.bad} />
           </View>
         )}
-        <Text style={[styles.title, { color: c.ink }]}>
-          {phase === 'verifying' ? 'One moment' : phase === 'done' ? 'Email verified' : 'Link problem'}
+        <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+          {phase === 'verifying' ? t('confirm.oneMoment') : phase === 'done' ? t('confirm.emailVerified') : t('confirm.linkProblem')}
         </Text>
-        <Text style={[styles.body, { color: c.ink2 }]}>{message}</Text>
+        <Text style={[styles.body, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{message}</Text>
       </View>
 
       {phase === 'error' ? (
         <View style={styles.foot}>
           <Button block href="/signin">
-            Go to sign in
+            {t('confirm.goToSignIn')}
           </Button>
         </View>
       ) : null}

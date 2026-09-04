@@ -5,6 +5,7 @@
  */
 
 export type Role = 'member' | 'admin' | 'unauth';
+export type Language = 'en' | 'ur';
 export type AccountStatus = 'invited' | 'active' | 'suspended';
 export type InvitationStatus = 'pending' | 'sent' | 'accepted' | 'failed' | 'revoked';
 
@@ -121,6 +122,7 @@ export interface AppProfile {
   reception?: 'A' | 'B';
   status: AccountStatus;
   mustSetPassword: boolean;
+  preferredLanguage: Language;
 }
 
 export interface AdminUser {

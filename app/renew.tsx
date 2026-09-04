@@ -10,14 +10,10 @@ import { useApp } from '@/providers/AppProvider';
 import { useMemberDetail, usePlans, useRenewMembership } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
 import { fmtLong, fmtShort, TODAY } from '@/data/format';
-import type { Plan } from '@/data/types';
+import { Language, type TranslationKey } from '@/lib/i18n';
 
-/**
- * A-04, A-05, A-06:
- * 1. Choose Plan (radios + start option + payment method)
- * 2. Review (receipt rows, total due highlight, staff read-aloud script)
- * 3. Success (renewed badge, real receipt reference, new validity)
- */
+type PayMethod = 'cash' | 'card' | 'wallet' | 'instapay';
+
 export default function RenewFlow() {
   return (
     <>
@@ -33,15 +29,16 @@ function RenewFlowInner() {
   const memberQuery = useMemberDetail(id);
   const plansQuery = usePlans();
   const renewMembership = useRenewMembership();
-  const { adminName, darkMode } = useApp();
+  const { adminName, darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
 
   const m = memberQuery.data ?? null;
   const plans = (plansQuery.data ?? []).filter((p) => p.name !== 'Premium Quarterly');
 
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [selectedPlanId, setSelectedPlanId] = React.useState('');
-  const [payMethod, setPayMethod] = React.useState<'cash' | 'card' | 'wallet' | 'instapay'>('cash');
+  const [payMethod, setPayMethod] = React.useState<PayMethod>('cash');
   const [result, setResult] = React.useState<{ receiptNumber: string | null; startDate: string; endDate: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -49,18 +46,25 @@ function RenewFlowInner() {
     if (!selectedPlanId && plans.length > 0) setSelectedPlanId(plans[0].id);
   }, [plans, selectedPlanId]);
 
+  const paymentMethodLabels: Record<PayMethod, string> = {
+    cash: t('payment.cash'),
+    card: t('payment.card'),
+    wallet: t('payment.wallet'),
+    instapay: t('payment.instapay'),
+  };
+
   if (!m) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="Renew" onBack={() => router.back()} />
-        <Text style={{ color: c.ink2, padding: 20 }}>
-          {memberQuery.isLoading ? 'Loading member…' : 'Member not found.'}
+        <AppBar title={t('renew.title')} onBack={() => router.back()} />
+        <Text style={{ color: c.ink2, padding: 20, writingDirection: textDir }}>
+          {memberQuery.isLoading ? t('renew.loading') : t('renew.notFound')}
         </Text>
       </View>
     );
   }
 
-  const plan: Plan | undefined = plans.find((p) => p.id === selectedPlanId) ?? plans[0];
+  const plan = plans.find((p) => p.id === selectedPlanId) ?? plans[0];
   const currentExpiry = m.membership?.expiryDate ?? TODAY;
   const hasActiveTerm = Boolean(m.membership && m.membership.expiryDate >= TODAY);
 
@@ -82,9 +86,9 @@ function RenewFlowInner() {
       setStep(3);
     } catch (err) {
       if (err instanceof ApiCallError && err.code === 'VALIDATION_ERROR') {
-        setError(`${err.message} If the member is still active, start the renewal after expiry instead.`);
+        setError(t('renew.validationFailed'));
       } else {
-        setError('The renewal could not be recorded. Check your connection and try again — no payment was saved.');
+        setError(t('renew.failed'));
       }
     }
   };
@@ -100,26 +104,25 @@ function RenewFlowInner() {
   if (step === 3 && result) {
     return (
       <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-        <AppBar title="Renewal" onClose={() => router.replace({ pathname: '/member-detail', params: { id: m.id } })} />
+        <AppBar title={t('renew.renewal')} onClose={() => router.replace({ pathname: '/member-detail', params: { id: m.id } })} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
           <Body style={{ gap: 20 }}>
             {renderStepPills(3)}
 
             <View style={{ alignItems: 'flex-start', gap: 10 }}>
-              <Tag variant="ok">Renewed</Tag>
-              <Text style={[styles.h1, { color: c.ink }]}>Membership recorded</Text>
-              <Text style={[styles.desc, { color: c.ink2 }]}>
-                {m.firstName} {m.lastName}'s {plan?.name} membership is valid until{' '}
-                <Text style={{ color: c.ink, fontWeight: '600' }}>{fmtLong(result.endDate)}</Text>.
+              <Tag variant="ok">{t('renew.renewed')}</Tag>
+              <Text style={[styles.h1, { color: c.ink, writingDirection: textDir }]}>{t('renew.recorded')}</Text>
+              <Text style={[styles.desc, { color: c.ink2, writingDirection: textDir }]}>
+                {t('renew.successBody', { name: m.firstName, plan: plan?.name ?? '', date: fmtLong(result.endDate, language) })}
               </Text>
             </View>
 
             <View style={[styles.receiptCard, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              <ReceiptRow label="Receipt reference" value={result.receiptNumber ?? '—'} isMono />
-              <ReceiptRow label={`${payMethod === 'instapay' ? 'InstaPay' : payMethod[0].toUpperCase() + payMethod.slice(1)} recorded`} value={`EGP ${plan?.priceEGP.toLocaleString()}`} />
-              <ReceiptRow label="Starts" value={fmtLong(result.startDate)} />
-              <ReceiptRow label="Staff" value={adminName || 'Front desk'} />
-              <ReceiptRow label="Status" value="Paid in full" last />
+              <ReceiptRow label={t('renew.receiptReference')} value={result.receiptNumber ?? t('common.notAvailable')} isMono />
+              <ReceiptRow label={t('renew.paymentRecorded', { method: paymentMethodLabels[payMethod] })} value={t('common.egpAmount', { amount: plan?.priceEGP.toLocaleString() ?? '' })} />
+              <ReceiptRow label={t('renew.starts')} value={fmtLong(result.startDate, language)} />
+              <ReceiptRow label={t('renew.staff')} value={adminName || t('common.frontDesk')} />
+              <ReceiptRow label={t('renew.status')} value={t('renew.paidInFull')} last />
             </View>
 
             <View style={{ gap: 12, marginTop: 12 }}>
@@ -127,14 +130,14 @@ function RenewFlowInner() {
                 block
                 onPress={() => router.replace({ pathname: '/member-detail', params: { id: m.id } })}
               >
-                Back to member profile
+                {t('renew.backToProfile')}
               </Button>
               <Button
                 variant="quiet"
                 block
                 onPress={() => router.replace('/(admin)/scanner')}
               >
-                Scan next member
+                {t('renew.scanNext')}
               </Button>
             </View>
           </Body>
@@ -146,47 +149,48 @@ function RenewFlowInner() {
   if (step === 2) {
     return (
       <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-        <AppBar title="Renew membership" onBack={() => setStep(1)} />
+        <AppBar title={t('renew.title')} onBack={() => setStep(1)} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
           <Body style={{ gap: 20 }}>
             {renderStepPills(2)}
 
             <View>
-              <Text style={[styles.stepSub, { color: c.ink3 }]}>Step 2 of 3 · Review</Text>
-              <Text style={[styles.h1, { color: c.ink }]}>Confirm renewal</Text>
-              <Text style={[styles.desc, { color: c.ink2 }]}>
-                Review the transaction details before committing.
+              <Text style={[styles.stepSub, { color: c.ink3, writingDirection: textDir }]}>{t('renew.stepReview')}</Text>
+              <Text style={[styles.h1, { color: c.ink, writingDirection: textDir }]}>{t('renew.confirmRenewal')}</Text>
+              <Text style={[styles.desc, { color: c.ink2, writingDirection: textDir }]}>
+                {t('renew.reviewBody')}
               </Text>
             </View>
 
-            {error ? <Banner variant="error">{error}</Banner> : null}
+            {error ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{error}</Text></Banner> : null}
 
             <View style={[styles.receiptCard, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              <ReceiptRow label="Member" value={`${m.firstName} ${m.lastName}`} />
-              <ReceiptRow label="Plan" value={plan?.name ?? '—'} />
+              <ReceiptRow label={t('renew.member')} value={`${m.firstName} ${m.lastName}`} />
+              <ReceiptRow label={t('renew.plan')} value={plan?.name ?? t('common.notAvailable')} />
               <ReceiptRow
-                label="Period"
-                value={hasActiveTerm ? `Starts after ${fmtShort(currentExpiry)}` : `Starts ${fmtShort(TODAY)}`}
+                label={t('renew.period')}
+                value={hasActiveTerm ? t('renew.startsAfter', { date: fmtShort(currentExpiry, language) }) : t('renew.startsToday', { date: fmtShort(TODAY, language) })}
               />
-              <ReceiptRow label="Payment" value={`${payMethod === 'instapay' ? 'InstaPay' : payMethod[0].toUpperCase() + payMethod.slice(1)} · EGP ${plan?.priceEGP.toLocaleString()}`} />
-              <View style={[styles.totalRow, { backgroundColor: c.accentSoft, borderColor: c.line }]}>
-                <Text style={[styles.totalLabel, { color: c.ink }]}>Total due</Text>
-                <Text style={[styles.totalVal, { color: c.accentHi }]}>
-                  EGP {plan?.priceEGP.toLocaleString()}
+              <ReceiptRow
+                label={t('renew.payment')}
+                value={t('renew.paymentSummary', { method: paymentMethodLabels[payMethod], amount: t('common.egpAmount', { amount: plan?.priceEGP.toLocaleString() ?? '' }) })}
+              />
+              <View style={[styles.totalRow, { backgroundColor: c.accentSoft, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <Text style={[styles.totalLabel, { color: c.ink, writingDirection: textDir }]}>{t('renew.totalDue')}</Text>
+                <Text style={[styles.totalVal, { color: c.accentHi, writingDirection: textDir }]}>
+                  {t('common.egpAmount', { amount: plan?.priceEGP.toLocaleString() ?? '' })}
                 </Text>
               </View>
             </View>
 
-            <Banner variant="info">
-              Staff: read this summary aloud to the member before completing payment.
-            </Banner>
+            <Banner variant="info"><Text style={{ writingDirection: textDir }}>{t('renew.readAloud')}</Text></Banner>
 
             <View style={{ gap: 12, marginTop: 8 }}>
               <Button block loading={renewMembership.isPending} onPress={confirmRenewal}>
-                Confirm payment & renew
+                {t('renew.confirmPayment')}
               </Button>
               <Button variant="quiet" block onPress={() => setStep(1)}>
-                Back
+                {t('common.back')}
               </Button>
             </View>
           </Body>
@@ -197,58 +201,60 @@ function RenewFlowInner() {
 
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-      <AppBar title="Renew membership" onBack={() => router.back()} />
+      <AppBar title={t('renew.title')} onBack={() => router.back()} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 22 }}>
           {renderStepPills(1)}
 
           <View>
-            <Text style={[styles.stepSub, { color: c.ink3 }]}>Step 1 of 3 · Choose plan</Text>
-            <Text style={[styles.h1, { color: c.ink }]}>Renewal plan</Text>
-            <Text style={[styles.desc, { color: c.ink2 }]}>
-              Select a membership tier for {m.firstName} {m.lastName}.
+            <Text style={[styles.stepSub, { color: c.ink3, writingDirection: textDir }]}>{t('renew.stepChoose')}</Text>
+            <Text style={[styles.h1, { color: c.ink, writingDirection: textDir }]}>{t('renew.planHeading')}</Text>
+            <Text style={[styles.desc, { color: c.ink2, writingDirection: textDir }]}>
+              {t('renew.selectFor', { name: `${m.firstName} ${m.lastName}` })}
             </Text>
           </View>
 
-          {error ? <Banner variant="error">{error}</Banner> : null}
+          {error ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{error}</Text></Banner> : null}
 
           <View style={{ gap: 10 }}>
             {plans.map((p) => {
               const on = p.id === selectedPlanId;
-              const periodLabel = p.duration === 12 ? '/ year' : p.duration === 3 ? '/ 3 mo' : '/ month';
+              const periodLabel = p.duration === 12 ? t('memberNew.perYear') : p.duration === 3 ? t('memberNew.perThreeMonths') : t('memberNew.perMonth');
               return (
                 <Pressable
                   key={p.id}
                   onPress={() => setSelectedPlanId(p.id)}
-                  style={[styles.planRadioCard, { backgroundColor: c.bg1, borderColor: on ? c.accent : c.line }]}
+                  style={[styles.planRadioCard, { backgroundColor: c.bg1, borderColor: on ? c.accent : c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}
                 >
                   <View style={[styles.radioCircle, { borderColor: on ? c.accent : c.line2, backgroundColor: on ? c.accent : 'transparent' }]} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.planTitle, { color: c.ink }]}>{p.name}</Text>
-                    <Text style={[styles.planPeriod, { color: c.ink3 }]}>{p.blurb}</Text>
+                    <Text style={[styles.planTitle, { color: c.ink, writingDirection: textDir }]}>{p.name}</Text>
+                    <Text style={[styles.planPeriod, { color: c.ink3, writingDirection: textDir }]}>{p.blurb}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.planPrice, { color: c.ink }]}>EGP {p.priceEGP.toLocaleString()}</Text>
-                    <Text style={[styles.planPricePeriod, { color: c.ink3 }]}>{periodLabel}</Text>
+                    <Text style={[styles.planPrice, { color: c.ink, writingDirection: textDir }]}>{t('common.egpAmount', { amount: p.priceEGP.toLocaleString() })}</Text>
+                    <Text style={[styles.planPricePeriod, { color: c.ink3, writingDirection: textDir }]}>{periodLabel}</Text>
                   </View>
                 </Pressable>
               );
             })}
             {plansQuery.isLoading ? (
-              <Text style={{ color: c.ink3, fontSize: 12.5 }}>Loading plans…</Text>
+              <Text style={{ color: c.ink3, fontSize: 13, writingDirection: textDir }}>{t('memberNew.loadingPlans')}</Text>
             ) : null}
           </View>
 
           <Banner variant="info">
-            {hasActiveTerm
-              ? `The new plan starts automatically after the current term ends on ${fmtLong(currentExpiry)}.`
-              : 'The new plan starts today — this member has no active term.'}
+            <Text style={{ writingDirection: textDir }}>
+              {hasActiveTerm
+                ? t('renew.startsAfterTerm', { date: fmtLong(currentExpiry, language) })
+                : t('renew.startsNow')}
+            </Text>
           </Banner>
 
           <View style={{ gap: 8 }}>
-            <Text style={[styles.fieldLabel, { color: c.ink3 }]}>Payment method</Text>
-            <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              {(['cash', 'card', 'wallet', 'instapay'] as const).map((method) => {
+            <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('renew.paymentMethod')}</Text>
+            <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              {(['cash', 'card', 'wallet', 'instapay'] as PayMethod[]).map((method) => {
                 const on = payMethod === method;
                 return (
                   <Pressable
@@ -256,8 +262,8 @@ function RenewFlowInner() {
                     onPress={() => setPayMethod(method)}
                     style={[styles.segBtn, on && { backgroundColor: c.accent }]}
                   >
-                    <Text style={[styles.segText, { color: on ? c.accentInk : c.ink3 }]}>
-                      {method === 'instapay' ? 'InstaPay' : method[0].toUpperCase() + method.slice(1)}
+                    <Text style={[styles.segText, { color: on ? c.accentInk : c.ink3, writingDirection: textDir }]}>
+                      {paymentMethodLabels[method]}
                     </Text>
                   </Pressable>
                 );
@@ -266,7 +272,7 @@ function RenewFlowInner() {
           </View>
 
           <Button block style={{ marginTop: 8 }} onPress={() => setStep(2)}>
-            Continue to review
+            {t('renew.continue')}
           </Button>
         </Body>
       </ScrollView>
@@ -285,12 +291,13 @@ function ReceiptRow({
   isMono?: boolean;
   last?: boolean;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
   return (
-    <View style={[styles.rrow, { borderBottomColor: c.line }, last && { borderBottomWidth: 0 }]}>
-      <Text style={[styles.rk, { color: c.ink3 }]}>{label}</Text>
-      <Text style={[styles.rv, { color: c.ink }, isMono && { fontFamily: typography.mono, fontSize: 13 }]}>
+    <View style={[styles.rrow, { borderBottomColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }, last && { borderBottomWidth: 0 }]}>
+      <Text style={[styles.rk, { color: c.ink3, writingDirection: textDir }]}>{label}</Text>
+      <Text style={[styles.rv, { color: c.ink, writingDirection: textDir }, isMono && { fontFamily: typography.mono, fontSize: 13 }]}>
         {value}
       </Text>
     </View>

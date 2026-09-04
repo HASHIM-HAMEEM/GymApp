@@ -353,14 +353,14 @@ export function useCheckInByQr() {
 export function usePublishNotice() {
   const cache = useQueryClient();
   return useMutation({
-    mutationFn: (input: {
+    mutationFn: async (input: {
       category: 'urgent' | 'schedule' | 'hours' | 'facilities' | 'renewal';
       title: string;
       body: string;
       audience: 'all_members' | 'active_only' | 'expiring_soon';
       urgent: boolean;
-    }) =>
-      callRpc<ApiPublishNoticeRow>(
+    }) => {
+      const notice = await callRpc<ApiPublishNoticeRow>(
         'publish_notice',
         {
           p_category: input.category,
@@ -370,7 +370,17 @@ export function usePublishNotice() {
           p_urgent: input.urgent,
         },
         'The notice could not be published.',
-      ),
+      );
+      try {
+        const push = await invokeEdge<{ attempted: number; failed: number; sent: number }>(
+          'send-notice-push',
+          { noticeId: notice.notice_id },
+        );
+        return { ...notice, push };
+      } catch {
+        return { ...notice, push: null };
+      }
+    },
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['notices'] });
       void cache.invalidateQueries({ queryKey: ['dashboard'] });
@@ -385,6 +395,18 @@ export function useMarkNoticeRead() {
       callRpc<string>('mark_notice_read', { p_notice_id: noticeId }, 'The notice could not be marked as read.'),
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['notices'] });
+    },
+  });
+}
+
+export function useDeleteNotice() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (noticeId: string) =>
+      callRpc<string>('delete_notice', { p_notice_id: noticeId }, 'The notice could not be removed.'),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ['notices'] });
+      void cache.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

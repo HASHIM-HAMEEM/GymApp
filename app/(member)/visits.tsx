@@ -8,25 +8,18 @@ import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { useCurrentMember } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
-import { TODAY } from '@/data/format';
+import { TODAY, fmtShort, fmtLong, formatTime } from '@/data/format';
+import type { Language } from '@/lib/i18n';
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-function labelFor(iso: string) {
-  const m = parseInt(iso.slice(5, 7), 10) - 1;
-  const y = iso.slice(0, 4);
-  return `${MONTHS[m]} ${y}`;
-}
-
-function sessionLabel(time: string) {
-  const h = parseInt(time.split(':')[0], 10) + (time.includes('PM') && parseInt(time.split(':')[0], 10) < 12 ? 12 : 0);
-  return h < 12 ? 'Morning check-in' : 'Evening check-in';
+function monthYearLabel(iso: string, language: Language): string {
+  const long = fmtLong(`${iso}-01`, language);
+  return long.replace(/^\d{1,2}\s+/, '');
 }
 
 export default function VisitsScreen() {
   const router = useRouter();
   const memberQuery = useCurrentMember();
-  const { darkMode } = useApp();
+  const { t, isRtl, language, darkMode } = useApp();
   const c = useColors(darkMode);
   const [showSkeleton, setShowSkeleton] = React.useState(false);
 
@@ -48,21 +41,28 @@ export default function VisitsScreen() {
 
   const count = filtered.length;
 
+  const sessionLabel = (time: string) => {
+    const rawHour = parseInt(time.split(':')[0], 10);
+    const hour = time.includes('PM') && rawHour < 12 ? rawHour + 12 : rawHour;
+    return hour < 12 ? t('visits.morning') : t('visits.evening');
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
-        title="Visits"
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Pressable onPress={() => setShowSkeleton((v) => !v)}>
-              <Text style={{ fontFamily: typography.mono, fontSize: 11, color: showSkeleton ? c.accent : c.ink4 }}>
-                {showSkeleton ? 'M-20 Shimmer: ON' : 'M-20'}
+              <Text style={{ fontFamily: typography.mono, fontSize: 11, color: showSkeleton ? c.accent : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }}>
+                {showSkeleton ? t('visits.shimmerOn') : t('common.off')}
               </Text>
             </Pressable>
-            <Text style={[styles.headStat, { color: c.ink3 }]}>{count} this month</Text>
+            <Text style={[styles.headStat, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('visits.monthCount', { count })}</Text>
           </View>
         }
-      />
+      >
+        <Text style={{ fontFamily: typography.display, fontSize: 17, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('visits.title')}</Text>
+      </AppBar>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -76,7 +76,7 @@ export default function VisitsScreen() {
                   key={n}
                   style={[
                     styles.vrow,
-                    { borderColor: c.line },
+                    { borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
                     i === 4 && { borderBottomWidth: 0 },
                   ]}
                 >
@@ -91,11 +91,11 @@ export default function VisitsScreen() {
           ) : visits.length === 0 ? (
             <EmptyState
               icon="clock"
-              title="No visits yet"
-              body="Once you check in at reception, your visits will appear here."
+              title={t('member.noVisits')}
+              body={t('member.noVisitsBody')}
               action={
                 <Button variant="secondary" icon="qr" href="/qr" style={{ marginTop: 22 }}>
-                  Show my card
+                  {t('member.showCard')}
                 </Button>
               }
             />
@@ -116,28 +116,35 @@ export default function VisitsScreen() {
                         },
                       ]}
                     >
-                      <Text style={[styles.chipText, { color: on ? c.bg : c.ink }]}>{labelFor(k + '-01')}</Text>
+                      <Text style={[styles.chipText, { color: on ? c.bg : c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{monthYearLabel(k, language)}</Text>
                     </Pressable>
                   );
                 })}
               </View>
 
               <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-                {filtered.map((v, i) => (
-                  <View key={v.id} style={[styles.vrow, { borderColor: c.line }, i === filtered.length - 1 && { borderBottomWidth: 0 }]}>
-                    <View style={[styles.date, { backgroundColor: c.bg2, borderColor: c.line }]}>
-                      <Text style={[styles.dateD, { color: c.ink }]}>{parseInt(v.date.slice(8), 10)}</Text>
-                      <Text style={[styles.dateM, { color: c.ink3 }]}>{MONTHS[parseInt(v.date.slice(5, 7), 10) - 1]}</Text>
+                {filtered.map((v, i) => {
+                  const [dayLabel, monthLabel] = fmtShort(v.date, language).split(' ');
+                  return (
+                    <View key={v.id} style={[styles.vrow, { borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }, i === filtered.length - 1 && { borderBottomWidth: 0 }]}>
+                      <View style={[styles.date, { backgroundColor: c.bg2, borderColor: c.line }]}>
+                        <Text style={[styles.dateD, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{dayLabel}</Text>
+                        <Text style={[styles.dateM, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{monthLabel}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={[styles.time, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{sessionLabel(v.time)}</Text>
+                        <Text style={[styles.loc, { color: c.ink3, fontFamily: typography.mono, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
+                          {t('visits.detail', {
+                            time: formatTime(v.time, language),
+                            method: v.method === 'qr' ? t('visits.qrScan') : t('visits.frontDesk'),
+                            reception: v.reception,
+                          })}
+                        </Text>
+                      </View>
+                      <Icon name="checkc" size={18} color={c.ok} />
                     </View>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={[styles.time, { color: c.ink }]}>{sessionLabel(v.time)}</Text>
-                      <Text style={[styles.loc, { color: c.ink3, fontFamily: typography.mono }]} numberOfLines={1}>
-                        {v.time} · {v.method === 'qr' ? 'QR scan' : 'Front desk'} · Reception {v.reception}
-                      </Text>
-                    </View>
-                    <Icon name="checkc" size={18} color={c.ok} />
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             </>
           )}

@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AppProvider, useApp } from '@/providers/AppProvider';
 import { colors, useColors } from '@/theme/tokens';
 import { StatusBar as FauxStatusBar } from '@/components/Chrome';
+import { subscribeToNotificationResponses } from '@/lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -17,6 +18,11 @@ function RootNav() {
   React.useEffect(() => {
     if (!authLoading) SplashScreen.hide();
   }, [authLoading]);
+
+  React.useEffect(() => {
+    if (authLoading || !session) return;
+    return subscribeToNotificationResponses((url) => router.push(url as never));
+  }, [authLoading, router, session]);
 
   React.useEffect(() => {
     if (authLoading || pathname === '/confirm') return;
@@ -65,6 +71,7 @@ function RootNav() {
 
       <Stack.Protected guard={active && !needsPassword}>
         <Stack.Screen name="notice" />
+        <Stack.Screen name="privacy" />
         <Stack.Protected guard={isMember}>
           <Stack.Screen name="(member)" />
           <Stack.Screen name="qr" />
@@ -92,12 +99,12 @@ function RootNav() {
  * On native, fill the full screen.
  */
 function PhoneFrame({ children }: { children: React.ReactNode }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const { width, height } = useWindowDimensions();
 
   if (Platform.OS !== 'web') {
-    return <>{children}</>;
+    return <View style={{ flex: 1, direction: isRtl ? 'rtl' : 'ltr' }}>{children}</View>;
   }
 
   const frameWidth = Math.min(390, Math.max(280, width - 24));
@@ -118,7 +125,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
         ]}
       >
         <FauxStatusBar dark={darkMode} />
-        <View style={{ flex: 1 }}>{children}</View>
+        <View style={{ flex: 1, direction: isRtl ? 'rtl' : 'ltr' }}>{children}</View>
       </View>
     </View>
   );

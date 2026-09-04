@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/Surfaces';
 import { useNotices } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
+import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
 
 function catColor(c: any, category: Notice['category']) {
@@ -24,10 +25,25 @@ function catColor(c: any, category: Notice['category']) {
   }
 }
 
+function noticeCategoryKey(category: Notice['category']): TranslationKey {
+  switch (category) {
+    case 'Urgent': return 'noticeCategory.urgent';
+    case 'Schedule': return 'noticeCategory.schedule';
+    case 'Hours': return 'noticeCategory.hours';
+    case 'Facilities': return 'noticeCategory.facilities';
+    case 'Renewal': return 'noticeCategory.renewal';
+    default: return 'noticeCategory.renewal';
+  }
+}
+
+function noticeDate(iso: string, language: Language): string {
+  return fmtShort(iso, language);
+}
+
 export default function NoticesScreen() {
   const router = useRouter();
   const noticesQuery = useNotices();
-  const { darkMode } = useApp();
+  const { t, isRtl, language, darkMode } = useApp();
   const c = useColors(darkMode);
   const notices = noticesQuery.data ?? [];
   const unreadCount = notices.filter((n) => !n.read).length;
@@ -35,8 +51,8 @@ export default function NoticesScreen() {
   if (notices.length === 0) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="Notices" />
-        <EmptyState icon="bell" title="All quiet" body="No notices right now. When the club posts something, it'll show up here." />
+        <AppBar title={t('notices.title')} />
+        <EmptyState icon="bell" title={t('notices.emptyTitle')} body={t('notices.emptyBody')} />
       </View>
     );
   }
@@ -44,13 +60,14 @@ export default function NoticesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
-        title="Notices"
         right={
           unreadCount > 0 ? (
-            <Text style={[styles.badge, { color: c.accentHi }]}>{unreadCount} new</Text>
+            <Text style={[styles.badge, { color: c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notices.newCount', { count: unreadCount })}</Text>
           ) : null
         }
-      />
+      >
+        <Text style={{ fontFamily: typography.display, fontSize: 17, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('notices.title')}</Text>
+      </AppBar>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -66,22 +83,22 @@ export default function NoticesScreen() {
                   onPress={() => router.push(`/notice?id=${n.id}`)}
                   style={({ pressed }) => [
                     styles.nrow,
-                    { borderColor: c.line },
+                    { borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
                     i === notices.length - 1 && { borderBottomWidth: 0 },
                     pressed && { opacity: 0.6 },
                   ]}
                 >
-                  <Text style={[styles.cat, { color }]}>{n.category}</Text>
+                  <Text style={[styles.cat, { color, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(noticeCategoryKey(n.category))}</Text>
                   <View style={styles.grow}>
-                    <Text style={[styles.title, { color: c.ink }]} numberOfLines={2}>
+                    <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={2}>
                       {n.title}
                     </Text>
-                    <Text style={[styles.preview, { color: c.ink3 }]} numberOfLines={2}>
+                    <Text style={[styles.preview, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={2}>
                       {n.body}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                    <Text style={[styles.dt, { color: c.ink4 }]}>{fmtShort(n.date)}</Text>
+                    <Text style={[styles.dt, { color: c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{noticeDate(n.date, language)}</Text>
                     {!n.read ? (
                       <View style={[styles.unread, { backgroundColor: c.accent }]} />
                     ) : null}

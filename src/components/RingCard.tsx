@@ -22,7 +22,7 @@ export interface RingCardProps {
 const CIRCUMFERENCE = 2 * Math.PI * 46; // r=46
 
 export function RingCard({ value, unit, variant, tag, title, subtitle, progress, children }: RingCardProps) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const offset = CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, progress)));
 
@@ -33,7 +33,7 @@ export function RingCard({ value, unit, variant, tag, title, subtitle, progress,
 
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
-      <View style={styles.row}>
+      <View style={[styles.row, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
         <View style={styles.ring}>
           <Svg width={108} height={108} viewBox="0 0 108 108">
             <G transform="rotate(-90 54 54)">
@@ -60,15 +60,15 @@ export function RingCard({ value, unit, variant, tag, title, subtitle, progress,
             </G>
           </Svg>
           <View style={styles.center}>
-            <Text style={[styles.n, { color: valueColor }]}>{value}</Text>
-            <Text style={[styles.u, { color: c.ink3 }]}>{unit}</Text>
+            <Text style={[styles.n, { color: valueColor, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{value}</Text>
+            <Text style={[styles.u, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{unit}</Text>
           </View>
         </View>
 
         <View style={styles.info}>
           <Tag variant={tag.variant ?? 'ok'}>{tag.label}</Tag>
-          <Text style={[styles.title, { color: c.ink }]}>{title}</Text>
-          {subtitle ? <Text style={[styles.subtitle, { color: c.ink3 }]}>{subtitle}</Text> : null}
+          <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{title}</Text>
+          {subtitle ? <Text style={[styles.subtitle, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{subtitle}</Text> : null}
         </View>
       </View>
 

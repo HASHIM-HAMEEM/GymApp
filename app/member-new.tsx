@@ -31,8 +31,9 @@ export default function MemberNew() {
   const router = useRouter();
   const plansQuery = usePlans();
   const createInvitation = useCreateMemberInvitation();
-  const { darkMode } = useApp();
+  const { darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
 
   const [firstName, setFirstName] = React.useState('');
   const [lastName, setLastName] = React.useState('');
@@ -52,26 +53,34 @@ export default function MemberNew() {
   const plans = plansQuery.data ?? [];
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
 
+  const paymentLabels: Record<PaymentMethod, string> = {
+    cash: t('payment.cash'),
+    card: t('payment.card'),
+    wallet: t('payment.wallet'),
+    instapay: t('payment.instapay'),
+    complimentary: t('payment.complimentaryShort'),
+  };
+
   if (created) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="New member" onClose={() => router.back()} />
+        <AppBar title={t('memberNew.title')} onClose={() => router.back()} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
           <Body style={{ gap: 18 }}>
             <View style={{ alignItems: 'center', gap: 12, paddingTop: 20 }}>
               <View style={[styles.badge, { backgroundColor: c.okSoft }]}>
                 <Icon name="mail" size={38} color={c.ok} />
               </View>
-              <Text style={[styles.h1, { color: c.ink }]}>Invitation sent</Text>
-              <Text style={[styles.desc, { color: c.ink2 }]}>
-                {created.memberNumber} is registered. An activation email is on its way to {created.email} — the member sets their own password from that link.
+              <Text style={[styles.h1, { color: c.ink, writingDirection: textDir }]}>{t('memberNew.invitationSent')}</Text>
+              <Text style={[styles.desc, { color: c.ink2, writingDirection: textDir }]}>
+                {t('memberNew.invitationSentBody', { memberId: created.memberNumber, email: created.email })}
               </Text>
             </View>
             <Button block onPress={() => router.replace({ pathname: '/member-detail', params: { id: created.memberNumber } })}>
-              View member profile
+              {t('memberNew.viewProfile')}
             </Button>
             <Button variant="secondary" block onPress={() => router.push('/member-new')}>
-              Add another member
+              {t('memberNew.addAnother')}
             </Button>
           </Body>
         </ScrollView>
@@ -81,18 +90,18 @@ export default function MemberNew() {
 
   const submit = async () => {
     let bad: string | null = null;
-    if (!firstName.trim() || !lastName.trim()) bad = 'First and last name are required.';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) bad = 'Enter a complete email address — the invitation is sent there.';
-    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = 'Enter a valid member phone number, or leave it blank.';
-    else if (dateOfBirth.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth.trim())) bad = 'Date of birth must be YYYY-MM-DD.';
-    else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = 'Add both the emergency contact name and phone, or leave both blank.';
-    else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = 'Enter a valid emergency contact phone number.';
-    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length !== 14) bad = 'Enter a valid Egyptian national ID — exactly 14 digits.';
-    else if (!address.trim()) bad = 'Address is required for the member file.';
+    if (!firstName.trim() || !lastName.trim()) bad = t('memberNew.nameRequired');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) bad = t('memberNew.emailInvalid');
+    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = t('memberNew.phoneInvalid');
+    else if (dateOfBirth.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth.trim())) bad = t('memberNew.birthDateInvalid');
+    else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('memberNew.emergencyBoth');
+    else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('memberNew.emergencyPhoneInvalid');
+    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length !== 14) bad = t('memberNew.nationalIdInvalid');
+    else if (!address.trim()) bad = t('memberNew.addressRequired');
     else if (planId && payMethod !== 'complimentary') {
       const amount = Number(amountPaid);
-      if (!amountPaid.trim() || !Number.isFinite(amount) || amount <= 0) bad = 'Enter the amount paid at the desk.';
-      else if (amount > (selectedPlan?.priceEGP ?? 0)) bad = 'The amount paid cannot exceed the plan price.';
+      if (!amountPaid.trim() || !Number.isFinite(amount) || amount <= 0) bad = t('memberNew.amountRequired');
+      else if (amount > (selectedPlan?.priceEGP ?? 0)) bad = t('memberNew.amountTooHigh');
     }
     if (bad) {
       setFormError(bad);
@@ -118,38 +127,36 @@ export default function MemberNew() {
       setCreated({ memberNumber: result.memberNumber, email: email.trim() });
     } catch (error) {
       if (error instanceof ApiCallError && error.code === 'INVITATION_EXISTS') {
-        setFormError('An account or invitation already exists for this email. Open the member list to resend it.');
+        setFormError(t('memberNew.invitationExists'));
       } else if (error instanceof ApiCallError && error.code === 'VALIDATION_ERROR') {
-        setFormError(`${error.message} Adjust the form and try again.`);
+        setFormError(t('memberNew.validationFailed'));
       } else if (
         error instanceof ApiCallError
         && ['INVITATION_SEND_FAILED', 'INVITATION_LINK_FAILED'].includes(error.code)
       ) {
-        setFormError(
-          'The member record was saved, but the email was not delivered. Open the member list and resend the invitation after email service is available.',
-        );
+        setFormError(t('memberNew.emailDeliveryFailed'));
       } else {
-        setFormError('The invitation could not be completed. Check your connection and try again.');
+        setFormError(t('memberNew.invitationFailed'));
       }
     }
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="New member" onBack={() => router.back()} />
+      <AppBar title={t('memberNew.title')} onBack={() => router.back()} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
-          {formError ? <Banner variant="error">{formError}</Banner> : null}
+          {formError ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{formError}</Text></Banner> : null}
 
-          <Field label="First name"><Control value={firstName} onChangeText={setFirstName} placeholder="Member's first name" autoComplete="off" /></Field>
-          <Field label="Last name"><Control value={lastName} onChangeText={setLastName} placeholder="Member's last name" autoComplete="off" /></Field>
+          <Field label={t('memberNew.firstName')}><Control value={firstName} onChangeText={setFirstName} placeholder={t('memberNew.firstNamePlaceholder')} autoComplete="off" /></Field>
+          <Field label={t('memberNew.lastName')}><Control value={lastName} onChangeText={setLastName} placeholder={t('memberNew.lastNamePlaceholder')} autoComplete="off" /></Field>
 
-          <Field label="Email" hint="The activation invitation is sent here. It becomes the member's sign-in address.">
+          <Field label={t('auth.email')} hint={t('memberNew.emailHint')}>
             <Control
               value={email}
               onChangeText={setEmail}
-              placeholder="name@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               inputMode="email"
               autoCapitalize="none"
               autoCorrect={false}
@@ -158,21 +165,21 @@ export default function MemberNew() {
             />
           </Field>
 
-          <Field label="Phone number · optional" hint="Kept on file; not used for sign-in.">
+          <Field label={t('memberNew.phoneOptional')} hint={t('memberNew.phoneHint')}>
             <Control
               value={phone}
               onChangeText={setPhone}
               placeholder="10 1234 5678"
               inputMode="tel"
               leading={
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 11, borderRightWidth: 1, borderRightColor: c.line }}>
-                  <Text style={{ fontSize: 14, fontWeight: '500', color: c.ink2 }}>+20</Text>
+                <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', paddingRight: 11, borderRightWidth: 1, borderRightColor: c.line }}>
+                  <Text style={{ fontSize: 14, fontWeight: '500', color: c.ink2, writingDirection: textDir }}>+20</Text>
                 </View>
               }
             />
           </Field>
 
-          <Field label="Date of birth · optional" hint="YYYY-MM-DD">
+          <Field label={t('memberNew.birthDateOptional')} hint={t('common.dateFormatHint')}>
             <Control
               value={dateOfBirth}
               onChangeText={setDateOfBirth}
@@ -183,13 +190,13 @@ export default function MemberNew() {
             />
           </Field>
 
-          <Field label="Emergency contact · optional">
-            <Control value={emName} onChangeText={setEmName} placeholder="Contact name" autoComplete="off" />
+          <Field label={t('memberNew.emergencyOptional')}>
+            <Control value={emName} onChangeText={setEmName} placeholder={t('memberNew.contactName')} autoComplete="off" />
             <View style={{ height: 10 }} />
-            <Control value={emPhone} onChangeText={setEmPhone} placeholder="Contact phone" inputMode="tel" />
+            <Control value={emPhone} onChangeText={setEmPhone} placeholder={t('memberNew.contactPhone')} inputMode="tel" />
           </Field>
 
-          <Field label="National ID" hint="Kept private — visible to reception only.">
+          <Field label={t('memberDetail.nationalId')} hint={t('memberNew.nationalIdHint')}>
             <Control
               value={nationalId}
               onChangeText={setNationalId}
@@ -199,45 +206,46 @@ export default function MemberNew() {
             />
           </Field>
 
-          <Field label="Address">
-            <Control value={address} onChangeText={setAddress} placeholder="Street, city" multiline />
+          <Field label={t('profile.address')}>
+            <Control value={address} onChangeText={setAddress} placeholder={t('memberNew.addressPlaceholder')} multiline />
           </Field>
 
           <View style={{ gap: 10 }}>
-            <Text style={[styles.fieldLabel, { color: c.ink3 }]}>First plan · optional</Text>
+            <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberNew.firstPlan')}</Text>
             {plans.map((p) => {
               const on = p.id === planId;
+              const periodLabel = p.duration === 12 ? t('memberNew.perYear') : p.duration === 3 ? t('memberNew.perThreeMonths') : t('memberNew.perMonth');
               return (
                 <Pressable
                   key={p.id}
                   onPress={() => setPlanId(on ? '' : p.id)}
                   style={[
                     styles.planCard,
-                    { backgroundColor: c.bg1, borderColor: on ? c.accent : c.line },
+                    { backgroundColor: c.bg1, borderColor: on ? c.accent : c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
                   ]}
                 >
                   <View style={[styles.radioCircle, { borderColor: on ? c.accent : c.line2, backgroundColor: on ? c.accent : 'transparent' }]} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.planTitle, { color: c.ink }]}>{p.name}</Text>
-                    <Text style={[styles.planPeriod, { color: c.ink3 }]}>{p.blurb}</Text>
+                    <Text style={[styles.planTitle, { color: c.ink, writingDirection: textDir }]}>{p.name}</Text>
+                    <Text style={[styles.planPeriod, { color: c.ink3, writingDirection: textDir }]}>{p.blurb}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.planPrice, { color: c.ink }]}>EGP {p.priceEGP.toLocaleString()}</Text>
-                    <Text style={[styles.planPricePeriod, { color: c.ink3 }]}>
-                      {p.duration === 12 ? '/ year' : p.duration === 3 ? '/ 3 mo' : '/ month'}
+                    <Text style={[styles.planPrice, { color: c.ink, writingDirection: textDir }]}>{t('common.egpAmount', { amount: p.priceEGP.toLocaleString() })}</Text>
+                    <Text style={[styles.planPricePeriod, { color: c.ink3, writingDirection: textDir }]}>
+                      {periodLabel}
                     </Text>
                   </View>
                 </Pressable>
               );
             })}
             {plansQuery.isLoading ? (
-              <Text style={{ color: c.ink3, fontSize: 12.5 }}>Loading plans…</Text>
+              <Text style={{ color: c.ink3, fontSize: 12.5, writingDirection: textDir }}>{t('memberNew.loadingPlans')}</Text>
             ) : null}
           </View>
 
           {planId ? (
             <View style={{ gap: 10 }}>
-              <Text style={[styles.fieldLabel, { color: c.ink3 }]}>Payment at the desk</Text>
+              <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberNew.paymentAtDesk')}</Text>
               <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
                 {(['cash', 'card', 'wallet', 'instapay', 'complimentary'] as PaymentMethod[]).map((method) => {
                   const on = payMethod === method;
@@ -247,8 +255,8 @@ export default function MemberNew() {
                       onPress={() => setPayMethod(method)}
                       style={[styles.segBtn, on && { backgroundColor: c.accent }]}
                     >
-                      <Text style={[styles.segText, { color: on ? c.accentInk : c.ink3 }]}>
-                        {method === 'instapay' ? 'InstaPay' : method === 'complimentary' ? 'Comp.' : method[0].toUpperCase() + method.slice(1)}
+                      <Text style={[styles.segText, { color: on ? c.accentInk : c.ink3, writingDirection: textDir }]}>
+                        {paymentLabels[method]}
                       </Text>
                     </Pressable>
                   );
@@ -256,8 +264,8 @@ export default function MemberNew() {
               </View>
               {payMethod !== 'complimentary' ? (
                 <Field
-                  label="Amount paid (EGP)"
-                  hint={selectedPlan ? `Plan price EGP ${selectedPlan.priceEGP.toLocaleString()}; unpaid balance becomes due.` : undefined}
+                  label={t('memberNew.amountPaid')}
+                  hint={selectedPlan ? t('memberNew.planPriceHint', { amount: t('common.egpAmount', { amount: selectedPlan.priceEGP.toLocaleString() }) }) : undefined}
                 >
                   <Control
                     value={amountPaid}
@@ -268,12 +276,12 @@ export default function MemberNew() {
                   />
                 </Field>
               ) : (
-                <Banner variant="info">Complimentary access records a zero-value payment — nothing becomes due.</Banner>
+                <Banner variant="info"><Text style={{ writingDirection: textDir }}>{t('memberNew.complimentaryHint')}</Text></Banner>
               )}
             </View>
           ) : (
             <Banner variant="info">
-              Skip the plan for now — the member receives the invitation immediately, and you can assign a plan from their profile later.
+              <Text style={{ writingDirection: textDir }}>{t('memberNew.skipPlanHint')}</Text>
             </Banner>
           )}
 
@@ -282,11 +290,11 @@ export default function MemberNew() {
             loading={createInvitation.isPending}
             onPress={submit}
           >
-            Create member & send invitation
+            {t('memberNew.createAndInvite')}
           </Button>
 
-          <Text style={[styles.foot, { color: c.ink4 }]}>
-            {CLUB.name} · Members set their own password from the email link
+          <Text style={[styles.foot, { color: c.ink4, writingDirection: textDir }]}>
+            {t('memberNew.footer', { club: CLUB.name })}
           </Text>
         </Body>
       </ScrollView>

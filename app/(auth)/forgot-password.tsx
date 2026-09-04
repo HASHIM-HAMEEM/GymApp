@@ -15,7 +15,7 @@ import { useApp } from '@/providers/AppProvider';
  */
 export default function ForgotPassword() {
   const router = useRouter();
-  const { darkMode, sendPasswordReset, configurationError } = useApp();
+  const { darkMode, sendPasswordReset, configurationError, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const [email, setEmail] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -27,7 +27,7 @@ export default function ForgotPassword() {
 
   const submit = async () => {
     if (!emailValid) {
-      setError('Enter a complete email address — including the domain, like name@example.com.');
+      setError(t('auth.completeEmailError'));
       return;
     }
     setError(null);
@@ -36,26 +36,37 @@ export default function ForgotPassword() {
       await sendPasswordReset(email);
       setSent(true);
     } catch {
-      setError('The reset email could not be sent right now. Wait a moment and try again.');
+      setError(t('auth.resetSendError'));
     } finally {
       setLoading(false);
     }
   };
 
+  const titleStyle = {
+    fontFamily: typography.display,
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: -0.01,
+    color: c.ink,
+    writingDirection: isRtl ? 'rtl' : 'ltr',
+  } as const;
+
   if (sent) {
     return (
       <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-        <AppBar title="Reset password" onBack={() => router.back()} />
+        <AppBar onBack={() => router.back()}>
+          <Text style={titleStyle}>{t('auth.resetTitle')}</Text>
+        </AppBar>
         <View style={styles.sentBody}>
           <View style={[styles.badge, { backgroundColor: c.okSoft }]}>
             <Icon name="mail" size={38} color={c.ok} />
           </View>
-          <Text style={[styles.sentTitle, { color: c.ink }]}>Check your email</Text>
-          <Text style={[styles.sentBody_, { color: c.ink2 }]}>
-            If {email.trim()} belongs to a Meridian account, a reset link is on its way. The link works once and expires shortly.
+          <Text style={[styles.sentTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.checkEmail')}</Text>
+          <Text style={[styles.sentBody_, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {t('auth.resetSent', { email: email.trim() })}
           </Text>
           <Button block href="/signin">
-            Back to sign in
+            {t('auth.backToSignIn')}
           </Button>
         </View>
       </View>
@@ -64,23 +75,25 @@ export default function ForgotPassword() {
 
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-      <AppBar title="Reset password" onBack={() => router.back()} />
+      <AppBar onBack={() => router.back()}>
+        <Text style={titleStyle}>{t('auth.resetTitle')}</Text>
+      </AppBar>
       <View style={styles.body}>
         <View>
-          <Text style={[styles.h1, { color: c.ink }]}>Forgot your password?</Text>
-          <Text style={[styles.lede, { color: c.ink3 }]}>
-            Enter your account email and we'll send a one-time link to choose a new password.
+          <Text style={[styles.h1, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.resetHeading')}</Text>
+          <Text style={[styles.lede, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {t('auth.resetIntro')}
           </Text>
         </View>
 
-        <Field label="Email" error={error ?? undefined} hint="The address where you received your Meridian invitation.">
+        <Field label={t('auth.email')} error={error ?? undefined} hint={t('auth.emailHint')}>
           <Control
             value={email}
             onChangeText={(t) => {
               setEmail(t);
               if (error) setError(null);
             }}
-            placeholder="name@example.com"
+            placeholder={t('auth.emailPlaceholder')}
             inputMode="email"
             autoCapitalize="none"
             autoCorrect={false}
@@ -91,11 +104,15 @@ export default function ForgotPassword() {
           />
         </Field>
 
-        {configurationError ? <Banner variant="error">{configurationError}</Banner> : null}
+        {configurationError ? (
+          <Banner variant="error" style={{ flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+            <Text style={{ writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('common.configurationError')}</Text>
+          </Banner>
+        ) : null}
 
         <View style={styles.foot}>
           <Button block loading={loading} disabled={!canSubmit} onPress={submit}>
-            Send reset link
+            {t('auth.sendResetLink')}
           </Button>
         </View>
       </View>

@@ -21,11 +21,11 @@ export function Tag({
   style?: any;
   live?: boolean;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const { bg, fg } = tagColors(variant, c);
   return (
-    <View style={[tagStyles.base, { backgroundColor: bg }, style]}>
+    <View style={[tagStyles.base, { backgroundColor: bg, flexDirection: isRtl ? 'row-reverse' : 'row' }, style]}>
       <View style={[tagStyles.dot, { backgroundColor: fg, opacity: live ? 1 : 0.9 }]}>
         {live ? <View style={[tagStyles.pulse, { backgroundColor: fg }]} /> : null}
       </View>
@@ -37,6 +37,7 @@ export function Tag({
           letterSpacing: 0.08,
           color: fg,
           textTransform: 'uppercase',
+          writingDirection: isRtl ? 'rtl' : 'ltr',
         }}
       >
         {children}

@@ -4,11 +4,11 @@ import { useColors } from '@/theme/tokens';
 import { TabBar, TabDef } from '@/components/Chrome';
 import { useApp } from '@/data/store';
 
-const TAB_ICONS: Record<string, TabDef> = {
-  home: { key: 'home', label: 'Home', icon: 'home', href: '/(member)/home' },
-  visits: { key: 'visits', label: 'Visits', icon: 'clock', href: '/(member)/visits' },
-  notices: { key: 'notices', label: 'Notices', icon: 'bell', href: '/(member)/notices' },
-  profile: { key: 'profile', label: 'Profile', icon: 'user', href: '/(member)/profile' },
+const TAB_ICONS: Record<string, Omit<TabDef, 'label'>> = {
+  home: { key: 'home', icon: 'home', href: '/(member)/home' },
+  visits: { key: 'visits', icon: 'clock', href: '/(member)/visits' },
+  notices: { key: 'notices', icon: 'bell', href: '/(member)/notices' },
+  profile: { key: 'profile', icon: 'user', href: '/(member)/profile' },
 };
 
 interface TabBarProps {
@@ -16,10 +16,17 @@ interface TabBarProps {
 }
 
 function MemberTabBar({ state }: TabBarProps) {
+  const { t } = useApp();
   const active = state.routes[state.index].name;
+  const labels = {
+    home: t('tabs.home'),
+    visits: t('tabs.visits'),
+    notices: t('tabs.notices'),
+    profile: t('tabs.profile'),
+  };
   const tabs = state.routes
     .filter((route: { name: string }) => TAB_ICONS[route.name])
-    .map((route: { name: string }) => TAB_ICONS[route.name]);
+    .map((route: { name: string }) => ({ ...TAB_ICONS[route.name], label: labels[route.name as keyof typeof labels] }));
 
   return (
     <TabBar

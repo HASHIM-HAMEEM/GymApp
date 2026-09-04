@@ -18,7 +18,7 @@ export interface TimelineProps {
 }
 
 export function Timeline({ fill, fillColor, l1, l2, l3 }: TimelineProps) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const fc = fillColor ?? c.accent;
   const clamped = Math.max(0, Math.min(100, fill));
@@ -40,7 +40,7 @@ export function Timeline({ fill, fillColor, l1, l2, l3 }: TimelineProps) {
       <View
         style={{
           position: 'absolute',
-          left: 0,
+          left: isRtl ? `${100 - clamped}%` : 0,
           top: 22,
           height: 3,
           width: `${clamped}%`,
@@ -50,17 +50,17 @@ export function Timeline({ fill, fillColor, l1, l2, l3 }: TimelineProps) {
       />
 
       {/* start point */}
-      <Dot left={0} color={fc} />
+      <Dot left={isRtl ? 100 : 0} color={fc} />
       {/* today point */}
-      <Dot left={clamped} color={fc} big />
+      <Dot left={isRtl ? 100 - clamped : clamped} color={fc} big />
       {/* end point */}
-      <Dot left={100} color={c.ink4} />
+      <Dot left={isRtl ? 0 : 100} color={c.ink4} />
 
       {/* labels */}
-      <View style={{ position: 'absolute', top: 38, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Label a={l1[0]} b={l1[1]} ink3={c.ink4} ink={c.ink} align="left" />
-        <Label a={l2[0]} b={l2[1]} ink3={c.ink4} ink={fc} align="center" left={`${clamped}%`} />
-        {l3 ? <Label a={l3[0]} b={l3[1]} ink3={c.ink4} ink={c.ink} align="right" /> : <View style={{ width: 60 }} />}
+      <View style={{ position: 'absolute', top: 38, left: 0, right: 0, flexDirection: isRtl ? 'row-reverse' : 'row', justifyContent: 'space-between' }}>
+        <Label a={l1[0]} b={l1[1]} ink3={c.ink4} ink={c.ink} align={isRtl ? 'right' : 'left'} isRtl={isRtl} />
+        <Label a={l2[0]} b={l2[1]} ink3={c.ink4} ink={fc} align="center" left={`${isRtl ? 100 - clamped : clamped}%`} isRtl={isRtl} />
+        {l3 ? <Label a={l3[0]} b={l3[1]} ink3={c.ink4} ink={c.ink} align={isRtl ? 'left' : 'right'} isRtl={isRtl} /> : <View style={{ width: 60 }} />}
       </View>
     </View>
   );
@@ -95,6 +95,7 @@ function Label({
   ink,
   align,
   left,
+  isRtl,
 }: {
   a: string;
   b: string;
@@ -102,9 +103,11 @@ function Label({
   ink: string;
   align: 'left' | 'center' | 'right';
   left?: string;
+  isRtl: boolean;
 }) {
   const alignItems = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
   const pos = left ? { position: 'absolute', left } as any : undefined;
+  const textDir = isRtl ? 'rtl' : 'ltr';
   return (
     <View style={[{ alignItems }, pos]}>
       <Text
@@ -115,6 +118,7 @@ function Label({
           fontWeight: '600',
           letterSpacing: 0.1,
           textTransform: 'uppercase',
+          writingDirection: textDir,
         }}
       >
         {a}
@@ -126,6 +130,7 @@ function Label({
           color: ink,
           fontWeight: '600',
           marginTop: 2,
+          writingDirection: textDir,
         }}
       >
         {b}

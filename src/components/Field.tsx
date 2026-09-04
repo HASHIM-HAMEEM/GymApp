@@ -18,9 +18,10 @@ export interface FieldProps {
 }
 
 export function Field({ label, hint, error, okMsg, children, style }: FieldProps) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const hasError = !!error;
+  const textDir = isRtl ? 'rtl' : 'ltr';
   return (
     <View style={[{ gap: 8 }, style]}>
       {label ? (
@@ -33,6 +34,7 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
             color: c.ink3,
             paddingLeft: 3,
             textTransform: 'uppercase',
+            writingDirection: textDir,
           }}
         >
           {label}
@@ -42,16 +44,16 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
       {hasError ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 3 }}>
           <Icon name="alertc" size={13} color={c.bad} />
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: c.bad }}>
+          <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: c.bad, writingDirection: textDir }}>
             {error}
           </Text>
         </View>
       ) : okMsg ? (
-        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: c.ok, paddingLeft: 3 }}>
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: c.ok, paddingLeft: 3, writingDirection: textDir }}>
           {okMsg}
         </Text>
       ) : hint ? (
-        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, letterSpacing: tracking.small, color: c.ink3, paddingLeft: 3 }}>
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, letterSpacing: tracking.small, color: c.ink3, paddingLeft: 3, writingDirection: textDir }}>
           {hint}
         </Text>
       ) : null}
@@ -104,7 +106,7 @@ export function Control({
   returnKeyType,
   onSubmitEditing,
 }: ControlProps) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   return (
     <View
@@ -142,6 +144,8 @@ export function Control({
           paddingLeft: leading ? 11 : 0,
           minHeight: multiline ? 80 : undefined,
           textAlignVertical: multiline ? 'top' : 'auto',
+          textAlign: isRtl ? 'right' : 'left',
+          writingDirection: isRtl ? 'rtl' : 'ltr',
         }}
       />
       {trailing}

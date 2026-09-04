@@ -14,12 +14,6 @@ import { useApp } from '@/providers/AppProvider';
 
 type Audience = 'all_members' | 'active_only' | 'expiring_soon';
 
-const AUDIENCES: { key: Audience; label: string }[] = [
-  { key: 'all_members', label: 'All members' },
-  { key: 'active_only', label: 'Active only' },
-  { key: 'expiring_soon', label: 'Expiring soon' },
-];
-
 export default function NoticeCompose() {
   return (
     <>
@@ -33,8 +27,9 @@ function NoticeComposeInner() {
   const router = useRouter();
   const publishNotice = usePublishNotice();
   const dashboardQuery = useDashboard();
-  const { adminName, darkMode } = useApp();
+  const { adminName, darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
 
   const [title, setTitle] = React.useState('');
   const [body, setBody] = React.useState('');
@@ -42,7 +37,14 @@ function NoticeComposeInner() {
   const [urgent, setUrgent] = React.useState(false);
   const [step, setStep] = React.useState<'compose' | 'confirm' | 'success' | 'failure'>('compose');
   const [deliveredCount, setDeliveredCount] = React.useState(0);
+  const [pushDelivery, setPushDelivery] = React.useState<'sent' | 'none' | 'failed'>('none');
   const [error, setError] = React.useState<string | null>(null);
+
+  const audienceLabels: Record<Audience, string> = {
+    all_members: t('noticeCompose.allMembers'),
+    active_only: t('noticeCompose.activeOnly'),
+    expiring_soon: t('noticeCompose.expiringSoon'),
+  };
 
   const audienceCount = (() => {
     const data = dashboardQuery.data;
@@ -63,13 +65,14 @@ function NoticeComposeInner() {
         urgent,
       });
       setDeliveredCount(result.recipient_count);
+      setPushDelivery(result.push === null ? 'failed' : result.push.sent > 0 ? 'sent' : 'none');
       setStep('success');
     } catch (err) {
       if (err instanceof ApiCallError && err.code === 'VALIDATION_ERROR') {
-        setError(`${err.message} Adjust the notice and try again.`);
+        setError(t('noticeCompose.validationFailed'));
         setStep('compose');
       } else {
-        setError('The notice could not be published. Check your connection and retry — your draft is still here.');
+        setError(t('noticeCompose.connectionDropped'));
         setStep('failure');
       }
     }
@@ -81,18 +84,37 @@ function NoticeComposeInner() {
         <View style={[styles.successBadge, { backgroundColor: c.okSoft }]}>
           <Icon name="check" size={42} color={c.ok} />
         </View>
-        <Text style={[styles.successTitle, { color: c.ink }]}>Notice published</Text>
-        <Text style={[styles.successBody, { color: c.ink2 }]}>
-          Delivered to <Text style={{ color: c.ink, fontWeight: '600' }}>{deliveredCount} members</Text> in the app.
+        <Text style={[styles.successTitle, { color: c.ink, writingDirection: textDir }]}>{t('notices.published')}</Text>
+        <Text style={[styles.successBody, { color: c.ink2, writingDirection: textDir }]}>
+          {t('noticeCompose.delivered', { count: deliveredCount })}
         </Text>
+        <Banner variant={pushDelivery === 'failed' ? 'warn' : 'info'}>
+          <Text style={{ writingDirection: textDir }}>
+            {pushDelivery === 'sent'
+              ? t('notices.pushed')
+              : pushDelivery === 'failed'
+                ? t('notices.pushUnavailable')
+                : t('notices.noPushDevices')}
+          </Text>
+        </Banner>
         <View style={{ alignSelf: 'stretch' }}>
           <KVList>
-            <KVRow label="Notice"><Text style={{ fontSize: 13.5, color: c.ink }}>{title.slice(0, 28)}{title.length > 28 ? '…' : ''}</Text></KVRow>
-            <KVRow label="Audience"><Text style={{ color: c.ink }}>{AUDIENCES.find((a) => a.key === audience)?.label}</Text></KVRow>
-            <KVRow label="Published"><Text style={{ color: c.ink }}>Just now · by {adminName || 'Front desk'}</Text></KVRow>
+            <KVRow label={t('noticeCompose.notice')}>
+              <Text style={{ fontSize: 13.5, color: c.ink, writingDirection: textDir }}>
+                {title.slice(0, 28)}{title.length > 28 ? '…' : ''}
+              </Text>
+            </KVRow>
+            <KVRow label={t('noticeCompose.audience')}>
+              <Text style={{ color: c.ink, writingDirection: textDir }}>{audienceLabels[audience]}</Text>
+            </KVRow>
+            <KVRow label={t('noticeCompose.published')}>
+              <Text style={{ color: c.ink, writingDirection: textDir }}>
+                {t('noticeCompose.justNowBy', { name: adminName || t('common.frontDesk') })}
+              </Text>
+            </KVRow>
           </KVList>
         </View>
-        <Button block onPress={() => router.replace('/(admin)/notices')}>Done</Button>
+        <Button block onPress={() => router.replace('/(admin)/notices')}>{t('common.done')}</Button>
       </View>
     );
   }
@@ -100,98 +122,101 @@ function NoticeComposeInner() {
   if (step === 'failure') {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="New notice" onBack={() => setStep('compose')} />
+        <AppBar title={t('noticeCompose.newNotice')} onBack={() => setStep('compose')} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
           <Body style={{ gap: 14 }}>
-        <View style={{ marginTop: 4 }}>
-          <View style={[styles.errBanner, { borderColor: c.bad + '33', backgroundColor: c.badBg }]}>
-            <Icon name="wifioff" size={19} color={c.bad} />
-            <Text style={[styles.errText, { color: c.bad }]}>
-              <Text style={{ fontWeight: '700' }}>Couldn't publish.</Text> {error ?? 'The connection dropped.'} Your notice is saved as a draft below.
-            </Text>
-          </View>
-        </View>
-        <Field label="Title"><Control value={title} onChangeText={setTitle} /></Field>
-        <Field label="Body">
-          <Control value={body} onChangeText={setBody} multiline />
-        </Field>
-        <Field label="Audience">
-          <Chip on>{AUDIENCES.find((a) => a.key === audience)?.label} <Text style={{ color: c.ink3 }}>{audienceCount ?? '…'}</Text></Chip>
-        </Field>
-        <Button variant="secondary" block icon="refresh" onPress={() => setStep('confirm')}>Retry publish</Button>
-        </Body>
-      </ScrollView>
-    </View>
+            <View style={{ marginTop: 4 }}>
+              <View style={[styles.errBanner, { borderColor: c.bad + '33', backgroundColor: c.badBg, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <Icon name="wifioff" size={19} color={c.bad} />
+                <Text style={[styles.errText, { color: c.bad, writingDirection: textDir }]}>
+                  <Text style={{ fontWeight: '700' }}>{t('noticeCompose.couldNotPublish')}</Text>{' '}
+                  {t('noticeCompose.draftSaved', { error: error || t('noticeCompose.connectionDropped') })}
+                </Text>
+              </View>
+            </View>
+            <Field label={t('noticeCompose.title')}><Control value={title} onChangeText={setTitle} /></Field>
+            <Field label={t('noticeCompose.body')}>
+              <Control value={body} onChangeText={setBody} multiline />
+            </Field>
+            <Field label={t('noticeCompose.audience')}>
+              <Chip on count={audienceCount ?? '…'}>{audienceLabels[audience]}</Chip>
+            </Field>
+            <Button variant="secondary" block icon="refresh" onPress={() => setStep('confirm')}>{t('noticeCompose.retry')}</Button>
+          </Body>
+        </ScrollView>
+      </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="New notice" onBack={() => router.back()} />
+      <AppBar title={t('noticeCompose.newNotice')} onBack={() => router.back()} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
         <Body style={{ gap: 18 }}>
 
-        {error ? <Banner variant="error">{error}</Banner> : null}
+          {error ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{error}</Text></Banner> : null}
 
-        <Field
-          label="Title"
-          hint={`${title.length}/160 characters`}
-        >
-          <Control
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Say it in one clear line"
-            maxLength={160}
-          />
-        </Field>
+          <Field
+            label={t('noticeCompose.title')}
+            hint={t('noticeCompose.characterCount', { count: title.length })}
+          >
+            <Control
+              value={title}
+              onChangeText={setTitle}
+              placeholder={t('noticeCompose.titlePlaceholder')}
+              maxLength={160}
+            />
+          </Field>
 
-        <Field label="Body" hint="Members read this in the notice's editorial view. Write plainly.">
-          <Control value={body} onChangeText={setBody} multiline placeholder="Write the announcement…" />
-        </Field>
+          <Field label={t('noticeCompose.body')} hint={t('noticeCompose.bodyHint')}>
+            <Control value={body} onChangeText={setBody} multiline placeholder={t('noticeCompose.bodyPlaceholder')} />
+          </Field>
 
-        <Field label="Audience">
-          <View style={{ gap: 8 }}>
-            {AUDIENCES.map((a) => {
-              const count =
-                a.key === 'all_members'
-                  ? dashboardQuery.data?.total_members
-                  : a.key === 'active_only'
-                    ? dashboardQuery.data?.active_members
-                    : dashboardQuery.data?.expiring_soon;
-              return (
-                <Chip key={a.key} on={audience === a.key} onPress={() => setAudience(a.key)} count={count}>
-                  {a.label}
-                </Chip>
-              );
-            })}
-          </View>
-        </Field>
-
-        <Field label="Priority">
-          <View style={[styles.priorityRow, { backgroundColor: c.bg2, borderColor: c.line }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.priorityT, { color: c.ink }]}>Mark as urgent</Text>
-              <Text style={[styles.priorityS, { color: c.ink3 }]}>Red spine, pinned to the top of every feed</Text>
+          <Field label={t('noticeCompose.audience')}>
+            <View style={{ gap: 8 }}>
+              {(['all_members', 'active_only', 'expiring_soon'] as Audience[]).map((key) => {
+                const count =
+                  key === 'all_members'
+                    ? dashboardQuery.data?.total_members
+                    : key === 'active_only'
+                      ? dashboardQuery.data?.active_members
+                      : dashboardQuery.data?.expiring_soon;
+                return (
+                  <Chip key={key} on={audience === key} onPress={() => setAudience(key)} count={count ?? '…'}>
+                    {audienceLabels[key]}
+                  </Chip>
+                );
+              })}
             </View>
-            <Switch on={urgent} onChange={setUrgent} />
-          </View>
-        </Field>
+          </Field>
+
+          <Field label={t('noticeCompose.priority')}>
+            <View style={[styles.priorityRow, { backgroundColor: c.bg2, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.priorityT, { color: c.ink, writingDirection: textDir }]}>{t('noticeCompose.markUrgent')}</Text>
+                <Text style={[styles.priorityS, { color: c.ink3, writingDirection: textDir }]}>{t('noticeCompose.urgentHint')}</Text>
+              </View>
+              <Switch on={urgent} onChange={setUrgent} />
+            </View>
+          </Field>
         </Body>
       </ScrollView>
 
       <View style={[styles.bottomBar, { backgroundColor: c.bg, borderTopColor: c.line }]}>
-        <Button block disabled={!title.trim() || !body.trim()} onPress={() => setStep('confirm')}>Review & publish</Button>
+        <Button block disabled={!title.trim() || !body.trim()} onPress={() => setStep('confirm')}>{t('noticeCompose.reviewPublish')}</Button>
       </View>
 
       <ConfirmModal
         visible={step === 'confirm'}
-        title={`Publish to ${AUDIENCES.find((a) => a.key === audience)?.label.toLowerCase()}?`}
-        confirmLabel="Publish"
+        title={t('noticeCompose.publishTo', { audience: audienceLabels[audience] })}
+        confirmLabel={t('common.publish')}
+        cancelLabel={t('common.cancel')}
         onCancel={() => setStep('compose')}
         onConfirm={publish}
       >
-        <Text style={{ fontWeight: '600', color: c.ink }}>{title}</Text> will be delivered to{' '}
-        <Text style={{ fontWeight: '600', color: c.ink }}>{audienceCount ?? 'the selected'} members</Text> now.
+        <Text style={{ writingDirection: textDir }}>
+          {t('noticeCompose.confirmBody', { title, count: audienceCount ?? t('noticeCompose.selectedMembers') })}
+        </Text>
       </ConfirmModal>
     </View>
   );

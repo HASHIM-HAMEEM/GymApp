@@ -3,11 +3,11 @@ import { Tabs, Redirect } from 'expo-router';
 import { TabBar, TabDef } from '@/components/Chrome';
 import { useApp } from '@/data/store';
 
-const TAB_ICONS: Record<string, TabDef> = {
-  today: { key: 'today', label: 'Today', icon: 'grid', href: '/(admin)/today' },
-  members: { key: 'members', label: 'Members', icon: 'users', href: '/(admin)/members' },
-  notices: { key: 'notices', label: 'Notices', icon: 'megaphone', href: '/(admin)/notices' },
-  profile: { key: 'profile', label: 'Profile', icon: 'user', href: '/(admin)/profile' },
+const TAB_ICONS: Record<string, Omit<TabDef, 'label'>> = {
+  today: { key: 'today', icon: 'grid', href: '/(admin)/today' },
+  members: { key: 'members', icon: 'users', href: '/(admin)/members' },
+  notices: { key: 'notices', icon: 'megaphone', href: '/(admin)/notices' },
+  profile: { key: 'profile', icon: 'user', href: '/(admin)/profile' },
 };
 
 interface TabBarProps {
@@ -15,10 +15,17 @@ interface TabBarProps {
 }
 
 function AdminTabBar({ state }: TabBarProps) {
+  const { t } = useApp();
   const active = state.routes[state.index].name;
+  const labels = {
+    today: t('tabs.today'),
+    members: t('tabs.members'),
+    notices: t('tabs.notices'),
+    profile: t('tabs.profile'),
+  };
   const tabs = state.routes
     .filter((route: { name: string }) => TAB_ICONS[route.name])
-    .map((route: { name: string }) => TAB_ICONS[route.name]);
+    .map((route: { name: string }) => ({ ...TAB_ICONS[route.name], label: labels[route.name as keyof typeof labels] }));
 
   return (
     <TabBar

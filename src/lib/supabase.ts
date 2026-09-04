@@ -8,6 +8,11 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 const chunkSize = 1800;
 
+function secureKey(key: string, suffix?: string) {
+  const normalized = key.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return suffix ? `${normalized}.${suffix}` : normalized;
+}
+
 const webStorage = {
   async getItem(key: string) {
     return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
@@ -22,12 +27,12 @@ const webStorage = {
 
 const secureStorage = {
   async getItem(key: string) {
-    const countValue = await SecureStore.getItemAsync(`${key}:chunks`);
-    if (!countValue) return SecureStore.getItemAsync(key);
+    const countValue = await SecureStore.getItemAsync(secureKey(key, 'chunks'));
+    if (!countValue) return SecureStore.getItemAsync(secureKey(key));
     const count = Number.parseInt(countValue, 10);
     if (!Number.isFinite(count) || count < 1) return null;
     const values = await Promise.all(
-      Array.from({ length: count }, (_, index) => SecureStore.getItemAsync(`${key}:${index}`)),
+      Array.from({ length: count }, (_, index) => SecureStore.getItemAsync(secureKey(key, String(index)))),
     );
     return values.some((value) => value === null) ? null : values.join('');
   },
@@ -37,20 +42,22 @@ const secureStorage = {
       { length: Math.ceil(value.length / chunkSize) },
       (_, index) => value.slice(index * chunkSize, (index + 1) * chunkSize),
     );
-    await Promise.all(chunks.map((chunk, index) => SecureStore.setItemAsync(`${key}:${index}`, chunk)));
-    await SecureStore.setItemAsync(`${key}:chunks`, String(chunks.length));
+    await Promise.all(
+      chunks.map((chunk, index) => SecureStore.setItemAsync(secureKey(key, String(index)), chunk)),
+    );
+    await SecureStore.setItemAsync(secureKey(key, 'chunks'), String(chunks.length));
   },
   async removeItem(key: string) {
-    const countValue = await SecureStore.getItemAsync(`${key}:chunks`);
+    const countValue = await SecureStore.getItemAsync(secureKey(key, 'chunks'));
     const count = Number.parseInt(countValue ?? '0', 10);
     if (Number.isFinite(count) && count > 0) {
       await Promise.all(
-        Array.from({ length: count }, (_, index) => SecureStore.deleteItemAsync(`${key}:${index}`)),
+        Array.from({ length: count }, (_, index) => SecureStore.deleteItemAsync(secureKey(key, String(index)))),
       );
     }
     await Promise.all([
-      SecureStore.deleteItemAsync(`${key}:chunks`),
-      SecureStore.deleteItemAsync(key),
+      SecureStore.deleteItemAsync(secureKey(key, 'chunks')),
+      SecureStore.deleteItemAsync(secureKey(key)),
     ]);
   },
 };

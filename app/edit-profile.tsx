@@ -6,6 +6,7 @@ import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
+import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useUpdateMemberProfile } from '@/data/api/queries';
 
@@ -21,50 +22,47 @@ export default function EditProfile() {
   const router = useRouter();
   const memberQuery = useCurrentMember();
   const updateProfile = useUpdateMemberProfile();
-  const { updateEmail, darkMode } = useApp();
+  const { darkMode, isRtl, t } = useApp();
   const c = useColors(darkMode);
   const m = memberQuery.data ?? null;
 
   const [first, setFirst] = React.useState(m?.firstName ?? '');
-  const [email, setEmail] = React.useState(m?.email ?? '');
   const [phone, setPhone] = React.useState(m ? m.phone.replace(/^\+20\s?/, '') : '');
   const [emName, setEmName] = React.useState(m?.emergencyName ?? '');
   const [emPhone, setEmPhone] = React.useState(m?.emergencyPhone ?? '');
   const [nationalId, setNationalId] = React.useState(m?.nationalId ?? '');
   const [address, setAddress] = React.useState(m?.address ?? '');
   const [formError, setFormError] = React.useState<string | null>(null);
-  const [emailNotice, setEmailNotice] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    if (m && !first && !email) {
+    if (m && !first) {
       setFirst(m.firstName);
-      setEmail(m.email);
       setPhone(m.phone.replace(/^\+20\s?/, ''));
       setEmName(m.emergencyName ?? '');
       setEmPhone(m.emergencyPhone ?? '');
       setNationalId(m.nationalId ?? '');
       setAddress(m.address ?? '');
     }
-  }, [m, first, email]);
+  }, [m, first]);
 
   if (!m) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="Edit profile" onBack={() => router.back()} />
-        <Text style={{ color: c.ink3, padding: 20 }}>Loading your profile…</Text>
+        <AppBar title={t('profile.editTitle')} onBack={() => router.back()} />
+        <Text style={{ color: c.ink3, padding: 20, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('profile.loadingProfile')}</Text>
       </View>
     );
   }
 
   const save = async () => {
     let bad: string | null = null;
-    if (!first.trim()) bad = 'First name is required — as it appears on your membership card.';
-    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = 'Enter a valid phone number, at least 10 digits.';
-    else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = 'Add both the emergency contact name and phone, or leave both blank.';
-    else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = 'Enter a valid emergency contact phone, at least 10 digits.';
-    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length !== 14) bad = 'Enter a valid Egyptian national ID — exactly 14 digits.';
-    else if (!address.trim()) bad = 'Address is required — reception uses it for your file.';
+    if (!first.trim()) bad = t('profile.firstNameRequired');
+    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = t('profile.phoneInvalid');
+    else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('profile.emergencyBoth');
+    else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('profile.emergencyPhoneInvalid');
+    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length !== 14) bad = t('profile.nationalIdInvalid');
+    else if (!address.trim()) bad = t('profile.addressRequired');
     if (bad) {
       setFormError(bad);
       return;
@@ -82,19 +80,10 @@ export default function EditProfile() {
         address: address.trim(),
       });
 
-      const nextEmail = email.trim().toLowerCase();
-      if (nextEmail && nextEmail !== m.email) {
-        await updateEmail(nextEmail);
-        setEmail(m.email);
-        setEmailNotice(
-          'Profile saved. A confirmation email is on its way to your new address — it takes over once you confirm it.',
-        );
-        return;
-      }
       router.back();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Your profile could not be saved.';
-      setFormError(`${message} Check the fields and try again.`);
+      const message = error instanceof Error ? error.message : t('memberNew.invitationFailed');
+      setFormError(`${message} ${t('profile.saveFailedTail')}`);
     } finally {
       setSaving(false);
     }
@@ -102,33 +91,29 @@ export default function EditProfile() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Edit profile" onBack={() => router.back()} />
+      <AppBar title={t('profile.editTitle')} onBack={() => router.back()} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
           {formError ? <Banner variant="error">{formError}</Banner> : null}
-          {emailNotice ? <Banner variant="info">{emailNotice}</Banner> : null}
 
-          <Field label="First name" hint="As it should appear on your membership card.">
+          <Field label={t('profile.firstName')} hint={t('profile.firstNameHint')}>
             <Control value={first} onChangeText={setFirst} />
           </Field>
 
-          <Field
-            label="Email"
-            hint="Changing it sends a confirmation email to the new address; the old one stays active until then."
-          >
-            <Control
-              value={email}
-              onChangeText={setEmail}
-              inputMode="email"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              textContentType="emailAddress"
-            />
+          <Field label={t('profile.authEmail')} hint={t('profile.authEmailHint')}>
+            <View style={[styles.lockedEmail, { backgroundColor: c.bg2, borderColor: c.line }]}> 
+              <Icon name="shield" size={18} color={c.ink3} />
+              <Text
+                style={[styles.lockedEmailText, { color: c.ink2, textAlign: isRtl ? 'right' : 'left' }]}
+                numberOfLines={1}
+              >
+                {m.email}
+              </Text>
+            </View>
           </Field>
 
-          <Field label="Phone number" hint="The number reception keeps on file.">
+          <Field label={t('profile.phone')} hint={t('profile.phoneHint')}>
             <Control
               value={phone}
               onChangeText={setPhone}
@@ -141,11 +126,11 @@ export default function EditProfile() {
             />
           </Field>
 
-          <Field label="Emergency contact name">
+          <Field label={t('profile.emergencyName')}>
             <Control value={emName} onChangeText={setEmName} />
           </Field>
 
-          <Field label="Emergency contact phone">
+          <Field label={t('profile.emergencyPhone')}>
             <Control
               value={emPhone}
               onChangeText={setEmPhone}
@@ -153,22 +138,22 @@ export default function EditProfile() {
             />
           </Field>
 
-          <Field label="National ID" hint="14 digits for Egyptian IDs. Kept private — only reception sees it.">
+          <Field label={t('profile.nationalId')} hint={t('profile.nationalIdHint')}>
             <Control
               value={nationalId}
               onChangeText={setNationalId}
               inputMode="numeric"
-              placeholder="00000000000000"
+              placeholder={t('profile.nationalIdPlaceholder')}
             />
           </Field>
 
-          <Field label="Address">
-            <Control value={address} onChangeText={setAddress} placeholder="Street, city" multiline />
+          <Field label={t('profile.address')}>
+            <Control value={address} onChangeText={setAddress} placeholder={t('profile.addressPlaceholder')} multiline />
           </Field>
 
           <View style={{ flexDirection: 'row', gap: 10, paddingTop: 4 }}>
-            <Button variant="secondary" block style={{ flex: 1 }} onPress={() => router.back()}>Cancel</Button>
-            <Button block style={{ flex: 1 }} loading={saving} onPress={save}>Save changes</Button>
+            <Button variant="secondary" block style={{ flex: 1 }} onPress={() => router.back()}>{t('common.cancel')}</Button>
+            <Button block style={{ flex: 1 }} loading={saving} onPress={save}>{t('profile.save')}</Button>
           </View>
         </Body>
       </ScrollView>
@@ -176,4 +161,19 @@ export default function EditProfile() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  lockedEmail: {
+    minHeight: 52,
+    borderWidth: 1,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingHorizontal: 14,
+  },
+  lockedEmailText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});

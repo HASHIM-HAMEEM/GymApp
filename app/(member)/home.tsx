@@ -8,12 +8,11 @@ import { RingCard } from '@/components/RingCard';
 import { IconButton } from '@/components/Button';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useNotices, usePlans, useQrPass } from '@/data/api/queries';
-import { statusVisual, fmtLong, daysBetween, TODAY } from '@/data/format';
+import { statusVisual, fmtLong, fmtTodayLabel, fmtDayName, fmtMonthDay, daysBetween, TODAY } from '@/data/format';
+import type { Language, TranslationKey } from '@/lib/i18n';
+import type { Notice } from '@/data/types';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function weekAround(iso: string) {
+function weekAround(iso: string, language: Language) {
   const d = new Date(iso + 'T00:00:00');
   const day = d.getDay();
   const diff = (day + 6) % 7; // Monday start
@@ -25,30 +24,27 @@ function weekAround(iso: string) {
     const m = String(cur.getMonth() + 1).padStart(2, '0');
     const dd = String(cur.getDate()).padStart(2, '0');
     out.push({
-      label: DAYS[(i + 1) % 7],
+      label: fmtDayName((i + 1) % 7, language),
       iso: `${y}-${m}-${dd}`,
     });
   }
   return out;
 }
 
-function formatTodayLabel(iso: string) {
-  const d = new Date(iso + 'T00:00:00');
-  const day = DAYS[d.getDay()];
-  const date = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  return `${day} · ${date}`;
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
+function noticeCategoryKey(category: Notice['category']): TranslationKey {
+  switch (category) {
+    case 'Urgent': return 'noticeCategory.urgent';
+    case 'Schedule': return 'noticeCategory.schedule';
+    case 'Hours': return 'noticeCategory.hours';
+    case 'Facilities': return 'noticeCategory.facilities';
+    case 'Renewal': return 'noticeCategory.renewal';
+    default: return 'noticeCategory.renewal';
+  }
 }
 
 export default function MemberHome() {
   const router = useRouter();
-  const { configurationError, darkMode } = useApp();
+  const { t, isRtl, language, configurationError, darkMode } = useApp();
   const memberQuery = useCurrentMember();
   const noticesQuery = useNotices();
   const plansQuery = usePlans();
@@ -60,12 +56,11 @@ export default function MemberHome() {
   const qrQuery = useQrPass(Boolean(canShowQr));
 
   const latestNotice = noticesQuery.data?.[0];
-  const vis = ms ? statusVisual(ms.status, ms, c) : null;
-  const week = weekAround(TODAY);
+  const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
+  const week = weekAround(TODAY, language);
 
   const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
   const price = plan?.priceEGP ?? ms?.amountDue ?? 1500;
-  const period = plan?.duration === 12 ? 'year' : plan?.duration === 3 ? '3 months' : 'month';
 
   const ringProgress = (() => {
     if (!ms || !ms.startDate) return 0;
@@ -78,17 +73,23 @@ export default function MemberHome() {
 
   const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, TODAY)) : 0;
 
+  const h = new Date().getHours();
+  const greetingWord =
+    h < 12 ? t('member.greetingMorning') : h < 18 ? t('member.greetingAfternoon') : t('member.greetingEvening');
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         right={
-          <IconButton name="bell" onPress={() => router.push('/(member)/notices')} />
+          <IconButton name="bell" onPress={() => router.push('/(member)/notices')} accessibilityLabel={t('common.notifications')} />
         }
       >
         <View>
-          <Text style={[styles.slabel, { color: c.ink3 }]}>{formatTodayLabel(TODAY)}</Text>
-          <Text style={[styles.greeting, { color: c.ink }]}>
-            {greeting()}{m ? `, ${m.firstName}` : ''}
+          <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {fmtTodayLabel(TODAY, language)}
+          </Text>
+          <Text style={[styles.greeting, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+            {m ? t('member.greetingWithName', { greeting: greetingWord, name: m.firstName }) : greetingWord}
           </Text>
         </View>
       </AppBar>
@@ -100,35 +101,37 @@ export default function MemberHome() {
       >
         <Body>
           {configurationError ? (
-            <Text style={[styles.configError, { color: c.ink2 }]}>{configurationError}</Text>
+            <Text style={[styles.configError, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+              {configurationError}
+            </Text>
           ) : null}
 
           {ms && vis ? (
             <RingCard
               value={String(daysLeft)}
-              unit={ms.status === 'paused' ? 'Days frozen' : ms.status === 'upcoming' ? 'Days to go' : 'Days left'}
+              unit={ms.status === 'paused' ? t('member.daysFrozen') : ms.status === 'upcoming' ? t('member.daysToGo') : t('member.daysLeft')}
               variant={vis.dotVariant}
               tag={{ label: vis.tagLabel, variant: vis.tagVariant }}
               title={ms.planName}
               subtitle={
                 ms.status === 'paused'
-                  ? `Frozen until ${fmtLong(ms.pauseEnds ?? ms.expiryDate)}\nUnpause at reception.`
+                  ? t('member.frozenUntil', { date: fmtLong(ms.pauseEnds ?? ms.expiryDate, language) })
                   : ms.status === 'expired'
-                  ? `Expired ${fmtLong(ms.expiryDate)}\nRenew to restore access.`
+                  ? t('member.expiredOn', { date: fmtLong(ms.expiryDate, language) })
                   : ms.status === 'upcoming'
-                  ? `Begins ${fmtLong(ms.startDate)}\nAccess opens on the start date.`
+                  ? t('member.beginsOn', { date: fmtLong(ms.startDate, language) })
                   : ms.status === 'expiring'
-                  ? `Expires in ${daysLeft} days\nRenew at reception.`
-                  : `Renews ${fmtLong(ms.expiryDate)}\nat reception.`
+                  ? t('member.expiresIn', { days: daysLeft })
+                  : t('member.renewsOn', { date: fmtLong(ms.expiryDate, language) })
               }
               progress={ringProgress}
             />
           ) : null}
 
           <MembershipCard
-            name={m ? `${m.firstName} ${m.lastName}` : 'Meridian member'}
-            plan={ms ? ms.planName.replace(/ Monthly| Annual/i, '') : 'No plan'}
-            validUntil={ms ? fmtLong(ms.expiryDate) : m?.memberSince ?? '—'}
+            name={m ? `${m.firstName} ${m.lastName}` : t('member.meridianMember')}
+            plan={ms ? ms.planName.replace(/ Monthly| Annual/i, '') : t('common.noPlan')}
+            validUntil={ms ? fmtLong(ms.expiryDate, language) : m?.memberSince ?? t('common.notAvailable')}
             memberId={m?.id ?? 'MRD-····'}
             variant={ms?.status === 'expiring' || ms?.status === 'due' ? 'warn' : ms?.status === 'expired' ? 'bad' : 'active'}
             href={canShowQr ? '/qr' : undefined}
@@ -137,7 +140,7 @@ export default function MemberHome() {
           />
 
           {m ? (
-            <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line }]}>
+            <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
               {week.map((wd) => {
                 const visited = m.visits.some((v) => v.date === wd.iso);
                 const isToday = wd.iso === TODAY;
@@ -158,7 +161,7 @@ export default function MemberHome() {
                       ]}
                     />
                     <Text
-                      style={[styles.wdLabel, { color: isToday ? c.accentHi : c.ink4 }]}
+                      style={[styles.wdLabel, { color: isToday ? c.accentHi : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
                     >
                       {wd.label}
                     </Text>
@@ -169,31 +172,31 @@ export default function MemberHome() {
           ) : null}
 
           {m && !ms ? (
-            <Text style={[styles.noPlan, { color: c.ink3 }]}>
-              No membership assigned yet. Reception can set one up in about two minutes — ask at the desk.
+            <Text style={[styles.noPlan, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+              {t('member.noPlanAssigned')}
             </Text>
           ) : null}
 
           {latestNotice ? (
             <Pressable
               onPress={() => router.push(`/notice?id=${latestNotice.id}`)}
-              style={[styles.noticeRow, { borderColor: c.line, backgroundColor: c.bg1 }]}
+              style={[styles.noticeRow, { borderColor: c.line, backgroundColor: c.bg1, flexDirection: isRtl ? 'row-reverse' : 'row' }]}
             >
               <Text
-                style={[styles.cat, { color: latestNotice.urgent ? c.bad : c.accentHi }]}
+                style={[styles.cat, { color: latestNotice.urgent ? c.bad : c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
               >
-                {latestNotice.category}
+                {t(noticeCategoryKey(latestNotice.category))}
               </Text>
               <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                <Text style={[styles.nt, { color: c.ink }]} numberOfLines={1}>
+                <Text style={[styles.nt, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
                   {latestNotice.title}
                 </Text>
-                <Text style={[styles.np, { color: c.ink3 }]} numberOfLines={1}>
+                <Text style={[styles.np, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
                   {latestNotice.body}
                 </Text>
               </View>
-              <Text style={[styles.ndt, { color: c.ink4, fontFamily: typography.mono }]}>
-                {MONTHS[parseInt(latestNotice.date.slice(5, 7), 10) - 1]} {parseInt(latestNotice.date.slice(8), 10)}
+              <Text style={[styles.ndt, { color: c.ink4, fontFamily: typography.mono, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+                {fmtMonthDay(latestNotice.date, language)}
               </Text>
             </Pressable>
           ) : null}

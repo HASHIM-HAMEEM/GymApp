@@ -5,6 +5,7 @@ import { Link, type Href } from 'expo-router';
 import { colors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { Logo } from './Logo';
 import { Tag, TagVariant } from './Tag';
+import { useApp } from '@/data/store';
 
 /* ------------------------------------------------------------------ */
 /* Membership card — signature luxury physical object, always dark     */
@@ -40,6 +41,7 @@ export function MembershipCard({
   qrValue,
   style,
 }: MembershipCardProps) {
+  const { t, isRtl } = useApp();
   const borderColor =
     variant === 'warn'
       ? 'rgba(222, 184, 124, 0.38)'
@@ -75,8 +77,8 @@ export function MembershipCard({
       ]}
     >
       <View>
-        <View style={styles.topRow}>
-          <View style={styles.brandRow}>
+        <View style={[styles.topRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <View style={[styles.brandRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
             <Logo size={20} color="#FFFFFF" strokeWidth={2.6} />
             <Text style={styles.wordmark}>Meridian</Text>
           </View>
@@ -84,17 +86,17 @@ export function MembershipCard({
         </View>
 
         <View style={styles.holder}>
-          <Text style={styles.holderName} numberOfLines={2}>
+          <Text style={[styles.holderName, { writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={2}>
             {name}
           </Text>
-          <Text style={styles.holderId}>{memberId}</Text>
+          <Text style={[styles.holderId, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{memberId}</Text>
         </View>
       </View>
 
-      <View style={styles.footRow}>
+      <View style={[styles.footRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
         <View style={styles.stat}>
-          <Text style={styles.statCap}>Valid until</Text>
-          <Text style={styles.statVal}>{validUntil ?? memberSince ?? '—'}</Text>
+          <Text style={[styles.statCap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('membership.validUntilLabel')}</Text>
+          <Text style={[styles.statVal, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{validUntil ?? memberSince ?? '—'}</Text>
         </View>
 
         {showQr ? (

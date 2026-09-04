@@ -28,8 +28,9 @@ export interface SheetProps {
 }
 
 export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
   const transition = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [mounted, setMounted] = React.useState(visible);
   const [reduceMotion, setReduceMotion] = React.useState(false);
@@ -84,10 +85,10 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
           <Pressable style={[sheetStyles.sheet, { backgroundColor: c.surface }]} onPress={(e) => e.stopPropagation()}>
             <View style={[sheetStyles.grip, { backgroundColor: c.lineStrong }]} />
             {title ? (
-              <Text style={[sheetStyles.title, { color: c.ink }]}>{title}</Text>
+              <Text style={[sheetStyles.title, { color: c.ink, writingDirection: textDir }]}>{title}</Text>
             ) : null}
             {desc ? (
-              <Text style={[sheetStyles.desc, { color: c.ink2 }]}>{desc}</Text>
+              <Text style={[sheetStyles.desc, { color: c.ink2, writingDirection: textDir }]}>{desc}</Text>
             ) : null}
             {children}
           </Pressable>
@@ -167,26 +168,29 @@ export function ConfirmModal({
   visible,
   title,
   children,
-  cancelLabel = 'Back',
-  confirmLabel = 'Confirm',
+  cancelLabel,
+  confirmLabel,
   onCancel,
   onConfirm,
   confirmVariant = 'primary',
 }: ConfirmModalProps) {
-  const { darkMode } = useApp();
+  const { darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
+  const textDir = isRtl ? 'rtl' : 'ltr';
+  const resolvedCancel = cancelLabel ?? t('common.back');
+  const resolvedConfirm = confirmLabel ?? t('common.confirm');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={modalStyles.scrim}>
         <View style={[modalStyles.modal, { backgroundColor: c.surface }]}>
-          <Text style={[modalStyles.title, { color: c.ink }]}>{title}</Text>
-          <Text style={[modalStyles.body, { color: c.ink2 }]}>{children}</Text>
+          <Text style={[modalStyles.title, { color: c.ink, writingDirection: textDir }]}>{title}</Text>
+          <Text style={[modalStyles.body, { color: c.ink2, writingDirection: textDir }]}>{children}</Text>
           <View style={modalStyles.acts}>
             <Button variant="secondary" block onPress={onCancel} style={{ flex: 1 }}>
-              {cancelLabel}
+              {resolvedCancel}
             </Button>
             <Button variant={confirmVariant} block onPress={onConfirm} style={{ flex: 1.3 }}>
-              {confirmLabel}
+              {resolvedConfirm}
             </Button>
           </View>
         </View>

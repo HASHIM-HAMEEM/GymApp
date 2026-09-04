@@ -1,275 +1,363 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, spacing, typography } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
-import { Monogram, Tag, SectionLabel, StatusDot } from '@/components/Tag';
-import { KVList, KVRow, Banner } from '@/components/Surfaces';
+import { Tag, SectionLabel } from '@/components/Tag';
 import { Sheet } from '@/components/Overlays';
+import { KVRow } from '@/components/Surfaces';
 import { Field, Control } from '@/components/Field';
+import { Banner } from '@/components/Surfaces';
 import { useMemberDetail, useResendMemberInvitation, useSetMembershipState } from '@/data/api/queries';
+import { fmtLong, fmtShort, fmtDateTime, statusVisual } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
-import { statusVisual, fmtLong, fmtShort, fmtDateTime, TODAY } from '@/data/format';
-
-function addDays(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
+import { Language, type TranslationKey } from '@/lib/i18n';
 
 export default function MemberDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const memberQuery = useMemberDetail(id);
-  const setMembershipState = useSetMembershipState();
-  const resendInvitation = useResendMemberInvitation();
-  const { darkMode } = useApp();
+  const member = useMemberDetail(id);
+  const resend = useResendMemberInvitation();
+  const setState = useSetMembershipState();
+  const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
-  const [freezeOpen, setFreezeOpen] = React.useState(false);
-  const [pauseUntil, setPauseUntil] = React.useState('');
+  const textDir = isRtl ? 'rtl' : 'ltr';
+
+  const [showingFreeze, setShowingFreeze] = React.useState(false);
+  const [freezeUntil, setFreezeUntil] = React.useState('');
   const [actionError, setActionError] = React.useState<string | null>(null);
 
-  const m = memberQuery.data ?? null;
-  const ms = m?.membership ?? null;
-  const invited = m?.accountStatus === 'invited';
-  const invitationPending = m?.invitationStatus === 'pending' || m?.invitationStatus === 'failed';
+  const m = member.data;
 
-  React.useEffect(() => {
-    if (ms && !pauseUntil) {
-      setPauseUntil(addDays(TODAY, 30) <= ms.expiryDate ? addDays(TODAY, 30) : ms.expiryDate);
-    }
-  }, [ms, pauseUntil]);
+  function membershipTag(ms: NonNullable<typeof m>['membership']) {
+    if (!ms) return { label: t('memberDetail.noMembership'), variant: 'muted' as const, dot: 'muted' as const };
+    const vis = statusVisual(ms.status, { expiryDate: ms.expiryDate, amountDue: ms.amountDue, pauseEnds: ms.pauseEnds, graceUntil: ms.graceUntil }, c, language);
+    return { label: vis.tagLabel, variant: vis.tagVariant, dot: vis.dotVariant };
+  }
 
-  if (!m) {
+  function paymentStateLabel(state: string) {
+    const map: Record<string, TranslationKey> = {
+      'Paid': 'payment.paid',
+      'Payment due': 'payment.due',
+      'Complimentary': 'payment.complimentary',
+    };
+    return map[state] ? t(map[state] as TranslationKey) : state;
+  }
+
+  function paymentMethodLabel(method: string) {
+    const map: Record<string, TranslationKey> = {
+      'InstaPay': 'payment.instapay',
+      'Cash': 'payment.cash',
+      'Card': 'payment.card',
+      'Wallet': 'payment.wallet',
+      'Complimentary': 'payment.complimentary',
+    };
+    return map[method] ? t(map[method] as TranslationKey) : method;
+  }
+
+  function inviteStatusLabel(s: string) {
+    const map: Record<string, TranslationKey> = {
+      pending: 'common.pending',
+      sent: 'common.invited',
+      accepted: 'member.active',
+    };
+    return map[s] ? t(map[s] as TranslationKey) : s;
+  }
+
+  if (member.isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <AppBar title="Member" onBack={() => router.back()} />
-        <Text style={{ color: c.ink2, padding: 20 }}>
-          {memberQuery.isLoading ? 'Loading member…' : 'Member not found.'}
-        </Text>
+      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: c.ink3, fontSize: 14, writingDirection: textDir }}>{t('memberDetail.loading')}</Text>
       </View>
     );
   }
 
-  const vis = ms ? statusVisual(ms.status, ms, c) : null;
+  if (!m) {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <AppBar title={t('memberDetail.title')} onBack={() => router.back()} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14 }}>
+          <Text style={{ color: c.ink3, writingDirection: textDir }}>{t('memberDetail.notFound')}</Text>
+          <Button onPress={() => router.back()}>{t('common.goBack')}</Button>
+        </View>
+      </View>
+    );
+  }
 
-  const togglePause = async () => {
-    if (!ms) return;
-    setActionError(null);
+  const ms = m.membership;
+  const isPaused = ms?.status === 'paused';
+  const canResend = m.invitationId && m.invitationStatus !== 'accepted' && m.invitationStatus !== 'revoked';
+
+  async function handleResend() {
+    if (!m.invitationId) return;
     try {
-      if (ms.status === 'paused') {
-        await setMembershipState.mutateAsync({ membershipId: ms.id!, action: 'resume' });
-      } else {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(pauseUntil)) {
-          setActionError('Enter the resume date as YYYY-MM-DD.');
-          return;
-        }
-        if (pauseUntil > ms.expiryDate || pauseUntil <= TODAY) {
-          setActionError('The resume date must be after today and within the membership term.');
-          return;
-        }
-        await setMembershipState.mutateAsync({ membershipId: ms.id!, action: 'pause', pauseUntil });
-        setFreezeOpen(false);
+      await resend.mutateAsync(m.invitationId);
+    } catch (err) {
+      setActionError(t('memberDetail.resendFailed'));
+    }
+  }
+
+  async function handleFreeze() {
+    if (!ms?.id) {
+      setActionError(t('memberDetail.changeFailed'));
+      return;
+    }
+    if (isPaused) {
+      try {
+        await setState.mutateAsync({ membershipId: ms.id, action: 'resume' });
+        setShowingFreeze(false);
+      } catch (err) {
+        setActionError(t('memberDetail.changeFailed'));
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'The change could not be saved.';
-      setActionError(`${message} Try again, or note it for the manager.`);
+      return;
     }
-  };
-
-  const resend = async () => {
-    if (!m?.invitationId) return;
-    setActionError(null);
+    if (!freezeUntil.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(freezeUntil.trim())) {
+      setActionError(t('memberDetail.resumeDateInvalid'));
+      return;
+    }
+    if (freezeUntil <= ms.startDate || freezeUntil > ms.expiryDate) {
+      setActionError(t('memberDetail.resumeDateRange'));
+      return;
+    }
     try {
-      await resendInvitation.mutateAsync(m.invitationId);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'The invitation could not be resent.';
-      setActionError(message);
+      await setState.mutateAsync({ membershipId: ms.id, action: 'pause', pauseUntil: freezeUntil });
+      setShowingFreeze(false);
+      setFreezeUntil('');
+    } catch (err) {
+      setActionError(t('memberDetail.changeFailed'));
     }
-  };
+  }
+
+  const tag = ms ? membershipTag(ms) : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <AppBar title="Member" onBack={() => router.back()} />
+      <AppBar title={t('memberDetail.title')} onBack={() => router.back()} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-        <Body style={{ gap: 18 }}>
+        <Body style={{ gap: spacing.md }}>
 
-          {actionError ? <Banner variant="error">{actionError}</Banner> : null}
+          {actionError ? (
+            <Banner variant="error">
+              <Text style={{ writingDirection: textDir }}>{actionError}</Text>
+            </Banner>
+          ) : null}
 
-          <View style={styles.head}>
-            <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={52} fontSize={17} />
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <Text style={[styles.name, { color: c.ink }]}>{m.firstName} {m.lastName}</Text>
-                {invited ? (
-                  <Tag variant="muted">Invited</Tag>
-                ) : vis ? (
-                  <Tag variant={vis.tagVariant}>{vis.tagLabel}</Tag>
-                ) : (
-                  <Tag variant="muted">No plan</Tag>
-                )}
-              </View>
-              <Text style={[styles.sub, { color: c.ink3 }]}>{m.id} · {m.email} · member since {m.memberSince}</Text>
+          <View style={[styles.head, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+            <View style={[styles.avatar, { backgroundColor: c.accentSoft }]}>
+              <Text style={{ fontFamily: typography.display, fontSize: 28, fontWeight: '700', color: c.accent }}>
+                {m.firstName.slice(0, 1)}{m.lastName.slice(0, 1)}
+              </Text>
             </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.name, { color: c.ink, writingDirection: textDir }]}>{m.firstName} {m.lastName}</Text>
+              <Text style={[styles.sub, { color: c.ink3, writingDirection: textDir }]}>
+                {t('memberDetail.memberSince', { id: m.id, email: m.email, date: m.memberSince })}
+              </Text>
+            </View>
+            <Tag variant="accent" style={{ alignSelf: 'center' }}>{t('common.member')}</Tag>
           </View>
 
-          {invitationPending || invited ? (
-            <View style={[styles.inviteBox, { borderColor: c.line, backgroundColor: c.bg1 }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.inviteTitle, { color: c.ink }]}>Invitation {m.invitationStatus ?? 'pending'}</Text>
-                <Text style={[styles.inviteSub, { color: c.ink3 }]}>
-                  {m.invitationStatus === 'failed'
-                    ? 'The last send attempt failed. Resend the activation email.'
-                    : 'The activation email is waiting to be accepted.'}
+          {m.invitationStatus && m.invitationStatus !== 'accepted' ? (
+            <View style={[styles.inviteBox, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={[styles.inviteTitle, { color: c.ink, writingDirection: textDir }]}>
+                  {t('memberDetail.invitationStatus', { status: inviteStatusLabel(m.invitationStatus) })}
+                </Text>
+                <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
+                  {t('memberDetail.invitationWaiting')}
                 </Text>
               </View>
-              <Button
-                size="sm"
-                variant="secondary"
-                icon="refresh"
-                loading={resendInvitation.isPending}
-                onPress={resend}
-              >
-                Resend
-              </Button>
+              {canResend ? (
+                <Button size="sm" loading={resend.isPending} onPress={handleResend}>{t('memberDetail.resend')}</Button>
+              ) : null}
             </View>
           ) : null}
 
-          <View style={styles.actions}>
-            <Button
-              style={{ flex: 1 }}
-              onPress={() => router.push({ pathname: '/renew', params: { id: m.id } })}
-            >
-              Renew
-            </Button>
-            <Button
-              variant="secondary"
-              style={{ flex: 1 }}
-              loading={setMembershipState.isPending}
-              onPress={() => {
-                if (ms?.status === 'paused') void togglePause();
-                else setFreezeOpen(true);
-              }}
-            >
-              {ms?.status === 'paused' ? 'Unpause' : 'Pause'}
-            </Button>
-          </View>
-          {ms && ms.status !== 'paused' ? (
-            <Button
-              variant="quiet"
-              block
-              textStyle={{ fontSize: 13 }}
-              style={{ marginTop: -4 }}
-              onPress={() => setFreezeOpen(true)}
-            >
-              Freeze access…
-            </Button>
-          ) : null}
+          {ms ? (
+            <View style={{ gap: 8 }}>
+              <SectionLabel>{t('memberDetail.currentMembership')}</SectionLabel>
+              <View style={[styles.membershipCard, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <Text style={[styles.planName, { color: c.ink, writingDirection: textDir }]}>{ms.planName}</Text>
+                  <Text style={[styles.dateLine, { color: c.ink3, writingDirection: textDir }]}>
+                    {fmtLong(ms.startDate, language)} — {fmtLong(ms.expiryDate, language)}
+                  </Text>
+                  {ms.pauseEnds ? (
+                    <Text style={[styles.pauseNote, { color: c.ink4, writingDirection: textDir }]}>
+                      {t('status.pausedUntilBanner', { date: fmtShort(ms.pauseEnds, language) })}
+                    </Text>
+                  ) : null}
+                </View>
+                {tag ? (
+                  <Tag variant={tag.variant} style={{ alignSelf: 'center' }}>
+                    {tag.label}
+                  </Tag>
+                ) : null}
+              </View>
 
-          <View>
-            <SectionLabel>Current membership</SectionLabel>
-            {ms ? (
-              <KVList>
-                <KVRow icon="card" label="Plan">{ms.planName}</KVRow>
-                <KVRow icon="cal" label="Start">{fmtLong(ms.startDate)}</KVRow>
-                <KVRow icon="cal" label="Expiry">
-                  <Text style={{ color: ms.status === 'expired' ? c.bad : ms.status === 'expiring' ? c.warn : c.ink }}>
-                    {fmtLong(ms.expiryDate)}
+              <KVRow label={t('memberDetail.plan')}>
+                <Text style={{ writingDirection: textDir }}>{ms.planName}</Text>
+              </KVRow>
+              <KVRow label={t('memberDetail.start')}>
+                <Text style={{ writingDirection: textDir }}>{fmtLong(ms.startDate, language)}</Text>
+              </KVRow>
+              <KVRow label={t('memberDetail.expiry')}>
+                <Text style={{ writingDirection: textDir }}>{fmtLong(ms.expiryDate, language)}</Text>
+              </KVRow>
+              {ms.payment ? (
+                <KVRow label={t('memberDetail.payment')}>
+                  <Text style={{ writingDirection: textDir }}>
+                    {t('memberDetail.paymentSummary', { state: paymentStateLabel(ms.payment.state), method: paymentMethodLabel(ms.payment.method) })}
+                    {ms.payment.date ? ` · ${fmtShort(ms.payment.date, language)}` : ''}
+                    {ms.payment.receiptNumber ? ` · ${ms.payment.receiptNumber}` : ''}
                   </Text>
                 </KVRow>
-                <KVRow icon="receipt" label="Payment">
-                  <StatusDot variant="ok" size={7} /> {ms.payment.state} · {ms.payment.method}
-                  {ms.payment.date ? `, ${fmtShort(ms.payment.date)}` : ''}
-                  {ms.payment.receiptNumber ? ` · ${ms.payment.receiptNumber}` : ''}
-                </KVRow>
-              </KVList>
+              ) : null}
+            </View>
+          ) : null}
+
+          <View style={{ gap: 0 }}>
+            <SectionLabel>{t('memberDetail.profileEmergency')}</SectionLabel>
+            <KVRow label={t('common.member')}>
+              <Text style={{ writingDirection: textDir }}>{m.firstName} {m.lastName}</Text>
+            </KVRow>
+            <KVRow label={t('memberDetail.email')}>
+              <Text style={{ writingDirection: textDir }}>{m.email}</Text>
+            </KVRow>
+            {m.phone ? (
+              <KVRow label={t('memberDetail.phone')}>
+                <Text style={{ writingDirection: textDir }}>{m.phone}</Text>
+              </KVRow>
+            ) : null}
+            {m.dateOfBirth ? (
+              <KVRow label={t('memberDetail.born')}>
+                <Text style={{ writingDirection: textDir }}>{fmtLong(m.dateOfBirth, language)}</Text>
+              </KVRow>
+            ) : null}
+            {m.nationalId ? (
+              <KVRow label={t('memberDetail.nationalId')}>
+                <Text style={{ writingDirection: textDir }}>{m.nationalId}</Text>
+              </KVRow>
+            ) : null}
+            <KVRow label={t('memberDetail.address')}>
+              <Text style={{ writingDirection: textDir }}>{m.address}</Text>
+            </KVRow>
+            {m.emergencyName && m.emergencyPhone ? (
+              <KVRow label={t('memberDetail.emergency')}>
+                <Text style={{ writingDirection: textDir }}>
+                  {t('memberDetail.emergencyContact', { name: m.emergencyName, phone: m.emergencyPhone })}
+                </Text>
+              </KVRow>
+            ) : null}
+          </View>
+
+          <View style={{ gap: 0 }}>
+            <SectionLabel>{t('memberDetail.visitHistory')}</SectionLabel>
+            {m.visits.length === 0 ? (
+              <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                <Text style={{ color: c.ink4, writingDirection: textDir }}>{t('memberDetail.noVisits')}</Text>
+              </View>
             ) : (
-              <Text style={[styles.none, { color: c.ink3 }]}>No membership assigned — assign one from Renew.</Text>
+              <>
+                {m.visits.slice(0, 8).map((v) => (
+                  <View key={v.id} style={[styles.vrow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                    <Text style={[styles.vdate, { color: c.ink, textAlign: isRtl ? 'right' : 'left', writingDirection: textDir }]}>
+                      {fmtShort(v.date, language)}
+                    </Text>
+                    <Text style={[styles.vtime, { color: c.ink3, writingDirection: textDir }]}>
+                      {v.time}
+                    </Text>
+                    <Text style={[styles.vrec, { color: c.ink4, writingDirection: textDir }]}>
+                      {t('memberDetail.visitSource', { source: v.method === 'qr' ? t('memberDetail.qr') : t('memberDetail.desk'), reception: v.reception })}
+                    </Text>
+                  </View>
+                ))}
+                {m.visits.length > 8 ? (
+                  <Text style={[styles.visitFoot, { color: c.ink4, writingDirection: textDir }]}>
+                    {t('common.countOfTotal', { count: Math.min(m.visits.length, 8), total: m.visits.length })}
+                  </Text>
+                ) : null}
+              </>
             )}
           </View>
 
-          <View>
-            <SectionLabel>Profile & emergency contact</SectionLabel>
-            <KVList>
-              <KVRow icon="mail" label="Email">{m.email}</KVRow>
-              {m.phone ? <KVRow icon="phone" label="Phone">{m.phone}</KVRow> : null}
-              {m.dateOfBirth ? <KVRow icon="cal" label="Born">{m.dateOfBirth}</KVRow> : null}
-              {m.emergencyName ? (
-                <KVRow icon="user" label="Emergency">{m.emergencyName} · {m.emergencyPhone ?? ''}</KVRow>
-              ) : null}
-              {m.nationalId ? <KVRow icon="card" label="National ID">{m.nationalId}</KVRow> : null}
-              {m.address ? <KVRow icon="pin" label="Address">{m.address}</KVRow> : null}
-            </KVList>
-          </View>
-
-          <View>
-            <SectionLabel>Activity log</SectionLabel>
-            <View style={[styles.logList, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              {m.activity.length === 0 ? (
-                <Text style={[styles.none, { color: c.ink3, padding: 16 }]}>No activity recorded yet.</Text>
-              ) : (
-                m.activity.map((a) => (
-                  <View key={a.id} style={[styles.logRow, { borderColor: c.line }]}>
-                    <View style={styles.dotCol}>
-                      <View style={[styles.logDot, { backgroundColor: c.line2 }, a.kind === 'checkin' && { backgroundColor: c.ok }]} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.logText, { color: c.ink }]}>{a.text}</Text>
-                      <Text style={[styles.logTime, { color: c.ink3 }]}>{fmtDateTime(a.at.slice(0, 16))}{a.author ? ` · by ${a.author}` : ''}</Text>
-                    </View>
+          <View style={{ gap: 0 }}>
+            <SectionLabel>{t('memberDetail.activityLog')}</SectionLabel>
+            {m.activity.length === 0 ? (
+              <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                <Text style={{ color: c.ink4, writingDirection: textDir }}>{t('memberDetail.noActivity')}</Text>
+              </View>
+            ) : (
+              m.activity.slice(0, 20).map((a, idx) => (
+                <View key={idx} style={[styles.logRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                  <View style={styles.dotCol}>
+                    <View style={[styles.logDot, { backgroundColor: c.line2 }]} />
                   </View>
-                ))
-              )}
-            </View>
-          </View>
-
-          <View>
-            <SectionLabel>Visit history</SectionLabel>
-            <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              {m.visits.length === 0 ? (
-                <Text style={[styles.none, { color: c.ink3, padding: 16 }]}>No visits recorded yet.</Text>
-              ) : (
-                m.visits.slice(0, 7).map((v) => (
-                  <View key={v.id} style={[styles.vrow, { borderColor: c.line }]}>
-                    <Text style={[styles.vdate, { color: c.ink }]}>{fmtShort(v.date)}</Text>
-                    <Text style={[styles.vtime, { color: c.ink }]}>{v.time}</Text>
-                    <Text style={[styles.vrec, { color: c.ink2 }]}>
-                      {v.method === 'qr' ? 'QR' : 'Desk'} · Rec {v.reception}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.logText, { color: c.ink, writingDirection: textDir }]}>{a.text}</Text>
+                    <Text style={[styles.logTime, { color: c.ink4, writingDirection: textDir }]}>
+                      {a.author ? t('memberDetail.activityBy', { date: fmtDateTime(a.at, language), author: a.author }) : fmtDateTime(a.at, language)}
                     </Text>
                   </View>
-                ))
-              )}
-            </View>
-            <Text style={[styles.visitFoot, { color: c.ink2 }]}>
-              {m.visits.length} visits recorded · first on {m.visits.length > 0 ? fmtShort(m.visits[m.visits.length - 1].date) : '—'}
-            </Text>
+                </View>
+              ))
+            )}
           </View>
+
+          <View style={{ gap: 10 }}>
+            <SectionLabel>{t('common.member')}</SectionLabel>
+            <View style={[styles.actions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onPress={() => router.push({ pathname: '/renew', params: { id: m.id } })}
+              >
+                {t('memberDetail.renew')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onPress={() => setShowingFreeze(true)}
+              >
+                {isPaused ? t('memberDetail.unpause') : t('memberDetail.freeze')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => router.push({ pathname: '/notice-compose', params: { memberId: m.id } })}
+              >
+                {t('notice.title')}
+              </Button>
+            </View>
+          </View>
+
         </Body>
       </ScrollView>
 
-      <Sheet
-        visible={freezeOpen}
-        onClose={() => setFreezeOpen(false)}
-        title="Freeze access"
-        desc={`Temporarily halt ${m.firstName}'s club access. Remaining days resume when the membership unfreezes.`}
-      >
-        <View style={{ gap: 12, marginTop: 12 }}>
-          <Field label="Resume on" hint="Must be after today and within the membership term.">
-            <Control
-              value={pauseUntil}
-              onChangeText={setPauseUntil}
-              placeholder="YYYY-MM-DD"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="off"
-            />
-          </Field>
-          <Button block loading={setMembershipState.isPending} onPress={togglePause}>
-            Confirm freeze
-          </Button>
-          <Button variant="quiet" block onPress={() => setFreezeOpen(false)}>
-            Keep active
+      <Sheet visible={showingFreeze} onClose={() => setShowingFreeze(false)}>
+        <Text style={[styles.sheetTitle, { color: c.ink, writingDirection: textDir }]}>
+          {isPaused ? t('memberDetail.unpause') : t('memberDetail.freezeTitle')}
+        </Text>
+        {!isPaused ? (
+          <>
+            <Text style={[styles.sheetBody, { color: c.ink3, writingDirection: textDir }]}>
+              {t('memberDetail.freezeBody', { name: m.firstName })}
+            </Text>
+            <Field label={t('memberDetail.resumeOn')} hint={t('memberDetail.resumeHint')}>
+              <Control
+                value={freezeUntil}
+                onChangeText={setFreezeUntil}
+                placeholder={t('common.dateFormatHint')}
+                autoComplete="off"
+              />
+            </Field>
+          </>
+        ) : null}
+        <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <Button variant="secondary" onPress={() => setShowingFreeze(false)}>{t('common.cancel')}</Button>
+          <Button loading={setState.isPending} onPress={handleFreeze}>
+            {isPaused ? t('memberDetail.unpause') : t('memberDetail.confirmFreeze')}
           </Button>
         </View>
       </Sheet>
@@ -278,26 +366,38 @@ export default function MemberDetail() {
 }
 
 const styles = StyleSheet.create({
-  head: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   name: {
-    fontFamily: typography.fontFamily,
-    fontSize: 22,
+    fontFamily: typography.display,
+    fontSize: 20,
     fontWeight: '600',
     letterSpacing: -0.4,
   },
   sub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
-    marginTop: 4,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 2,
   },
   inviteBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    padding: 14,
   },
   inviteTitle: {
     fontFamily: typography.fontFamily,
@@ -306,64 +406,42 @@ const styles = StyleSheet.create({
   },
   inviteSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
-    lineHeight: 18,
-    marginTop: 2,
+    fontSize: 13,
+    lineHeight: 20,
   },
-  actions: { flexDirection: 'row', gap: 10 },
-  none: {
-    fontFamily: typography.fontFamily,
-    fontSize: 14,
-    marginTop: 8,
-  },
-  logList: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    paddingVertical: 2,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  logRow: {
+  membershipCard: {
     flexDirection: 'row',
-    gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    gap: spacing.sm,
   },
-  dotCol: { width: 12, paddingTop: 5 },
-  logDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  planName: {
+    fontFamily: typography.display,
+    fontSize: 16,
+    fontWeight: '600',
   },
-  logText: {
+  dateLine: {
     fontFamily: typography.fontFamily,
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 20,
   },
-  logTime: {
+  pauseNote: {
     fontFamily: typography.fontFamily,
     fontSize: 12,
-    marginTop: 3,
-  },
-  tbl: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginTop: 8,
+    lineHeight: 18,
   },
   vrow: {
     flexDirection: 'row',
-    gap: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: 12,
   },
   vdate: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
-    fontWeight: '600',
-    width: 80,
+    fontWeight: '500',
   },
   vtime: {
     fontFamily: typography.fontFamily,
@@ -372,11 +450,59 @@ const styles = StyleSheet.create({
   },
   vrec: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 12,
   },
   visitFoot: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
-    marginTop: 8,
+    fontSize: 11.5,
+    color: 'gray',
+    marginTop: 4,
+  },
+  logRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  dotCol: {
+    width: 12,
+    alignItems: 'center',
+    paddingTop: 5,
+  },
+  logDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  logText: {
+    fontFamily: typography.fontFamily,
+    fontSize: 13.5,
+    lineHeight: 22,
+  },
+  logTime: {
+    fontFamily: typography.fontFamily,
+    fontSize: 11.5,
+    marginTop: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  sheetTitle: {
+    fontFamily: typography.display,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  sheetBody: {
+    fontFamily: typography.fontFamily,
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  sheetActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
   },
 });
