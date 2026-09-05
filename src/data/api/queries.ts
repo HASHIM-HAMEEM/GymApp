@@ -528,6 +528,20 @@ export function useMarkNoticeRead() {
   });
 }
 
+export function useMarkAllNoticesRead() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      callRpc<number>('mark_all_notices_read', {}, 'Notices could not be cleared.'),
+    onSuccess: () => {
+      cache.setQueryData<Notice[]>(['notices', false], (notices) =>
+        notices?.map((notice) => ({ ...notice, read: true })),
+      );
+      void cache.invalidateQueries({ queryKey: ['notices'] });
+    },
+  });
+}
+
 export function useDeleteNotice() {
   const cache = useQueryClient();
   return useMutation({

@@ -5,7 +5,10 @@ import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { EmptyState } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
-import { useNotices } from '@/data/api/queries';
+import { IconButton } from '@/components/Button';
+import { Sheet } from '@/components/Overlays';
+import { Button } from '@/components/Button';
+import { useNotices, useMarkAllNoticesRead } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
 import type { Language, TranslationKey } from '@/lib/i18n';
@@ -44,10 +47,21 @@ function noticeDate(iso: string, language: Language): string {
 export default function NoticesScreen() {
   const router = useRouter();
   const noticesQuery = useNotices();
+  const markAllRead = useMarkAllNoticesRead();
   const { t, isRtl, language, darkMode } = useApp();
   const c = useColors(darkMode);
   const notices = noticesQuery.data ?? [];
   const unreadCount = notices.filter((n) => !n.read).length;
+  const [clearOpen, setClearOpen] = React.useState(false);
+
+  const handleClearAll = async () => {
+    try {
+      await markAllRead.mutateAsync();
+      setClearOpen(false);
+    } catch {
+      setClearOpen(false);
+    }
+  };
 
   if (notices.length === 0) {
     return (
@@ -62,9 +76,19 @@ export default function NoticesScreen() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         right={
-          unreadCount > 0 ? (
-            <Text style={[styles.badge, { color: c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notices.newCount', { count: unreadCount })}</Text>
-          ) : null
+          <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10 }}>
+            {unreadCount > 0 ? (
+              <Text style={[styles.badge, { color: c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notices.newCount', { count: unreadCount })}</Text>
+            ) : null}
+            {unreadCount > 0 ? (
+              <IconButton
+                name="xc"
+                onPress={() => setClearOpen(true)}
+                accessibilityLabel={t('notices.clearAll')}
+                size={22}
+              />
+            ) : null}
+          </View>
         }
       >
         <Text style={{ fontFamily: typography.display, fontSize: 18, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('notices.title')}</Text>
@@ -112,6 +136,22 @@ export default function NoticesScreen() {
           </View>
         </Body>
       </ScrollView>
+
+      <Sheet
+        visible={clearOpen}
+        onClose={() => setClearOpen(false)}
+        title={t('notices.clearAll')}
+        desc={t('notices.clearAllBody')}
+      >
+        <View style={{ gap: 10, marginTop: 12 }}>
+          <Button block loading={markAllRead.isPending} onPress={handleClearAll}>
+            {t('notices.clearAllConfirm')}
+          </Button>
+          <Button variant="quiet" block disabled={markAllRead.isPending} onPress={() => setClearOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+        </View>
+      </Sheet>
     </View>
   );
 }

@@ -156,34 +156,44 @@ export default function MemberHome() {
 
           {m ? (
             <TapCard onPress={() => router.push('/(member)/visits')}>
-              <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                {week.map((wd) => {
-                  const visited = m.visits.some((v) => v.date === wd.iso);
-                  const isToday = wd.iso === today;
-                  const on = visited && !isToday;
-                  return (
-                    <View key={wd.iso} style={styles.wd}>
-                      <View
-                        style={[
-                          styles.dot,
-                          {
-                            borderColor: isToday ? c.accentHi : on ? c.accent : 'rgba(233,238,248,0.22)',
-                            backgroundColor: on ? c.accent : 'transparent',
-                            shadowColor: on ? c.accentGlow : 'transparent',
-                            shadowOpacity: on ? 0.8 : 0,
-                            shadowRadius: 8,
-                            shadowOffset: { width: 0, height: 0 },
-                          },
-                        ]}
-                      />
-                      <Text
-                        style={[styles.wdLabel, { color: isToday ? c.accentHi : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
-                      >
-                        {wd.label}
-                      </Text>
-                    </View>
-                  );
-                })}
+              <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line }]}>
+                <View style={[styles.weekHeader, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                  <Text style={[styles.weekTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+                    {t('member.thisWeek')}
+                  </Text>
+                  <Text style={[styles.weekCount, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+                    {m.visits.filter((v) => week.some((wd) => wd.iso === v.date)).length} {t('member.visitsThisWeek')}
+                  </Text>
+                </View>
+                <View style={[styles.weekRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                  {week.map((wd) => {
+                    const visited = m.visits.some((v) => v.date === wd.iso);
+                    const isToday = wd.iso === today;
+                    const on = visited && !isToday;
+                    return (
+                      <View key={wd.iso} style={styles.wd}>
+                        <View
+                          style={[
+                            styles.dot,
+                            {
+                              borderColor: isToday ? c.accentHi : on ? c.accent : c.line2,
+                              backgroundColor: on ? c.accent : 'transparent',
+                              shadowColor: on ? c.accentGlow : 'transparent',
+                              shadowOpacity: on ? 0.6 : 0,
+                              shadowRadius: 6,
+                              shadowOffset: { width: 0, height: 0 },
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[styles.wdLabel, { color: isToday ? c.accentHi : on ? c.ink2 : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
+                        >
+                          {wd.label}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
               </View>
             </TapCard>
           ) : null}
@@ -199,12 +209,20 @@ export default function MemberHome() {
               onPress={() => router.push(`/notice?id=${latestNotice.id}`)}
               style={[styles.noticeRow, { borderColor: c.line, backgroundColor: c.bg1, flexDirection: isRtl ? 'row-reverse' : 'row' }]}
             >
-              <Text
-                style={[styles.cat, { color: latestNotice.urgent ? c.bad : c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
-              >
-                {t(noticeCategoryKey(latestNotice.category))}
-              </Text>
+              <View style={[styles.noticeIcon, { backgroundColor: latestNotice.urgent ? c.badSoft : c.accentSoft }]}>
+                <View style={[styles.noticeDot, { backgroundColor: latestNotice.urgent ? c.bad : c.accent }]} />
+              </View>
               <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}>
+                  <Text
+                    style={[styles.cat, { color: latestNotice.urgent ? c.bad : c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
+                  >
+                    {t(noticeCategoryKey(latestNotice.category))}
+                  </Text>
+                  {!latestNotice.read ? (
+                    <View style={[styles.unreadDot, { backgroundColor: c.accent }]} />
+                  ) : null}
+                </View>
                 <Text style={[styles.nt, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
                   {latestNotice.title}
                 </Text>
@@ -245,18 +263,38 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   week: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: radius.lg,
     paddingHorizontal: 18,
     paddingTop: 16,
-    paddingBottom: 14,
+    paddingBottom: 16,
+    gap: 14,
   },
-  wd: { flex: 1, alignItems: 'center', gap: 9 },
+  weekHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  weekTitle: {
+    fontFamily: typography.display,
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
+  weekCount: {
+    fontFamily: typography.fontFamily,
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: tracking.small,
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  wd: { flex: 1, alignItems: 'center', gap: 10 },
   dot: {
-    width: 9,
-    height: 9,
+    width: 10,
+    height: 10,
     borderRadius: 5,
     borderWidth: 1.5,
   },
@@ -279,17 +317,32 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: radius.lg,
     borderWidth: 1,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  noticeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  noticeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  unreadDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   cat: {
     fontFamily: typography.mono,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.9,
     textTransform: 'uppercase',
-    paddingTop: 3,
-    width: 76,
-    flexShrink: 0,
   },
   nt: {
     fontFamily: typography.display,
