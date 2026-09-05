@@ -108,7 +108,7 @@ export default function MemberHome() {
           <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 2 }}>
             {hasUnread ? (
               <IconButton
-                name="close"
+                name="checkc"
                 onPress={() => setClearOpen(true)}
                 accessibilityLabel={t('notices.clearAll')}
               />

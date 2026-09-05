@@ -81,7 +81,7 @@ export default function NoticesScreen() {
               <Text style={[styles.badge, { color: c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notices.newCount', { count: unreadCount })}</Text>
             ) : null}
             <IconButton
-              name="close"
+              name="checkc"
               onPress={() => setClearOpen(true)}
               accessibilityLabel={t('notices.clearAll')}
             />

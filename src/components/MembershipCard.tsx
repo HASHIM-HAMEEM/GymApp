@@ -103,7 +103,7 @@ export function MembershipCard({
           <View style={styles.qrPlate}>
             <QRCode
               value={qrPayload}
-              size={58}
+              size={62}
               color="#10131A"
               backgroundColor={colors.plate}
               quietZone={4}
@@ -142,11 +142,11 @@ export function MembershipCard({
 const styles = StyleSheet.create({
   card: {
     borderRadius: 22,
-    padding: 22,
-    paddingBottom: 20,
+    padding: 20,
+    paddingBottom: 18,
     overflow: 'hidden',
     borderWidth: 1,
-    minHeight: 188,
+    minHeight: 172,
     justifyContent: 'space-between',
     backgroundColor: '#161616',
   },
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   holder: {
-    marginTop: 22,
+    marginTop: 18,
   },
   holderName: {
     fontFamily: typography.display,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 16,
   },
   stat: {
     gap: 4,
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     color: '#F2F4F8',
   },
   qrPlate: {
-    width: 70,
-    height: 70,
+    width: 74,
+    height: 74,
     borderRadius: 14,
     backgroundColor: colors.plate,
     alignItems: 'center',

@@ -24,7 +24,7 @@ import Svg, {
 import { Sheet } from '@/components/Overlays';
 import { useClub } from '@/data/api/queries';
 import { useApp } from '@/data/store';
-import { typography } from '@/theme/tokens';
+import { typography, useColors } from '@/theme/tokens';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { WelcomeArtwork } from '@/components/WelcomeArtwork';
 
@@ -189,6 +189,7 @@ export default function Welcome() {
   const insets = useSafeAreaInsets();
   const { width, height, fontScale } = useWindowDimensions();
   const { darkMode, t, isRtl } = useApp();
+  const c = useColors(darkMode);
   const clubQuery = useClub();
   const reducedMotion = useReducedMotion();
   const [deskInfoOpen, setDeskInfoOpen] = React.useState(false);
@@ -349,25 +350,25 @@ export default function Welcome() {
         desc={t('welcome.sheetBody')}
       >
         <View style={styles.sheetContent}>
-          <View style={[styles.infoBox, { backgroundColor: light ? '#FFFFFF' : '#12181D', borderColor: light ? 'rgba(18,30,38,0.1)' : 'rgba(255,255,255,0.1)' }]}>
-            <Text selectable style={[styles.infoTitle, { color: light ? '#11191F' : '#F4F7F9', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{club.name}</Text>
+          <View style={[styles.infoBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
+            <Text selectable style={[styles.infoTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{club.name}</Text>
             {club.address || club.city ? (
-              <Text selectable style={[styles.infoLine, { color: light ? '#4F616D' : '#A6B4BC', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+              <Text selectable style={[styles.infoLine, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
                 {t('welcome.clubLocation', { address: club.address, city: club.city })}
               </Text>
             ) : null}
             {club.hours && club.hours.length > 0 ? (
               <View style={{ marginTop: 10, gap: 3 }}>
-                <Text style={[styles.clubCardLabel, { color: light ? '#7A8A95' : '#7E909B', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
+                <Text style={[styles.clubCardLabel, { color: c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
                 {club.hours.map((h, i) => (
-                  <Text key={i} selectable style={[styles.infoLine, { color: light ? '#4F616D' : '#A6B4BC', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+                  <Text key={i} selectable style={[styles.infoLine, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
                     {h.label} · {h.value}
                   </Text>
                 ))}
               </View>
             ) : null}
             {club.phone ? (
-              <Text selectable style={[styles.infoLine, styles.mono, { color: light ? '#6A7A84' : '#AABAC5', writingDirection: 'ltr' }]}>
+              <Text selectable style={[styles.infoLine, styles.mono, { color: c.ink3, writingDirection: 'ltr' }]}>
                 {t('welcome.receptionPhone', { phone: club.phone })}
               </Text>
             ) : null}
@@ -375,9 +376,9 @@ export default function Welcome() {
           <Pressable
             accessibilityRole="button"
             onPress={() => setDeskInfoOpen(false)}
-            style={({ pressed }) => [styles.sheetButton, { backgroundColor: light ? '#11191F' : '#F4F7F9', opacity: pressed ? 0.78 : 1 }]}
+            style={({ pressed }) => [styles.sheetButton, { backgroundColor: c.ink, opacity: pressed ? 0.78 : 1 }]}
           >
-            <Text style={[styles.sheetButtonText, { color: light ? '#FFFFFF' : '#080B0D' }]}>{t('welcome.closeDetails')}</Text>
+            <Text style={[styles.sheetButtonText, { color: c.bg }]}>{t('welcome.closeDetails')}</Text>
           </Pressable>
         </View>
       </Sheet>
