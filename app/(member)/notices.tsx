@@ -80,25 +80,23 @@ export default function NoticesScreen() {
             {unreadCount > 0 ? (
               <Text style={[styles.badge, { color: c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notices.newCount', { count: unreadCount })}</Text>
             ) : null}
-            {unreadCount > 0 ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('notices.clearAll')}
-                onPress={() => setClearOpen(true)}
-                hitSlop={12}
-                style={({ pressed }) => ({
-                  width: 38,
-                  height: 38,
-                  borderRadius: 19,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: c.ink3,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Icon name="close" size={18} color={c.bg} />
-              </Pressable>
-            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('notices.clearAll')}
+              onPress={() => setClearOpen(true)}
+              hitSlop={12}
+              style={({ pressed }) => ({
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: c.ink3,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <Icon name="close" size={18} color={c.bg} />
+            </Pressable>
           </View>
         }
       >

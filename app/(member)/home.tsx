@@ -5,9 +5,11 @@ import { useColors, spacing, typography, tracking, radius } from '@/theme/tokens
 import { AppBar, Body } from '@/components/Chrome';
 import { MembershipCard } from '@/components/MembershipCard';
 import { RingCard } from '@/components/RingCard';
-import { IconButton } from '@/components/Button';
+import { IconButton, Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
+import { Sheet } from '@/components/Overlays';
 import { useApp } from '@/providers/AppProvider';
-import { useCurrentMember, useNotices, usePlans, useQrPass } from '@/data/api/queries';
+import { useCurrentMember, useNotices, usePlans, useQrPass, useMarkAllNoticesRead } from '@/data/api/queries';
 import { statusVisual, fmtLong, fmtTodayLabel, fmtDayName, fmtMonthDay, daysBetween, todayIso, formatMoney } from '@/data/format';
 import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
@@ -57,7 +59,20 @@ export default function MemberHome() {
   const memberQuery = useCurrentMember();
   const noticesQuery = useNotices();
   const plansQuery = usePlans();
+  const markAllRead = useMarkAllNoticesRead();
   const c = useColors(darkMode);
+  const [clearOpen, setClearOpen] = React.useState(false);
+
+  const hasUnread = (noticesQuery.data ?? []).some((n) => !n.read);
+
+  const handleClearAll = async () => {
+    try {
+      await markAllRead.mutateAsync();
+      setClearOpen(false);
+    } catch {
+      setClearOpen(false);
+    }
+  };
 
   const m = memberQuery.data ?? null;
   const ms = m?.membership ?? null;
@@ -91,9 +106,30 @@ export default function MemberHome() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         right={
-          <View>
-            <IconButton name="bell" onPress={() => router.push('/(member)/notices')} accessibilityLabel={t('common.notifications')} />
-            {(noticesQuery.data ?? []).some((notice) => !notice.read) ? <View style={{ pointerEvents: 'none', position: 'absolute', right: 7, top: 5, width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent }} /> : null}
+          <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+            {hasUnread ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('notices.clearAll')}
+                onPress={() => setClearOpen(true)}
+                hitSlop={12}
+                style={({ pressed }) => ({
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: c.ink3,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Icon name="close" size={16} color={c.bg} />
+              </Pressable>
+            ) : null}
+            <View>
+              <IconButton name="bell" onPress={() => router.push('/(member)/notices')} accessibilityLabel={t('common.notifications')} />
+              {hasUnread ? <View style={{ pointerEvents: 'none', position: 'absolute', right: 7, top: 5, width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent }} /> : null}
+            </View>
           </View>
         }
       >
@@ -237,6 +273,22 @@ export default function MemberHome() {
           ) : null}
         </Body>
       </ScrollView>
+
+      <Sheet
+        visible={clearOpen}
+        onClose={() => setClearOpen(false)}
+        title={t('notices.clearAll')}
+        desc={t('notices.clearAllBody')}
+      >
+        <View style={{ gap: 10, marginTop: 12 }}>
+          <Button block loading={markAllRead.isPending} onPress={handleClearAll}>
+            {t('notices.clearAllConfirm')}
+          </Button>
+          <Button variant="quiet" block disabled={markAllRead.isPending} onPress={() => setClearOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+        </View>
+      </Sheet>
     </View>
   );
 }
