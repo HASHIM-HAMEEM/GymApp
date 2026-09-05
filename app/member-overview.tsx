@@ -87,14 +87,14 @@ export default function MemberOverview() {
           ) : null}
 
           {/* Profile details — not shown on home */}
-          <View style={{ gap: 0 }}>
+          <View style={styles.section}>
             <SectionLabel>{t('memberOverview.profileSection')}</SectionLabel>
             <KVList>
-              <KVRow icon="user" label={t('memberDetail.email')}>
+              <KVRow icon="user" label={t('memberDetail.email')} stacked>
                 <LtrText>{m.email}</LtrText>
               </KVRow>
               {m.phone ? (
-                <KVRow icon="phone" label={t('memberDetail.phone')}>
+                <KVRow icon="phone" label={t('memberDetail.phone')} stacked>
                   <LtrText>{m.phone}</LtrText>
                 </KVRow>
               ) : null}
@@ -104,17 +104,17 @@ export default function MemberOverview() {
                 </KVRow>
               ) : null}
               {m.nationalId ? (
-                <KVRow icon="card" label={t('memberDetail.nationalId')}>
+                <KVRow icon="card" label={t('memberDetail.nationalId')} stacked>
                   <LtrText>{m.nationalId}</LtrText>
                 </KVRow>
               ) : null}
               {m.address ? (
-                <KVRow icon="pin" label={t('memberDetail.address')}>
+                <KVRow icon="pin" label={t('memberDetail.address')} stacked>
                   <Text style={{ writingDirection: textDir, flexShrink: 1 }}>{m.address}</Text>
                 </KVRow>
               ) : null}
               {m.emergencyName && m.emergencyPhone ? (
-                <KVRow icon="shield" label={t('memberDetail.emergency')}>
+                <KVRow icon="shield" label={t('memberDetail.emergency')} stacked>
                   <Text style={{ writingDirection: textDir }}>
                     {t('memberDetail.emergencyContact', { name: m.emergencyName, phone: `\u200E${m.emergencyPhone}\u200E` })}
                   </Text>
@@ -125,7 +125,7 @@ export default function MemberOverview() {
 
           {/* Full membership details — home only shows plan name + days left */}
           {ms ? (
-            <View style={{ gap: 0 }}>
+            <View style={styles.section}>
               <SectionLabel>{t('memberOverview.membershipSection')}</SectionLabel>
               <KVList>
                 <KVRow icon="card" label={t('memberDetail.plan')}>
@@ -153,7 +153,7 @@ export default function MemberOverview() {
                   </KVRow>
                 ) : null}
                 {ms.payment ? (
-                  <KVRow icon="receipt" label={t('memberDetail.payment')}>
+                  <KVRow icon="receipt" label={t('memberDetail.payment')} stacked>
                     <Text style={{ writingDirection: textDir }}>
                       {t('memberDetail.paymentSummary', {
                         state: t(paymentStateKey(ms.payment.state)),
@@ -171,7 +171,7 @@ export default function MemberOverview() {
               </KVList>
             </View>
           ) : (
-            <View style={{ gap: 8 }}>
+            <View style={styles.section}>
               <SectionLabel>{t('memberOverview.membershipSection')}</SectionLabel>
               <View style={[styles.noPlanBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
                 <Text style={[styles.noPlanText, { color: c.ink3, writingDirection: textDir }]}>
@@ -182,7 +182,7 @@ export default function MemberOverview() {
           )}
 
           {/* Full visit history — home only shows the week strip */}
-          <View style={{ gap: 0 }}>
+          <View style={styles.section}>
             <SectionLabel>{t('memberOverview.visitsSection')}</SectionLabel>
             {m.visits.length === 0 ? (
               <View style={[styles.noPlanBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
@@ -222,7 +222,7 @@ export default function MemberOverview() {
 
           {/* Activity log — not on home at all */}
           {m.activity.length > 0 ? (
-            <View style={{ gap: 0 }}>
+            <View style={styles.section}>
               <SectionLabel>{t('memberOverview.activitySection')}</SectionLabel>
               <View style={[styles.activityList, { backgroundColor: c.bg1, borderColor: c.line }]}>
                 {m.activity.slice(0, 15).map((a, i) => (
@@ -257,6 +257,9 @@ export default function MemberOverview() {
 }
 
 const styles = StyleSheet.create({
+  section: {
+    gap: 8,
+  },
   noPlanBox: {
     borderWidth: 1,
     borderRadius: radius.lg,

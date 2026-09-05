@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { Svg, G, Circle } from 'react-native-svg';
 import { useColors, spacing, typography, radius, tracking } from '@/theme/tokens';
 import { Tag, TagVariant } from './Tag';
@@ -24,6 +24,9 @@ const CIRCUMFERENCE = 2 * Math.PI * 46; // r=46
 export function RingCard({ value, unit, variant, tag, title, subtitle, progress, children }: RingCardProps) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const { fontScale } = useWindowDimensions();
+  const [availableWidth, setAvailableWidth] = React.useState(350);
+  const stacked = availableWidth < 310 || fontScale > 1.3;
   const offset = CIRCUMFERENCE * (1 - Math.max(0, Math.min(1, progress)));
 
   const stroke =
@@ -32,8 +35,8 @@ export function RingCard({ value, unit, variant, tag, title, subtitle, progress,
     variant === 'ok' ? c.ink : variant === 'warn' ? c.warn : variant === 'bad' ? c.bad : c.ink3;
 
   return (
-    <View style={[styles.wrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
-      <View style={[styles.row, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+    <View onLayout={(event) => setAvailableWidth(event.nativeEvent.layout.width)} style={[styles.wrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
+      <View style={[styles.row, { flexDirection: stacked ? 'column' : isRtl ? 'row-reverse' : 'row', alignItems: stacked ? 'flex-start' : 'center' }]}>
         <View style={styles.ring}>
           <Svg width={108} height={108} viewBox="0 0 108 108">
             <G transform="rotate(-90 54 54)">
@@ -65,7 +68,7 @@ export function RingCard({ value, unit, variant, tag, title, subtitle, progress,
           </View>
         </View>
 
-        <View style={styles.info}>
+        <View style={[styles.info, stacked && { flex: 0, width: '100%' }]}>
           <Tag variant={tag.variant ?? 'ok'}>{tag.label}</Tag>
           <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{title}</Text>
           {subtitle ? <Text style={[styles.subtitle, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{subtitle}</Text> : null}
@@ -84,8 +87,8 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 22 },
-  ring: { width: 108, height: 108, position: 'relative' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  ring: { width: 108, height: 108, flexShrink: 0, position: 'relative' },
   center: {
     position: 'absolute',
     top: 0,
@@ -112,6 +115,7 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1, minWidth: 0, justifyContent: 'center' },
   title: {
+    lineHeight: 24,
     fontFamily: typography.display,
     fontSize: 18,
     fontWeight: '600',

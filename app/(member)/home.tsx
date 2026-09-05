@@ -120,7 +120,7 @@ export default function MemberHome() {
           </View>
         }
       >
-        <View>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {fmtTodayLabel(today, language)}
           </Text>
@@ -132,10 +132,10 @@ export default function MemberHome() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
         showsVerticalScrollIndicator={false}
       >
-        <Body>
+        <Body style={{ flex: 0, paddingTop: 16, paddingHorizontal: 20, paddingBottom: 32, gap: 20 }}>
           {configurationError ? (
             <Text style={[styles.configError, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
               {configurationError}
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   greeting: {
+    lineHeight: 24,
     fontFamily: typography.display,
     fontSize: 18,
     fontWeight: '600',
@@ -304,12 +305,14 @@ const styles = StyleSheet.create({
   week: {
     borderWidth: 1,
     borderRadius: radius.lg,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
     gap: 14,
   },
   weekHeader: {
+    flexWrap: 'wrap',
+    gap: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -327,6 +330,7 @@ const styles = StyleSheet.create({
     letterSpacing: tracking.small,
   },
   weekRow: {
+    gap: 4,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -338,6 +342,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   wdLabel: {
+    textAlign: 'center',
+    lineHeight: 16,
     fontFamily: typography.fontFamily,
     fontSize: 11,
     fontWeight: '600',

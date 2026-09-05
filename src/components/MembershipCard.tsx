@@ -86,7 +86,7 @@ export function MembershipCard({
         </View>
 
         <View style={styles.holder}>
-          <Text style={[styles.holderName, { writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={2}>
+          <Text style={[styles.holderName, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {name}
           </Text>
           <Text style={[styles.holderId, { writingDirection: 'ltr' }]}>{memberId}</Text>
@@ -103,10 +103,10 @@ export function MembershipCard({
           <View style={styles.qrPlate}>
             <QRCode
               value={qrPayload}
-              size={62}
+              size={92}
               color="#10131A"
               backgroundColor={colors.plate}
-              quietZone={4}
+              quietZone={12}
               ecl="M"
             />
           </View>
@@ -141,6 +141,8 @@ export function MembershipCard({
 
 const styles = StyleSheet.create({
   card: {
+    width: '100%',
+    minWidth: 0,
     borderRadius: 22,
     padding: 20,
     paddingBottom: 18,
@@ -154,6 +156,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 12,
+    flexWrap: 'wrap',
   },
   brandRow: {
     flexDirection: 'row',
@@ -169,6 +173,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   planChip: {
+    maxWidth: '100%',
+    flexShrink: 1,
     fontFamily: typography.display,
     fontSize: 11,
     fontWeight: '600',
@@ -183,7 +189,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   holder: {
-    marginTop: 18,
+    marginTop: 16,
+    minWidth: 0,
+    alignSelf: 'stretch',
   },
   holderName: {
     fontFamily: typography.display,
@@ -199,14 +207,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1.0,
     color: 'rgba(242,244,248,0.55)',
     marginTop: 5,
+    lineHeight: 20,
   },
   footRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 0,
+    gap: 16,
   },
   stat: {
+    flex: 1,
+    minWidth: 0,
     gap: 4,
   },
   statCap: {
@@ -218,14 +230,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   statVal: {
+    lineHeight: 22,
     fontFamily: typography.display,
     fontSize: 15,
     fontWeight: '600',
     color: '#F2F4F8',
   },
   qrPlate: {
-    width: 74,
-    height: 74,
+    overflow: 'hidden',
+    width: 92,
+    height: 92,
+    flexShrink: 0,
     borderRadius: 14,
     backgroundColor: colors.plate,
     alignItems: 'center',

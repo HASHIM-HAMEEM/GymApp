@@ -39,7 +39,7 @@ const en = {
   'settings.privacy': 'Privacy & data',
   'settings.signOut': 'Sign out',
   'settings.signOutApex': 'Sign out of Apex',
-  'settings.signOutDisclaimer': 'You will be signed out and returned to the welcome screen. Your membership and data are safe — sign back in anytime with your email and password.',
+  'settings.signOutDisclaimer': 'You will be signed out and returned to the welcome screen. Your membership and data are safe - sign back in anytime with your email and password.',
   'settings.signOutConfirm': 'Yes, sign me out',
   'settings.developedBy': 'dev-> Hashim',
   'profile.title': 'Profile',

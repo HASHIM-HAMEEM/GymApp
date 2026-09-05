@@ -1,28 +1,45 @@
 import * as React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, typography, tracking } from '@/theme/tokens';
-import { Logo } from '@/components/Logo';
 import { useApp } from '@/providers/AppProvider';
+import { LaunchBrand } from '@/components/LaunchBrand';
+import { typography } from '@/theme/tokens';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 
 export default function Splash() {
   const router = useRouter();
   const { t, isRtl } = useApp();
+  const reducedMotion = useReducedMotion();
+  const exit = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
-    const t = setTimeout(() => {
+    if (reducedMotion) {
       router.replace('/welcome');
-    }, 2200);
-    return () => clearTimeout(t);
-  }, [router]);
+      return;
+    }
+    const animation = Animated.sequence([
+      Animated.delay(260),
+      Animated.timing(exit, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.bezier(0.23, 1, 0.32, 1),
+        useNativeDriver: Platform.OS !== 'web',
+      }),
+    ]);
+    animation.start(({ finished }) => {
+      if (finished) router.replace('/welcome');
+    });
+    return () => animation.stop();
+  }, [exit, reducedMotion, router]);
+
+  const opacity = exit.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+  const scale = exit.interpolate({ inputRange: [0, 1], outputRange: [1, 0.97] });
 
   return (
     <View style={styles.wrap}>
-      <View style={{ alignItems: 'center', marginTop: -20 }}>
-        <Logo size={64} strokeWidth={3} />
-        <Text style={[styles.wm, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>Apex</Text>
-        <Text style={[styles.cap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.athleticClub')}</Text>
-      </View>
+      <Animated.View style={{ opacity, transform: [{ scale }] }}>
+        <LaunchBrand subtitle={t('welcome.athleticClub')} isRtl={isRtl} />
+      </Animated.View>
       <Text style={[styles.foot, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.version')}</Text>
     </View>
   );
@@ -31,35 +48,17 @@ export default function Splash() {
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
-    backgroundColor: colors.bg,
+    backgroundColor: '#050708',
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: 60,
-  },
-  wm: {
-    fontFamily: typography.display,
-    fontSize: 30,
-    fontWeight: '600',
-    letterSpacing: 0.18,
-    color: colors.ink,
-    textTransform: 'uppercase',
-    marginTop: 18,
-  },
-  cap: {
-    fontFamily: typography.fontFamily,
-    fontSize: 13,
-    fontWeight: '500',
-    letterSpacing: 0.14,
-    color: colors.ink3,
-    textTransform: 'uppercase',
-    marginTop: 4,
   },
   foot: {
     fontFamily: typography.fontFamily,
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.18,
-    color: colors.ink4,
+    color: '#52616B',
     textTransform: 'uppercase',
     position: 'absolute',
     bottom: 60,

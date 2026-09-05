@@ -104,6 +104,7 @@ export function AppBar({ title, onBack, onClose, right, sub, dark, children }: A
     >
       {onBack ? <IconButton name="back" onPress={onBack} color={c.ink} /> : null}
       {onClose ? <IconButton name="close" onPress={onClose} color={c.ink} /> : null}
+      <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       {children ? (
         children
       ) : (
@@ -111,6 +112,7 @@ export function AppBar({ title, onBack, onClose, right, sub, dark, children }: A
           <Text
             style={{
               fontFamily: typography.display,
+              flexShrink: 1,
               fontSize: 18,
               fontWeight: '600',
               letterSpacing: -0.01,
@@ -134,8 +136,8 @@ export function AppBar({ title, onBack, onClose, right, sub, dark, children }: A
           ) : null}
         </>
       )}
-      <View style={{ flex: 1 }} />
-      {right}
+      </View>
+      {right ? <View style={{ flexShrink: 0 }}>{right}</View> : null}
     </View>
   );
 }

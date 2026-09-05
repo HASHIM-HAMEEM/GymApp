@@ -146,7 +146,7 @@ export function EmptyState({
 }) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
-  const textDir = isRtl ? 'rtl' : 'ltr';
+  const textDir: 'rtl' | 'ltr' = isRtl ? 'rtl' : 'ltr';
   return (
     <View style={{ alignItems: 'center', gap: 12, paddingVertical: 30, paddingHorizontal: 18 }}>
       <View
@@ -227,19 +227,34 @@ export function KVRow({
   icon,
   label,
   children,
+  stacked = false,
 }: {
   icon?: IconName;
   label: React.ReactNode;
   children: React.ReactNode;
+  /** Use for addresses and long text; preserves a readable label/value hierarchy. */
+  stacked?: boolean;
 }) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
-  const textDir = isRtl ? 'rtl' : 'ltr';
+  const textDir: 'rtl' | 'ltr' = isRtl ? 'rtl' : 'ltr';
+  const valueStyle = {
+    width: '100%' as const,
+    fontFamily: typography.fontFamily,
+    fontSize: 15,
+    fontWeight: '500' as const,
+    letterSpacing: tracking.ui,
+    color: c.ink,
+    textAlign: isRtl ? 'left' as const : 'right' as const,
+    writingDirection: textDir,
+    flexShrink: 1,
+    lineHeight: 21,
+  };
   return (
     <View
       style={{
-        flexDirection: isRtl ? 'row-reverse' : 'row',
-        alignItems: 'center',
+        flexDirection: stacked ? 'column' : isRtl ? 'row-reverse' : 'row',
+        alignItems: stacked ? 'stretch' : 'center',
         justifyContent: 'space-between',
         gap: 12,
         paddingVertical: 14,
@@ -249,7 +264,7 @@ export function KVRow({
         borderColor: c.line,
       }}
     >
-      <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
+      <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, minWidth: 0, flexShrink: 1 }}>
         {icon ? <Icon name={icon} size={18} color={c.ink3} /> : null}
         <Text
           style={{
@@ -262,20 +277,16 @@ export function KVRow({
           {label}
         </Text>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <Text
-          style={{
-            fontFamily: typography.fontFamily,
-            fontSize: 15,
-            fontWeight: '500',
-            letterSpacing: tracking.ui,
-            color: c.ink,
-            textAlign: isRtl ? 'left' : 'right',
-            writingDirection: textDir,
-          }}
-        >
-          {children}
-        </Text>
+      <View style={{ flex: stacked ? undefined : 1, minWidth: 0, width: stacked ? '100%' : undefined, alignSelf: stacked ? 'stretch' : undefined, alignItems: isRtl ? 'flex-start' : 'flex-end', paddingLeft: stacked && !isRtl ? 28 : 0, paddingRight: stacked && isRtl ? 28 : 0 }}>
+        {React.isValidElement(children)
+          ? React.cloneElement(children as React.ReactElement<{ style?: unknown }>, {
+              style: [valueStyle, (children.props as { style?: unknown }).style],
+            })
+          : (
+            <Text style={valueStyle}>
+              {children}
+            </Text>
+          )}
       </View>
     </View>
   );

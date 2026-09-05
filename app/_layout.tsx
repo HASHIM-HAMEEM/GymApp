@@ -66,11 +66,11 @@ function RootNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
-      <Stack.Screen name="index" />
+      <Stack.Screen name="index" options={{ animation: 'fade' }} />
       <Stack.Screen name="confirm" />
 
       <Stack.Protected guard={!hasSession}>
-        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
       </Stack.Protected>
 
       <Stack.Protected guard={blocked}>

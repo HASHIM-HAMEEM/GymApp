@@ -27,6 +27,7 @@ import { useApp } from '@/data/store';
 import { typography, useColors } from '@/theme/tokens';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { WelcomeArtwork } from '@/components/WelcomeArtwork';
+import { LaunchBrand } from '@/components/LaunchBrand';
 
 
 const STARS = [
@@ -66,34 +67,7 @@ function StarField({ light }: { light: boolean }) {
 
 function ChromeMark({ light }: { light: boolean }) {
   const { t, isRtl } = useApp();
-  return (
-    <View style={styles.chromeMark}>
-      <Svg width={92} height={92} viewBox="0 0 92 92" fill="none">
-        <Defs>
-          <LinearGradient id="chrome" gradientUnits="userSpaceOnUse" x1="18" y1="9" x2="75" y2="82">
-            <Stop offset="0" stopColor={light ? '#435667' : '#F7FBFF'} />
-            <Stop offset="0.24" stopColor={light ? '#EAF1F5' : '#9BAFBE'} />
-            <Stop offset="0.48" stopColor={light ? '#667B8D' : '#F9FCFF'} />
-            <Stop offset="0.72" stopColor={light ? '#233847' : '#61798B'} />
-            <Stop offset="1" stopColor={light ? '#C5D0D8' : '#DDE7EE'} />
-          </LinearGradient>
-          <RadialGradient id="orb" cx="38%" cy="28%" r="74%">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.98" />
-            <Stop offset="0.28" stopColor="#C7D4DE" stopOpacity="0.96" />
-            <Stop offset="0.66" stopColor="#536B7D" stopOpacity="0.98" />
-            <Stop offset="1" stopColor="#15222C" stopOpacity="1" />
-          </RadialGradient>
-        </Defs>
-        <Circle cx="46" cy="46" r="35" stroke="#8EA5B6" strokeOpacity="0.22" strokeWidth="9" />
-        <Circle cx="46" cy="46" r="31" stroke="url(#chrome)" strokeWidth="7" />
-        <Path d="M15 46 H77" stroke="url(#chrome)" strokeWidth="7" strokeLinecap="round" />
-        <Circle cx="66" cy="46" r="10" fill="url(#orb)" />
-        <Path d="M29 25c8-7 22-10 34-3" stroke="#FFFFFF" strokeOpacity="0.78" strokeWidth="2.2" strokeLinecap="round" />
-      </Svg>
-      <Text style={[styles.brandName, { color: light ? '#18242D' : '#EDF5FA' }]}>APEX</Text>
-      <Text style={[styles.brandSub, { color: light ? '#63727D' : '#8294A0', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.athleticClub')}</Text>
-    </View>
-  );
+  return <LaunchBrand light={light} subtitle={t('welcome.athleticClub')} isRtl={isRtl} />;
 }
 
 
@@ -346,10 +320,12 @@ export default function Welcome() {
       <Sheet
         visible={deskInfoOpen}
         onClose={() => setDeskInfoOpen(false)}
-        title={t('welcome.sheetTitle')}
-        desc={t('welcome.sheetBody')}
       >
         <View style={styles.sheetContent}>
+          <View style={{ gap: 10 }}>
+            <Text accessibilityRole="header" style={[styles.sheetHeading, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.sheetTitle')}</Text>
+            <Text style={[styles.sheetDescription, { color: c.ink2, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.sheetBody')}</Text>
+          </View>
           <View style={[styles.infoBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
             <Text selectable style={[styles.infoTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{club.name}</Text>
             {club.address || club.city ? (
@@ -358,19 +334,21 @@ export default function Welcome() {
               </Text>
             ) : null}
             {club.hours && club.hours.length > 0 ? (
-              <View style={{ marginTop: 10, gap: 3 }}>
-                <Text style={[styles.clubCardLabel, { color: c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
+              <View style={{ marginTop: 16, gap: 10 }}>
+                <Text style={[styles.clubCardLabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
                 {club.hours.map((h, i) => (
-                  <Text key={i} selectable style={[styles.infoLine, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-                    {h.label} · {h.value}
-                  </Text>
+                  <View key={i} style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
+                    <Text selectable style={[styles.infoLine, { color: c.ink3, minWidth: 64, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{h.label}</Text>
+                    <Text selectable style={[styles.infoLine, { color: c.ink2, flex: 1, minWidth: 120, textAlign: isRtl ? 'left' : 'right', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{h.value}</Text>
+                  </View>
                 ))}
               </View>
             ) : null}
             {club.phone ? (
-              <Text selectable style={[styles.infoLine, styles.mono, { color: c.ink3, writingDirection: 'ltr' }]}>
-                {t('welcome.receptionPhone', { phone: club.phone })}
-              </Text>
+              <View style={{ marginTop: 16, paddingTop: 16, gap: 6, borderTopWidth: 1, borderColor: c.line }}>
+                <Text style={[styles.clubCardLabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('common.frontDesk')}</Text>
+                <Text selectable style={[styles.infoLine, styles.mono, { color: c.ink2, writingDirection: 'ltr' }]}>{club.phone}</Text>
+              </View>
             ) : null}
           </View>
           <Pressable
@@ -393,10 +371,7 @@ const styles = StyleSheet.create({
   hero: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 28, paddingBottom: 36 },
   heroCompact: { paddingTop: 12, paddingBottom: 24 },
   star: { position: 'absolute', borderRadius: 4 },
-  intro: { position: 'absolute', top: '23%', alignItems: 'center' },
-  chromeMark: { alignItems: 'center' },
-  brandName: { marginTop: 12, fontFamily: typography.display, fontSize: 18, lineHeight: 20, fontWeight: '600', letterSpacing: 18 * 0.18, paddingLeft: 18 * 0.18 },
-  brandSub: { marginTop: 7, fontFamily: typography.fontFamily, fontSize: 11, lineHeight: 14, fontWeight: '600', letterSpacing: 11 * 0.14, paddingLeft: 11 * 0.14 },
+  intro: { position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' },
   copy: { alignItems: 'center', marginTop: 16, maxWidth: 330 },
   eyebrow: { fontFamily: typography.fontFamily, fontSize: 11, lineHeight: 16, fontWeight: '600', letterSpacing: 11 * 0.1, textTransform: 'uppercase', textAlign: 'center' },
   title: { marginTop: 12, fontFamily: typography.display, fontSize: 30, lineHeight: 34, fontWeight: '600', letterSpacing: 30 * -0.028, textAlign: 'center' },
@@ -410,10 +385,12 @@ const styles = StyleSheet.create({
   receptionText: { fontFamily: typography.fontFamily, textAlign: 'center', fontSize: 13, lineHeight: 20, fontWeight: '500', letterSpacing: 13 * 0.01 },
   clubCardLabel: { fontFamily: typography.fontFamily, fontSize: 11, lineHeight: 14, fontWeight: '600', letterSpacing: 11 * 0.12, textTransform: 'uppercase' },
   horizon: { zIndex: 1, opacity: 0.3, position: 'absolute', left: '50%', bottom: -180, width: 620, height: 310, marginLeft: -310 },
-  sheetContent: { width: '100%', alignSelf: 'stretch', gap: 14, marginTop: 12 },
-  infoBox: { width: '100%', padding: 16, borderRadius: 14, borderWidth: 1, gap: 5 },
-  infoTitle: { fontFamily: typography.display, fontSize: 18, lineHeight: 22, fontWeight: '600' },
-  infoLine: { fontFamily: typography.fontFamily, fontSize: 13, lineHeight: 19, letterSpacing: 13 * 0.01 },
+  sheetContent: { width: '100%', alignSelf: 'stretch', gap: 20, marginTop: 4 },
+  sheetHeading: { fontFamily: typography.display, fontSize: 26, lineHeight: 32, letterSpacing: -0.4, fontWeight: '600' },
+  sheetDescription: { fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 23 },
+  infoBox: { width: '100%', padding: 20, borderRadius: 14, borderWidth: 1, gap: 6 },
+  infoTitle: { fontFamily: typography.display, fontSize: 18, lineHeight: 26, fontWeight: '600' },
+  infoLine: { fontFamily: typography.fontFamily, fontSize: 13, lineHeight: 20, letterSpacing: 13 * 0.01 },
   mono: { marginTop: 3, fontFamily: typography.mono },
   sheetButton: { width: '100%', alignSelf: 'stretch', minHeight: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   sheetButtonText: { fontFamily: typography.fontFamily, fontSize: 15, lineHeight: 20, fontWeight: '600' },
