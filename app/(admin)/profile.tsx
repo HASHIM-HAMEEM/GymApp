@@ -24,7 +24,7 @@ export default function AdminProfile() {
   const updateAdminProfile = useUpdateAdminProfile();
   const updateClub = useUpdateClub();
   const c = useColors(darkMode);
-  const club = clubQuery.data;
+  const club = clubQuery.data ?? { name: '', address: '', city: '', phone: '', hours: [] };
 
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [clubOpen, setClubOpen] = React.useState(false);

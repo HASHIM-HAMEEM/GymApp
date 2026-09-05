@@ -111,8 +111,7 @@ export function useClub() {
   return useQuery({
     queryKey: ['club'],
     queryFn: fetchClub,
-    staleTime: 300_000,
-    initialData: null,
+    staleTime: 60_000,
     select: (row): ClubSettings => ({
       ...CLUB,
       ...(row ?? {}),

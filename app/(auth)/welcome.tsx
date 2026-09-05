@@ -201,7 +201,7 @@ export default function Welcome() {
   const progress = React.useRef(new Animated.Value(0)).current;
   const exitProgress = React.useRef(new Animated.Value(0)).current;
   const light = !darkMode;
-  const club = clubQuery.data;
+  const club = clubQuery.data ?? { name: '', address: '', city: '', phone: '', hours: [] };
   const compact = available.height < 620 || fontScale > 1.2;
   const stageWidth = Math.max(180, Math.min(340, available.width - 48, compact ? 270 : 340));
 
