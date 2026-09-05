@@ -5,7 +5,7 @@ import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { EmptyState } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
-import { IconButton } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Overlays';
 import { Button } from '@/components/Button';
 import { useNotices, useMarkAllNoticesRead } from '@/data/api/queries';
@@ -81,12 +81,23 @@ export default function NoticesScreen() {
               <Text style={[styles.badge, { color: c.accentHi, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('notices.newCount', { count: unreadCount })}</Text>
             ) : null}
             {unreadCount > 0 ? (
-              <IconButton
-                name="xc"
-                onPress={() => setClearOpen(true)}
+              <Pressable
+                accessibilityRole="button"
                 accessibilityLabel={t('notices.clearAll')}
-                size={22}
-              />
+                onPress={() => setClearOpen(true)}
+                hitSlop={12}
+                style={({ pressed }) => ({
+                  width: 38,
+                  height: 38,
+                  borderRadius: 19,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: c.ink3,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Icon name="close" size={18} color={c.bg} />
+              </Pressable>
             ) : null}
           </View>
         }

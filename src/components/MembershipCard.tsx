@@ -103,10 +103,10 @@ export function MembershipCard({
           <View style={styles.qrPlate}>
             <QRCode
               value={qrPayload}
-              size={58}
+              size={72}
               color="#10131A"
               backgroundColor={colors.plate}
-              quietZone={5}
+              quietZone={7}
               ecl="M"
             />
           </View>
@@ -226,9 +226,9 @@ const styles = StyleSheet.create({
     color: '#F2F4F8',
   },
   qrPlate: {
-    width: 68,
-    height: 68,
-    borderRadius: 16,
+    width: 86,
+    height: 86,
+    borderRadius: 18,
     backgroundColor: colors.plate,
     alignItems: 'center',
     justifyContent: 'center',
