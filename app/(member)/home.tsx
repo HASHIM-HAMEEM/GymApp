@@ -12,6 +12,15 @@ import { statusVisual, fmtLong, fmtTodayLabel, fmtDayName, fmtMonthDay, daysBetw
 import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
 
+/** Wrap a card in a pressable that navigates to member overview. */
+function TapCard({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [{ transform: [{ scale: pressed ? 0.985 : 1 }] }]}>
+      {children}
+    </Pressable>
+  );
+}
+
 function weekAround(iso: string, language: Language) {
   const d = new Date(iso + 'T00:00:00');
   const day = d.getDay();
@@ -111,25 +120,27 @@ export default function MemberHome() {
           ) : null}
 
           {ms && vis ? (
-            <RingCard
-              value={String(daysLeft)}
-              unit={ms.status === 'paused' ? t('member.daysFrozen') : ms.status === 'upcoming' ? t('member.daysToGo') : t('member.daysLeft')}
-              variant={vis.dotVariant}
-              tag={{ label: vis.tagLabel, variant: vis.tagVariant }}
-              title={ms.planName}
-              subtitle={
-                ms.status === 'paused'
-                  ? t('member.frozenUntil', { date: `\u200E${fmtLong(ms.pauseEnds ?? ms.expiryDate, language)}\u200E` })
-                  : ms.status === 'expired'
-                  ? t('member.expiredOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
-                  : ms.status === 'upcoming'
-                  ? t('member.beginsOn', { date: `\u200E${fmtLong(ms.startDate, language)}\u200E` })
-                  : ms.status === 'expiring'
-                  ? t('member.expiresIn', { days: `\u200E${daysLeft}\u200E` })
-                  : t('member.renewsOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
-              }
-              progress={ringProgress}
-            />
+            <TapCard onPress={() => router.push('/member-overview')}>
+              <RingCard
+                value={String(daysLeft)}
+                unit={ms.status === 'paused' ? t('member.daysFrozen') : ms.status === 'upcoming' ? t('member.daysToGo') : t('member.daysLeft')}
+                variant={vis.dotVariant}
+                tag={{ label: vis.tagLabel, variant: vis.tagVariant }}
+                title={ms.planName}
+                subtitle={
+                  ms.status === 'paused'
+                    ? t('member.frozenUntil', { date: `\u200E${fmtLong(ms.pauseEnds ?? ms.expiryDate, language)}\u200E` })
+                    : ms.status === 'expired'
+                    ? t('member.expiredOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
+                    : ms.status === 'upcoming'
+                    ? t('member.beginsOn', { date: `\u200E${fmtLong(ms.startDate, language)}\u200E` })
+                    : ms.status === 'expiring'
+                    ? t('member.expiresIn', { days: `\u200E${daysLeft}\u200E` })
+                    : t('member.renewsOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
+                }
+                progress={ringProgress}
+              />
+            </TapCard>
           ) : null}
 
           <MembershipCard
@@ -138,41 +149,43 @@ export default function MemberHome() {
             validUntil={ms ? fmtLong(ms.expiryDate, language) : m?.memberSince ?? t('common.notAvailable')}
             memberId={m?.id ?? 'MRD-····'}
             variant={ms?.status === 'expiring' || ms?.status === 'due' ? 'warn' : ms?.status === 'expired' ? 'bad' : 'active'}
-            href={canShowQr ? '/qr' : undefined}
+            href={canShowQr ? '/qr' : '/member-overview'}
             showQr={canShowQr && Boolean(qrQuery.data?.value)}
             qrValue={qrQuery.data?.value}
           />
 
           {m ? (
-            <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-              {week.map((wd) => {
-                const visited = m.visits.some((v) => v.date === wd.iso);
-                const isToday = wd.iso === today;
-                const on = visited && !isToday;
-                return (
-                  <View key={wd.iso} style={styles.wd}>
-                    <View
-                      style={[
-                        styles.dot,
-                        {
-                          borderColor: isToday ? c.accentHi : on ? c.accent : 'rgba(233,238,248,0.22)',
-                          backgroundColor: on ? c.accent : 'transparent',
-                          shadowColor: on ? c.accentGlow : 'transparent',
-                          shadowOpacity: on ? 0.8 : 0,
-                          shadowRadius: 8,
-                          shadowOffset: { width: 0, height: 0 },
-                        },
-                      ]}
-                    />
-                    <Text
-                      style={[styles.wdLabel, { color: isToday ? c.accentHi : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
-                    >
-                      {wd.label}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+            <TapCard onPress={() => router.push('/(member)/visits')}>
+              <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                {week.map((wd) => {
+                  const visited = m.visits.some((v) => v.date === wd.iso);
+                  const isToday = wd.iso === today;
+                  const on = visited && !isToday;
+                  return (
+                    <View key={wd.iso} style={styles.wd}>
+                      <View
+                        style={[
+                          styles.dot,
+                          {
+                            borderColor: isToday ? c.accentHi : on ? c.accent : 'rgba(233,238,248,0.22)',
+                            backgroundColor: on ? c.accent : 'transparent',
+                            shadowColor: on ? c.accentGlow : 'transparent',
+                            shadowOpacity: on ? 0.8 : 0,
+                            shadowRadius: 8,
+                            shadowOffset: { width: 0, height: 0 },
+                          },
+                        ]}
+                      />
+                      <Text
+                        style={[styles.wdLabel, { color: isToday ? c.accentHi : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}
+                      >
+                        {wd.label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </TapCard>
           ) : null}
 
           {m && !ms ? (

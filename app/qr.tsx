@@ -1,16 +1,17 @@
 import * as React from 'react';
-import { Platform, View, Text, StyleSheet } from 'react-native';
+import { Platform, View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, useColors, spacing, typography, tracking } from '@/theme/tokens';
+import { colors, useColors, spacing, typography, tracking, radius } from '@/theme/tokens';
 import { AppBar } from '@/components/Chrome';
 import { Tag } from '@/components/Tag';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Overlays';
-import { useCurrentMember, useQrPass, useRegenerateQrPass } from '@/data/api/queries';
+import { Logo } from '@/components/Logo';
+import { useClub, useCurrentMember, useQrPass, useRegenerateQrPass } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
-import { fmtLong } from '@/data/format';
+import { fmtLong, daysBetween, todayIso } from '@/data/format';
 import type { Language } from '@/lib/i18n';
 
 /**
@@ -18,16 +19,25 @@ import type { Language } from '@/lib/i18n';
  * - M-09 QR pass (Live): rotating one-time pass issued by the server.
  * - M-10 QR pass (Expired): plate dims, badge says Won't scan, renew CTA.
  * - M-11 Sheet (Regenerate): rotating immediately invalidates saved copies.
+ *
+ * V3: Large responsive QR, Apex branding, months-left badge.
  */
 function qrDate(iso: string, language: Language): string {
   return fmtLong(iso, language);
 }
 
+function monthsLeft(expiry: string, today: string): number {
+  const days = Math.max(0, daysBetween(expiry, today));
+  return Math.ceil(days / 30);
+}
+
 export default function QrScreen() {
   const router = useRouter();
   const memberQuery = useCurrentMember();
+  const clubQuery = useClub();
   const { t, isRtl, language, darkMode } = useApp();
   const c = useColors(darkMode);
+  const { width: screenWidth } = useWindowDimensions();
   const [regenOpen, setRegenOpen] = React.useState(false);
   const [secondsLeft, setSecondsLeft] = React.useState(0);
   const regeneratePass = useRegenerateQrPass();
@@ -40,6 +50,10 @@ export default function QrScreen() {
   const qrQuery = useQrPass(canIssue);
   const pass = qrQuery.data ?? null;
   const unavailable = !canIssue || qrQuery.isError;
+
+  // Responsive QR size: fill available width minus padding, cap at 320
+  const qrSize = Math.min(screenWidth - 96, 300);
+  const platePadding = Math.round(qrSize * 0.09);
 
   React.useEffect(() => {
     if (!pass?.expiresAt) {
@@ -81,6 +95,10 @@ export default function QrScreen() {
       ? `${t('status.active')} · ${ms.planName} · ${t('membership.validUntil', { date: qrDate(ms.expiryDate, language) })}`
       : t('qr.noActive');
 
+  const today = m?.asOf ?? todayIso();
+  const months = ms ? monthsLeft(ms.expiryDate, today) : 0;
+  const clubName = clubQuery.data?.name ?? 'Apex';
+
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
       <AppBar
@@ -97,29 +115,45 @@ export default function QrScreen() {
       />
 
       <View style={styles.body}>
-        <View style={{ alignItems: 'center' }}>
-          <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('qr.memberCard')}</Text>
+        {/* Apex branding + months left badge */}
+        <View style={[styles.brandRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <View style={[styles.brand, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+            <Logo size={22} color={c.ink} strokeWidth={2.6} />
+            <Text style={[styles.wordmark, { color: c.ink }]}>{clubName}</Text>
+          </View>
+          {ms && !unavailable ? (
+            <View style={[styles.monthsBadge, { backgroundColor: c.accentSoft, borderColor: c.line2 }]}>
+              <Text style={[styles.monthsNum, { color: c.ink }]}>{months}</Text>
+              <Text style={[styles.monthsUnit, { color: c.ink3 }]}>{t('qr.monthsLeft')}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Member name + ID */}
+        <View style={{ alignItems: 'center', gap: 4 }}>
           <Text style={[styles.name, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {m ? `${m.firstName} ${m.lastName}` : t('member.apexMember')}
           </Text>
-          <Text style={[styles.id, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{m?.id ?? 'MRD-····'}</Text>
+          <Text style={[styles.id, { color: c.ink3, writingDirection: 'ltr' }]}>{m?.id ?? 'MRD-····'}</Text>
         </View>
 
-        <View style={[styles.plate, { opacity: unavailable ? 0.28 : 1 }]}>
+        {/* Large responsive QR plate */}
+        <View style={[styles.plate, { opacity: unavailable ? 0.28 : 1, padding: platePadding, borderRadius: Math.round(platePadding * 1.4) }]}>
           {pass && !unavailable ? (
             <QRCode
               value={pass.value}
-              size={210}
+              size={qrSize}
               color="#0A0A0A"
               backgroundColor={colors.plate}
-              quietZone={16}
+              quietZone={Math.round(qrSize * 0.06)}
               ecl="M"
             />
           ) : (
-            <View style={styles.placeholder} />
+            <View style={{ width: qrSize, height: qrSize }} />
           )}
         </View>
 
+        {/* Status row */}
         <View style={{ alignItems: 'center' }}>
           {unavailable ? (
             <View style={[styles.statusRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
@@ -181,20 +215,55 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 26,
+    gap: 22,
     paddingHorizontal: spacing.screen,
   },
-  slabel: {
-    fontFamily: typography.fontFamily,
-    fontSize: 11,
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: 360,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  wordmark: {
+    fontFamily: typography.display,
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: 1.2,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
-    marginBottom: 8,
+  },
+  monthsBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 64,
+  },
+  monthsNum: {
+    fontFamily: typography.display,
+    fontSize: 22,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    lineHeight: 26,
+  },
+  monthsUnit: {
+    fontFamily: typography.fontFamily,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginTop: 2,
   },
   name: {
     fontFamily: typography.display,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '600',
     letterSpacing: -0.015 * 24,
     textAlign: 'center',
@@ -203,12 +272,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: 13,
     letterSpacing: 0.8,
-    marginTop: 6,
   },
   plate: {
     backgroundColor: colors.plate,
-    padding: 18,
-    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 18px 50px rgba(0,0,0,0.5)' }
       : {
@@ -219,19 +287,18 @@ const styles = StyleSheet.create({
           elevation: 8,
         }),
   },
-  placeholder: {
-    width: 210,
-    height: 210,
-  },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    maxWidth: 340,
   },
   statusText: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
     letterSpacing: tracking.small,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   foot: {
     paddingHorizontal: spacing.screen,

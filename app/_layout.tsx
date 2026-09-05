@@ -83,6 +83,7 @@ function RootNav() {
         <Stack.Protected guard={isMember}>
           <Stack.Screen name="(member)" />
           <Stack.Screen name="qr" />
+          <Stack.Screen name="member-overview" />
           <Stack.Screen name="edit-profile" />
         </Stack.Protected>
         <Stack.Protected guard={isAdmin}>
