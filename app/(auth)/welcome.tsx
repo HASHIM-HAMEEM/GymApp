@@ -336,48 +336,6 @@ export default function Welcome() {
           >
             <Text style={[styles.receptionText, { color: light ? '#344D5E' : '#B5C3CC' }]}>{t('welcome.join')}</Text>
           </Pressable>
-
-          {(club.address || club.city || club.phone) ? (
-            <View
-              style={[
-                styles.clubCard,
-                {
-                  backgroundColor: light ? 'rgba(18,30,38,0.04)' : 'rgba(255,255,255,0.05)',
-                  borderColor: light ? 'rgba(18,30,38,0.08)' : 'rgba(255,255,255,0.08)',
-                  flexDirection: isRtl ? 'row-reverse' : 'row',
-                },
-              ]}
-            >
-              <View style={[styles.clubCardCol, { alignItems: isRtl ? 'flex-end' : 'flex-start' }]}>
-                <Text style={[styles.clubCardLabel, { color: light ? '#7A8A95' : '#7E909B', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.clubInfoTitle')}</Text>
-                {club.address || club.city ? (
-                  <Text selectable style={[styles.clubCardValue, { color: light ? '#2A3A47' : '#C8D5DD', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-                    {t('welcome.clubLocation', { address: club.address, city: club.city })}
-                  </Text>
-                ) : null}
-              </View>
-              <View style={[styles.clubCardCol, { alignItems: isRtl ? 'flex-end' : 'flex-start' }]}>
-                {club.hours && club.hours.length > 0 ? (
-                  <>
-                    <Text style={[styles.clubCardLabel, { color: light ? '#7A8A95' : '#7E909B', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
-                    {club.hours.map((h, i) => (
-                      <Text key={i} selectable style={[styles.clubCardValue, { color: light ? '#2A3A47' : '#C8D5DD', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-                        {h.label} · {h.value}
-                      </Text>
-                    ))}
-                  </>
-                ) : null}
-              </View>
-              <View style={[styles.clubCardCol, { alignItems: isRtl ? 'flex-end' : 'flex-start' }]}>
-                {club.phone ? (
-                  <>
-                    <Text style={[styles.clubCardLabel, { color: light ? '#7A8A95' : '#7E909B', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.phoneLabel')}</Text>
-                    <Text selectable style={[styles.clubCardValue, styles.mono, { color: light ? '#2A3A47' : '#C8D5DD', writingDirection: 'ltr' }]}>{club.phone}</Text>
-                  </>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
         </Animated.View>
       </Animated.View>
       </ScrollView>
@@ -397,6 +355,16 @@ export default function Welcome() {
               <Text selectable style={[styles.infoLine, { color: light ? '#4F616D' : '#A6B4BC', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
                 {t('welcome.clubLocation', { address: club.address, city: club.city })}
               </Text>
+            ) : null}
+            {club.hours && club.hours.length > 0 ? (
+              <View style={{ marginTop: 10, gap: 3 }}>
+                <Text style={[styles.clubCardLabel, { color: light ? '#7A8A95' : '#7E909B', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
+                {club.hours.map((h, i) => (
+                  <Text key={i} selectable style={[styles.infoLine, { color: light ? '#4F616D' : '#A6B4BC', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+                    {h.label} · {h.value}
+                  </Text>
+                ))}
+              </View>
             ) : null}
             {club.phone ? (
               <Text selectable style={[styles.infoLine, styles.mono, { color: light ? '#6A7A84' : '#AABAC5', writingDirection: 'ltr' }]}>
@@ -439,10 +407,7 @@ const styles = StyleSheet.create({
   arrowCircle: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   receptionAction: { minHeight: 44, paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
   receptionText: { fontFamily: typography.fontFamily, textAlign: 'center', fontSize: 13, lineHeight: 20, fontWeight: '500', letterSpacing: 13 * 0.01 },
-  clubCard: { marginTop: 20, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 14, borderWidth: 1, gap: 14, flexWrap: 'wrap' },
-  clubCardCol: { flex: 1, minWidth: 120, gap: 4 },
   clubCardLabel: { fontFamily: typography.fontFamily, fontSize: 11, lineHeight: 14, fontWeight: '600', letterSpacing: 11 * 0.12, textTransform: 'uppercase' },
-  clubCardValue: { fontFamily: typography.fontFamily, fontSize: 13, lineHeight: 19, fontWeight: '400', letterSpacing: 13 * 0.01 },
   horizon: { zIndex: 1, opacity: 0.3, position: 'absolute', left: '50%', bottom: -180, width: 620, height: 310, marginLeft: -310 },
   sheetContent: { width: '100%', alignSelf: 'stretch', gap: 14, marginTop: 12 },
   infoBox: { width: '100%', padding: 16, borderRadius: 14, borderWidth: 1, gap: 5 },

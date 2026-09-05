@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
@@ -7,16 +7,16 @@ import { Button } from '@/components/Button';
 import { Tag, SectionLabel } from '@/components/Tag';
 import { KVRow, KVList, Banner } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
-import { MembershipCard } from '@/components/MembershipCard';
-import { useClub, useCurrentMember, usePlans, useQrPass } from '@/data/api/queries';
+import { useCurrentMember, usePlans } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
-import { statusVisual, fmtLong, fmtShort, fmtTodayLabel, daysBetween, todayIso, formatMoney } from '@/data/format';
+import { statusVisual, fmtLong, fmtShort, fmtDateTime, daysBetween, todayIso, formatMoney } from '@/data/format';
 import type { TranslationKey } from '@/lib/i18n';
 
 /**
- * Member overview — dedicated page showing the member's full details.
- * Opens when tapping home-screen widgets (RingCard, MembershipCard, etc.).
- * UI matches the Apex dark-first monochrome theme.
+ * Member overview — dedicated page showing full member details that are
+ * NOT already on the home screen. Opens when tapping home-screen widgets.
+ * Home shows: greeting, RingCard, MembershipCard, week visits, latest notice.
+ * This page shows: profile info, full membership details, payment, visit history.
  */
 function paymentMethodKey(method?: string): TranslationKey {
   switch (method?.toLowerCase()) {
@@ -43,14 +43,12 @@ export default function MemberOverview() {
   const router = useRouter();
   const memberQuery = useCurrentMember();
   const plansQuery = usePlans();
-  const clubQuery = useClub();
   const { t, isRtl, language, darkMode } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
 
   const m = memberQuery.data ?? null;
   const ms = m?.membership ?? null;
-  const canShowQr = ms?.status === 'active' || ms?.status === 'expiring' || ms?.status === 'due';
 
   if (memberQuery.isLoading) {
     return (
@@ -76,7 +74,6 @@ export default function MemberOverview() {
   const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
   const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, today)) : 0;
   const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
-  const clubName = clubQuery.data?.name ?? 'Apex';
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -84,100 +81,12 @@ export default function MemberOverview() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <Body style={{ gap: spacing.md }}>
 
-          {/* Member header card */}
-          <View style={[styles.head, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-            <View style={[styles.avatar, { backgroundColor: c.accentSoft }]}>
-              <Text style={{ fontFamily: typography.display, fontSize: 28, fontWeight: '700', color: c.accent }}>
-                {m.firstName.slice(0, 1)}{m.lastName.slice(0, 1)}
-              </Text>
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.name, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>
-                {m.firstName} {m.lastName}
-              </Text>
-              <Text style={[styles.sub, { color: c.ink3, writingDirection: 'ltr' }]} numberOfLines={1}>
-                {m.id}
-              </Text>
-              {vis ? (
-                <View style={{ marginTop: 8, flexDirection: isRtl ? 'row-reverse' : 'row', gap: 8, alignItems: 'center' }}>
-                  <Tag variant={vis.tagVariant}>{vis.tagLabel}</Tag>
-                  {ms?.planName ? (
-                    <Text style={[styles.planChip, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>
-                      {ms.planName}
-                    </Text>
-                  ) : null}
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Membership card (visual) */}
-          {ms ? (
-            <MembershipCard
-              name={`${m.firstName} ${m.lastName}`}
-              plan={ms.planName.replace(/ Monthly| Annual/i, '')}
-              validUntil={fmtLong(ms.expiryDate, language)}
-              memberId={m.id}
-              variant={ms.status === 'expiring' || ms.status === 'due' ? 'warn' : ms.status === 'expired' ? 'bad' : 'active'}
-              href={canShowQr ? '/qr' : undefined}
-              showQr={canShowQr}
-            />
-          ) : null}
-
           {/* Status banner */}
           {vis?.bannerText ? (
             <Banner variant={vis.bannerVariant}>{vis.bannerText}</Banner>
           ) : null}
 
-          {/* Membership details */}
-          {ms ? (
-            <View style={{ gap: 0 }}>
-              <SectionLabel>{t('memberOverview.membershipSection')}</SectionLabel>
-              <KVList>
-                <KVRow icon="card" label={t('memberDetail.plan')}>
-                  <Text style={{ writingDirection: textDir }}>{ms.planName}</Text>
-                </KVRow>
-                <KVRow icon="cal" label={t('memberDetail.start')}>
-                  <LtrText>{fmtLong(ms.startDate, language)}</LtrText>
-                </KVRow>
-                <KVRow icon="cal" label={t('memberDetail.expiry')}>
-                  <LtrText>{fmtLong(ms.expiryDate, language)}</LtrText>
-                </KVRow>
-                <KVRow icon="clock" label={t('member.daysLeft')}>
-                  <LtrText style={{ color: vis?.dotVariant === 'bad' ? c.bad : vis?.dotVariant === 'warn' ? c.warn : c.ink }}>
-                    {daysLeft} {t('member.daysLeft').toLowerCase()}
-                  </LtrText>
-                </KVRow>
-                {ms.amountDue ? (
-                  <KVRow icon="receipt" label={t('membership.amountDue')}>
-                    <LtrText style={{ color: c.warn }}>{formatMoney(ms.amountDue, ms.currency, language)}</LtrText>
-                  </KVRow>
-                ) : null}
-                {ms.payment ? (
-                  <KVRow icon="receipt" label={t('memberDetail.payment')}>
-                    <Text style={{ writingDirection: textDir }}>
-                      {t('memberDetail.paymentSummary', {
-                        state: t(paymentStateKey(ms.payment.state)),
-                        method: t(paymentMethodKey(ms.payment.method)),
-                        date: `\u200E${fmtShort(ms.payment.date, language)}\u200E`,
-                      })}
-                    </Text>
-                  </KVRow>
-                ) : null}
-              </KVList>
-            </View>
-          ) : (
-            <View style={{ gap: 8 }}>
-              <SectionLabel>{t('memberOverview.membershipSection')}</SectionLabel>
-              <View style={[styles.noPlanBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
-                <Text style={[styles.noPlanText, { color: c.ink3, writingDirection: textDir }]}>
-                  {t('member.noPlanAssigned')}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Personal details */}
+          {/* Profile details — not shown on home */}
           <View style={{ gap: 0 }}>
             <SectionLabel>{t('memberOverview.profileSection')}</SectionLabel>
             <KVList>
@@ -192,6 +101,11 @@ export default function MemberOverview() {
               {m.dateOfBirth ? (
                 <KVRow icon="cal" label={t('memberDetail.born')}>
                   <LtrText>{fmtLong(m.dateOfBirth, language)}</LtrText>
+                </KVRow>
+              ) : null}
+              {m.nationalId ? (
+                <KVRow icon="card" label={t('memberDetail.nationalId')}>
+                  <LtrText>{m.nationalId}</LtrText>
                 </KVRow>
               ) : null}
               {m.address ? (
@@ -209,44 +123,132 @@ export default function MemberOverview() {
             </KVList>
           </View>
 
-          {/* Visit summary */}
+          {/* Full membership details — home only shows plan name + days left */}
+          {ms ? (
+            <View style={{ gap: 0 }}>
+              <SectionLabel>{t('memberOverview.membershipSection')}</SectionLabel>
+              <KVList>
+                <KVRow icon="card" label={t('memberDetail.plan')}>
+                  <Text style={{ writingDirection: textDir }}>{ms.planName}</Text>
+                </KVRow>
+                <KVRow icon="cal" label={t('memberDetail.start')}>
+                  <LtrText>{fmtLong(ms.startDate, language)}</LtrText>
+                </KVRow>
+                <KVRow icon="cal" label={t('memberDetail.expiry')}>
+                  <LtrText>{fmtLong(ms.expiryDate, language)}</LtrText>
+                </KVRow>
+                <KVRow icon="clock" label={t('member.daysLeft')}>
+                  <LtrText style={{ color: vis?.dotVariant === 'bad' ? c.bad : vis?.dotVariant === 'warn' ? c.warn : c.ink }}>
+                    {daysLeft}
+                  </LtrText>
+                </KVRow>
+                {ms.frozenDays ? (
+                  <KVRow icon="pause" label={t('membership.daysPreserved')}>
+                    <LtrText>{ms.frozenDays}</LtrText>
+                  </KVRow>
+                ) : null}
+                {ms.amountDue ? (
+                  <KVRow icon="receipt" label={t('membership.amountDue')}>
+                    <LtrText style={{ color: c.warn }}>{formatMoney(ms.amountDue, ms.currency, language)}</LtrText>
+                  </KVRow>
+                ) : null}
+                {ms.payment ? (
+                  <KVRow icon="receipt" label={t('memberDetail.payment')}>
+                    <Text style={{ writingDirection: textDir }}>
+                      {t('memberDetail.paymentSummary', {
+                        state: t(paymentStateKey(ms.payment.state)),
+                        method: t(paymentMethodKey(ms.payment.method)),
+                        date: `\u200E${fmtShort(ms.payment.date, language)}\u200E`,
+                      })}
+                    </Text>
+                  </KVRow>
+                ) : null}
+                {plan ? (
+                  <KVRow icon="receipt" label={t('membership.restartFrom')}>
+                    <LtrText>{formatMoney(plan.price, plan.currency, language)}</LtrText>
+                  </KVRow>
+                ) : null}
+              </KVList>
+            </View>
+          ) : (
+            <View style={{ gap: 8 }}>
+              <SectionLabel>{t('memberOverview.membershipSection')}</SectionLabel>
+              <View style={[styles.noPlanBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
+                <Text style={[styles.noPlanText, { color: c.ink3, writingDirection: textDir }]}>
+                  {t('member.noPlanAssigned')}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Full visit history — home only shows the week strip */}
           <View style={{ gap: 0 }}>
             <SectionLabel>{t('memberOverview.visitsSection')}</SectionLabel>
-            <View style={[styles.visitSummary, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-              <View style={styles.visitStat}>
-                <Text style={[styles.visitNum, { color: c.ink }]}>{m.visits.length}</Text>
-                <Text style={[styles.visitLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberOverview.totalVisits')}</Text>
+            {m.visits.length === 0 ? (
+              <View style={[styles.noPlanBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
+                <Text style={[styles.noPlanText, { color: c.ink3, writingDirection: textDir }]}>
+                  {t('member.noVisitsBody')}
+                </Text>
               </View>
-              <View style={[styles.visitDivider, { backgroundColor: c.line }]} />
-              <View style={styles.visitStat}>
-                <Text style={[styles.visitNum, { color: c.ink }]}>{fmtTodayLabel(today, language)}</Text>
-                <Text style={[styles.visitLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberOverview.today')}</Text>
+            ) : (
+              <View style={[styles.visitList, { backgroundColor: c.bg1, borderColor: c.line }]}>
+                {m.visits.slice(0, 20).map((v, i) => (
+                  <View
+                    key={v.id}
+                    style={[
+                      styles.visitRow,
+                      { borderBottomWidth: i < Math.min(m.visits.length, 20) - 1 ? 1 : 0, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
+                    ]}
+                  >
+                    <LtrText style={[styles.visitDate, { color: c.ink, textAlign: isRtl ? 'right' : 'left' }]}>
+                      {fmtShort(v.date, language)}
+                    </LtrText>
+                    <LtrText style={[styles.visitTime, { color: c.ink3 }]}>
+                      {v.time}
+                    </LtrText>
+                    <Text style={[styles.visitMeta, { color: c.ink4, writingDirection: textDir }]}>
+                      {v.method === 'qr' ? t('memberDetail.qr') : t('memberDetail.desk')} · {v.reception}
+                    </Text>
+                  </View>
+                ))}
+                {m.visits.length > 20 ? (
+                  <Button variant="quiet" block href="/(member)/visits" style={{ marginTop: 8 }}>
+                    {t('common.countOfTotal', { count: 20, total: m.visits.length })}
+                  </Button>
+                ) : null}
               </View>
-            </View>
-            {m.visits.length > 0 ? (
-              <Button variant="secondary" block href="/(member)/visits" style={{ marginTop: 10 }}>
-                {t('memberOverview.viewVisits')}
-              </Button>
-            ) : null}
+            )}
           </View>
 
-          {/* Quick actions */}
-          <View style={{ gap: 10 }}>
-            <SectionLabel>{t('memberOverview.actions')}</SectionLabel>
-            <View style={[styles.actions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-              {canShowQr ? (
-                <Button variant="secondary" size="sm" href="/qr">
-                  {t('membership.showQr')}
-                </Button>
-              ) : null}
-              <Button variant="secondary" size="sm" href="/(member)/membership">
-                {t('membership.title')}
-              </Button>
-              <Button variant="quiet" size="sm" href="/edit-profile">
-                {t('memberOverview.editProfile')}
-              </Button>
+          {/* Activity log — not on home at all */}
+          {m.activity.length > 0 ? (
+            <View style={{ gap: 0 }}>
+              <SectionLabel>{t('memberOverview.activitySection')}</SectionLabel>
+              <View style={[styles.activityList, { backgroundColor: c.bg1, borderColor: c.line }]}>
+                {m.activity.slice(0, 15).map((a, i) => (
+                  <View
+                    key={a.id ?? i}
+                    style={[
+                      styles.activityRow,
+                      { borderBottomWidth: i < Math.min(m.activity.length, 15) - 1 ? 1 : 0, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
+                    ]}
+                  >
+                    <View style={styles.activityDotCol}>
+                      <View style={[styles.activityDot, { backgroundColor: c.line2 }]} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.activityText, { color: c.ink, writingDirection: textDir }]} numberOfLines={2}>
+                        {a.text}
+                      </Text>
+                      <Text style={[styles.activityTime, { color: c.ink3, writingDirection: textDir }]}>
+                        {a.author ? t('memberDetail.activityBy', { date: `\u200E${fmtDateTime(a.at, language)}\u200E`, author: a.author }) : fmtDateTime(a.at, language)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          ) : null}
 
         </Body>
       </ScrollView>
@@ -255,38 +257,6 @@ export default function MemberOverview() {
 }
 
 const styles = StyleSheet.create({
-  head: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: 18,
-    gap: 14,
-    alignItems: 'center',
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  name: {
-    fontFamily: typography.display,
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  sub: {
-    fontFamily: typography.mono,
-    fontSize: 13,
-    letterSpacing: 0.8,
-    marginTop: 4,
-  },
-  planChip: {
-    fontFamily: typography.fontFamily,
-    fontSize: 13,
-    letterSpacing: tracking.small,
-    flexShrink: 1,
-  },
   noPlanBox: {
     borderWidth: 1,
     borderRadius: radius.lg,
@@ -298,39 +268,67 @@ const styles = StyleSheet.create({
     letterSpacing: tracking.small,
     lineHeight: 19,
   },
-  visitSummary: {
+  visitList: {
     borderWidth: 1,
     borderRadius: radius.lg,
-    padding: 18,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    overflow: 'hidden',
   },
-  visitStat: {
+  visitRow: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 14,
+  },
+  visitDate: {
+    fontFamily: typography.mono,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    width: 80,
+    flexShrink: 0,
+  },
+  visitTime: {
+    fontFamily: typography.mono,
+    fontSize: 13,
+    letterSpacing: 0.4,
     flex: 1,
-    alignItems: 'center',
-    gap: 6,
   },
-  visitNum: {
-    fontFamily: typography.display,
-    fontSize: 22,
-    fontWeight: '600',
-    letterSpacing: -0.3,
-  },
-  visitLabel: {
+  visitMeta: {
     fontFamily: typography.fontFamily,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    fontSize: 12,
+    letterSpacing: tracking.small,
+    flexShrink: 1,
   },
-  visitDivider: {
-    width: 1,
-    alignSelf: 'stretch',
-    marginVertical: 4,
+  activityList: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  activityRow: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  activityDotCol: {
+    paddingTop: 5,
+  },
+  activityDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  activityText: {
+    fontFamily: typography.fontFamily,
+    fontSize: 14,
+    letterSpacing: tracking.small,
+    lineHeight: 20,
+  },
+  activityTime: {
+    fontFamily: typography.fontFamily,
+    fontSize: 12,
+    letterSpacing: tracking.small,
+    lineHeight: 17,
+    marginTop: 4,
   },
 });

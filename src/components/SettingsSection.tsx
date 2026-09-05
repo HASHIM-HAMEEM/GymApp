@@ -84,6 +84,7 @@ export function PreferencesGroup({
   const [languageOpen, setLanguageOpen] = React.useState(false);
   const [languageError, setLanguageError] = React.useState<string | null>(null);
   const [savingLanguage, setSavingLanguage] = React.useState(false);
+  const [signOutOpen, setSignOutOpen] = React.useState(false);
 
   const chooseLanguage = async (nextLanguage: Language) => {
     setLanguageError(null);
@@ -131,7 +132,7 @@ export function PreferencesGroup({
           label={signingOut ? t('common.loading') : t('settings.signOut')}
           danger
           last
-          onPress={signingOut ? undefined : onSignOut}
+          onPress={signingOut ? undefined : () => setSignOutOpen(true)}
         />
       </SettingsGroup>
 
@@ -158,6 +159,22 @@ export function PreferencesGroup({
             onPress={() => void chooseLanguage('ur')}
           />
           <Button variant="quiet" block disabled={savingLanguage} onPress={() => setLanguageOpen(false)}>
+            {t('common.cancel')}
+          </Button>
+        </View>
+      </Sheet>
+
+      <Sheet
+        visible={signOutOpen}
+        onClose={() => setSignOutOpen(false)}
+        title={t('settings.signOut')}
+        desc={t('settings.signOutDisclaimer')}
+      >
+        <View style={styles.languageSheet}>
+          <Button block loading={signingOut} onPress={() => { setSignOutOpen(false); onSignOut(); }}>
+            {t('settings.signOutConfirm')}
+          </Button>
+          <Button variant="quiet" block disabled={signingOut} onPress={() => setSignOutOpen(false)}>
             {t('common.cancel')}
           </Button>
         </View>
