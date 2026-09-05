@@ -106,7 +106,7 @@ export default function SignIn() {
           <Button
             variant="quiet"
             block
-            textStyle={{ fontSize: 13.5 }}
+            textStyle={{ fontSize: 13, letterSpacing: tracking.small, }}
             href="/forgot-password"
           >
             {t('auth.forgotPassword')}
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
   },
   slabel: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 1.2,
     textTransform: 'uppercase',
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
   },
   lede: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 10,
     lineHeight: 22,
   },

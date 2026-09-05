@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "Meridian",
-    "slug": "meridian",
+    "name": "Apex",
+    "slug": "apex",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "meridian",
+    "scheme": "apex",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hashimhameem.meridian",
+      "bundleIdentifier": "com.hashimhameem.apex",
       "config": {
         "usesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.hashimhameem.meridian",
+      "package": "com.hashimhameem.apex",
       "permissions": ["android.permission.POST_NOTIFICATIONS"],
       "adaptiveIcon": {
         "backgroundColor": "#F5F3EC",
@@ -42,7 +42,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Meridian to scan member QR passes.",
+          "cameraPermission": "Allow Apex to scan member QR passes.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }

@@ -1,5 +1,5 @@
 /**
- * Meridian — domain types.
+ * Apex — domain types.
  * These mirror the entities implied by the design system screens.
  * All data is mock/in-memory until the database is added later.
  */
@@ -18,15 +18,17 @@ export type MembershipStatus =
   | 'upcoming'
   | 'none';
 
-export type PaymentMethod = 'InstaPay' | 'Cash' | 'Card' | 'Wallet' | 'Complimentary';
-export type PaymentState = 'Paid' | 'Payment due' | 'Complimentary';
+export type PaymentMethod = 'UPI' | 'Cash' | 'Card' | 'Wallet' | 'Complimentary' | 'InstaPay';
+export type PaymentState = 'Paid' | 'Payment due' | 'Complimentary' | 'No payment recorded';
 
 export interface Plan {
   id: string;
   name: string;
   /** months */
   duration: number;
-  priceEGP: number;
+  price: number;
+  /** ISO 4217 code, e.g. INR */
+  currency: string;
   blurb: string;
 }
 
@@ -36,7 +38,8 @@ export interface Payment {
   state: PaymentState;
   /** ISO date the payment was recorded */
   date: string;
-  amountEGP?: number;
+  amount?: number;
+  currency?: string;
   receiptNumber?: string;
 }
 
@@ -45,14 +48,20 @@ export interface Membership {
   planId: string;
   planName: string;
   startDate: string; // ISO
+  /** Effective expiry (physical end plus credited freeze days) */
   expiryDate: string; // ISO
   status: MembershipStatus;
-  payment: Payment;
-  /** for paused memberships */
+  /** Real payment record; null when nothing was ever recorded */
+  payment: Payment | null;
+  /** for paused memberships: first accessible day */
   pauseEnds?: string;
   /** for due memberships */
   amountDue?: number;
   graceUntil?: string;
+  /** ISO 4217 snapshot of the purchased term */
+  currency?: string;
+  /** paid days credited back from freezes (audit counter) */
+  frozenDays?: number;
   /** consecutive years */
   consecutiveYears?: number;
 }
@@ -99,7 +108,7 @@ export interface Member {
   invitationStatus?: InvitationStatus;
   firstName: string;
   lastName: string;
-  phone: string; // +20 10 2748 8531
+  phone: string; // +91 98765 43210
   email: string;
   dateOfBirth?: string;
   emergencyName?: string;
@@ -109,6 +118,8 @@ export interface Member {
   memberSince: string; // year or ISO
   lastVisitAt?: string;
   invitationId?: string;
+  /** Server as-of date (club-local) used for current-term selection */
+  asOf?: string;
   membership: Membership | null;
   visits: Visit[];
   activity: ActivityEntry[];

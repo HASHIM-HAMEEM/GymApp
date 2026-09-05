@@ -16,14 +16,13 @@ export interface MemberInvitationInput {
   nationalId: string | null;
   address: string | null;
   planId: string | null;
-  membershipStartDate: string | null;
   amountPaid: number | null;
-  paymentMethod: "instapay" | "cash" | "card" | "wallet" | "complimentary" | null;
+  paymentMethod: "upi" | "cash" | "card" | "wallet" | "complimentary" | null;
 }
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const NATIONAL_ID_PATTERN = /^[0-9][0-9 ]{2,62}[0-9]$/;
-const PAYMENT_METHODS = ["instapay", "cash", "card", "wallet", "complimentary"] as const;
+const PAYMENT_METHODS = ["upi", "cash", "card", "wallet", "complimentary"] as const;
 
 function normalizedText(value: unknown, fieldName: string, maxLength: number): string {
   if (typeof value !== "string") {
@@ -135,7 +134,9 @@ function normalizeAmountPaid(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0 || value > 10_000_000) {
     throw new ApiError(400, "VALIDATION_ERROR", "amountPaid must be a positive number.");
   }
-  if (Math.round(value * 100) !== value * 100) {
+  // Floating-point multiplication is inexact (19.99 * 100 is
+  // 1998.9999999999998); compare within an epsilon instead of exactly.
+  if (Math.abs(value * 100 - Math.round(value * 100)) > 1e-6) {
     throw new ApiError(400, "VALIDATION_ERROR", "amountPaid must not exceed two decimal places.");
   }
   return value;
@@ -161,10 +162,16 @@ export function parseMemberInvitationInput(body: Record<string, unknown>): Membe
     "nationalId",
     "address",
     "planId",
+    // Accepted (as null) for older clients that always send the field;
+    // non-null values are rejected below.
     "membershipStartDate",
     "amountPaid",
     "paymentMethod",
   ]);
+  // Start dates are server-controlled; reject clients that still send one.
+  if (body.membershipStartDate !== undefined && body.membershipStartDate !== null && body.membershipStartDate !== "") {
+    throw new ApiError(400, "VALIDATION_ERROR", "Membership start dates are server-controlled.");
+  }
   return {
     email: normalizeEmail(body.email),
     firstName: normalizedText(body.firstName, "firstName", 80),
@@ -178,7 +185,6 @@ export function parseMemberInvitationInput(body: Record<string, unknown>): Membe
     planId: body.planId === undefined || body.planId === null || body.planId === ""
       ? null
       : (isUuid(body.planId) ? body.planId : throwInvalidPlanId()),
-    membershipStartDate: normalizeOptionalIsoDate(body.membershipStartDate, "membershipStartDate", true),
     amountPaid: normalizeAmountPaid(body.amountPaid),
     paymentMethod: normalizePaymentMethod(body.paymentMethod),
   };

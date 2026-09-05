@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { View, Text } from 'react-native';
-import { useColors, typography } from '@/theme/tokens';
+import { useColors, typography, tracking } from '@/theme/tokens';
 import { useApp } from '@/data/store';
 
 /* ------------------------------------------------------------------ */
@@ -113,7 +113,7 @@ function Label({
       <Text
         style={{
           fontFamily: typography.fontFamily,
-          fontSize: 9.5,
+          fontSize: 11,
           color: ink3,
           fontWeight: '600',
           letterSpacing: 0.1,
@@ -126,7 +126,8 @@ function Label({
       <Text
         style={{
           fontFamily: typography.display,
-          fontSize: 12,
+          fontSize: 13,
+          letterSpacing: tracking.small,
           color: ink,
           fontWeight: '600',
           marginTop: 2,

@@ -60,7 +60,6 @@ export async function createMemberInvitation(
   if (input.nationalId !== null) args.p_national_id = input.nationalId;
   if (input.address !== null) args.p_address = input.address;
   if (input.planId !== null) args.p_plan_id = input.planId;
-  if (input.membershipStartDate !== null) args.p_membership_start_date = input.membershipStartDate;
   if (input.amountPaid !== null) args.p_amount_paid = input.amountPaid;
   if (input.paymentMethod !== null) args.p_payment_method = input.paymentMethod;
 

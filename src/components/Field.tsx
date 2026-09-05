@@ -28,7 +28,7 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
         <Text
           style={{
             fontFamily: typography.fontFamily,
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: '600',
             letterSpacing: 0.04,
             color: c.ink3,
@@ -44,16 +44,16 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
       {hasError ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 3 }}>
           <Icon name="alertc" size={13} color={c.bad} />
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: c.bad, writingDirection: textDir }}>
+          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, letterSpacing: tracking.small, fontWeight: '500', color: c.bad, writingDirection: textDir }}>
             {error}
           </Text>
         </View>
       ) : okMsg ? (
-        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, fontWeight: '500', color: c.ok, paddingLeft: 3, writingDirection: textDir }}>
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, letterSpacing: tracking.small, fontWeight: '500', color: c.ok, paddingLeft: 3, writingDirection: textDir }}>
           {okMsg}
         </Text>
       ) : hint ? (
-        <Text style={{ fontFamily: typography.fontFamily, fontSize: 12.5, letterSpacing: tracking.small, color: c.ink3, paddingLeft: 3, writingDirection: textDir }}>
+        <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, letterSpacing: tracking.small, color: c.ink3, paddingLeft: 3, writingDirection: textDir }}>
           {hint}
         </Text>
       ) : null}
@@ -139,7 +139,7 @@ export function Control({
         style={{
           flex: 1,
           fontFamily: typography.fontFamily,
-          fontSize: 16,
+          fontSize: 15,
           color: c.ink,
           paddingLeft: leading ? 11 : 0,
           minHeight: multiline ? 80 : undefined,
@@ -219,7 +219,7 @@ export function OtpBoxes({
             backgroundColor: c.bg1,
             textAlign: 'center',
             fontFamily: typography.fontFamily,
-            fontSize: 22,
+            fontSize: 18,
             fontWeight: '600',
             color: c.ink,
           }}

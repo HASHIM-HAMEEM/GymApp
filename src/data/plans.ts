@@ -5,28 +5,32 @@ export const PLANS: Plan[] = [
     id: 'premium-monthly',
     name: 'Premium Monthly',
     duration: 1,
-    priceEGP: 1500,
+    price: 2499,
+    currency: 'INR',
     blurb: 'Full floor, studio & recovery access',
   },
   {
     id: 'three-month',
     name: '3-Month Plan',
     duration: 3,
-    priceEGP: 4050,
-    blurb: 'Same access · saves EGP 450',
+    price: 6999,
+    currency: 'INR',
+    blurb: 'Same access · saves ₹500',
   },
   {
     id: 'premium-quarterly',
     name: 'Premium Quarterly',
     duration: 3,
-    priceEGP: 4050,
-    blurb: 'Same access · saves EGP 450',
+    price: 6999,
+    currency: 'INR',
+    blurb: 'Same access · saves ₹500',
   },
   {
     id: 'annual',
     name: 'Annual Membership',
     duration: 12,
-    priceEGP: 15000,
+    price: 23999,
+    currency: 'INR',
     blurb: 'Same access · two months free',
   },
 ];
@@ -40,10 +44,10 @@ export function planByName(name: string): Plan | undefined {
 }
 
 export const CLUB: Club = {
-  name: 'Meridian Athletic Club',
-  address: '14 El-Nakhil St., Nasser City',
-  city: 'Cairo',
-  phone: '+20 2 2619 4400',
+  name: 'Apex Athletic Club',
+  address: '',
+  city: '',
+  phone: '',
   hours: [
     { label: 'Mon–Thu', value: '6 AM–11 PM' },
     { label: 'Fri', value: '7 AM–9 PM' },

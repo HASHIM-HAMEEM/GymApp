@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Svg, G, Circle } from 'react-native-svg';
-import { useColors, spacing, typography, radius } from '@/theme/tokens';
+import { useColors, spacing, typography, radius, tracking } from '@/theme/tokens';
 import { Tag, TagVariant } from './Tag';
 
 import { useApp } from '@/data/store';
@@ -97,14 +97,14 @@ const styles = StyleSheet.create({
   },
   n: {
     fontFamily: typography.display,
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '600',
     letterSpacing: -0.6,
     lineHeight: 34,
   },
   u: {
     fontFamily: typography.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.0,
     textTransform: 'uppercase',
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   info: { flex: 1, minWidth: 0, justifyContent: 'center' },
   title: {
     fontFamily: typography.display,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     marginTop: 8,
     marginBottom: 3,
@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 19,
   },
   tail: { marginTop: 2 },

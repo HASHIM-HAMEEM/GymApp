@@ -1,5 +1,5 @@
 /* ============================================================
-   MERIDIAN V2 · flows.js — interactive prototypes
+   APEX V2 · flows.js — interactive prototypes
    ============================================================ */
 
 /* ---------- F-01 · Sign-in ---------- */

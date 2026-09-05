@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
-import { useColors, radius, spacing, typography } from '@/theme/tokens';
+import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
@@ -100,7 +100,7 @@ function NoticeComposeInner() {
         <View style={{ alignSelf: 'stretch' }}>
           <KVList>
             <KVRow label={t('noticeCompose.notice')}>
-              <Text style={{ fontSize: 13.5, color: c.ink, writingDirection: textDir }}>
+              <Text style={{ fontSize: 13, letterSpacing: tracking.small, color: c.ink, writingDirection: textDir }}>
                 {title.slice(0, 28)}{title.length > 28 ? '…' : ''}
               </Text>
             </KVRow>
@@ -149,7 +149,7 @@ function NoticeComposeInner() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
       <AppBar title={t('noticeCompose.newNotice')} onBack={() => router.back()} />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
         <Body style={{ gap: 18 }}>
@@ -218,7 +218,7 @@ function NoticeComposeInner() {
           {t('noticeCompose.confirmBody', { title, count: audienceCount ?? t('noticeCompose.selectedMembers') })}
         </Text>
       </ConfirmModal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -243,12 +243,13 @@ const styles = StyleSheet.create({
   },
   priorityT: {
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '500',
   },
   priorityS: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   successWrap: {
@@ -268,14 +269,14 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontFamily: typography.fontFamily,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   successBody: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
     lineHeight: 21,
   },
@@ -290,7 +291,8 @@ const styles = StyleSheet.create({
   errText: {
     flex: 1,
     fontFamily: typography.fontFamily,
-    fontSize: 13.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 19,
   },
 });

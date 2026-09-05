@@ -8,7 +8,7 @@ import { RingCard } from '@/components/RingCard';
 import { IconButton } from '@/components/Button';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useNotices, usePlans, useQrPass } from '@/data/api/queries';
-import { statusVisual, fmtLong, fmtTodayLabel, fmtDayName, fmtMonthDay, daysBetween, TODAY } from '@/data/format';
+import { statusVisual, fmtLong, fmtTodayLabel, fmtDayName, fmtMonthDay, daysBetween, todayIso, formatMoney } from '@/data/format';
 import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
 
@@ -55,23 +55,24 @@ export default function MemberHome() {
   const canShowQr = ms?.status === 'active' || ms?.status === 'expiring' || ms?.status === 'due';
   const qrQuery = useQrPass(Boolean(canShowQr));
 
+  const today = m?.asOf ?? todayIso();
   const latestNotice = noticesQuery.data?.[0];
   const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
-  const week = weekAround(TODAY, language);
+  const week = weekAround(today, language);
 
   const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
-  const price = plan?.priceEGP ?? ms?.amountDue ?? 1500;
+  const price = plan?.price ?? ms?.amountDue ?? 0;
 
   const ringProgress = (() => {
     if (!ms || !ms.startDate) return 0;
     if (ms.status === 'expired') return 0;
     const total = daysBetween(ms.expiryDate, ms.startDate);
-    const left = daysBetween(ms.expiryDate, TODAY);
+    const left = daysBetween(ms.expiryDate, today);
     if (total <= 0) return 0;
     return Math.max(0, Math.min(1, left / total));
   })();
 
-  const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, TODAY)) : 0;
+  const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, today)) : 0;
 
   const h = new Date().getHours();
   const greetingWord =
@@ -86,7 +87,7 @@ export default function MemberHome() {
       >
         <View>
           <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-            {fmtTodayLabel(TODAY, language)}
+            {fmtTodayLabel(today, language)}
           </Text>
           <Text style={[styles.greeting, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {m ? t('member.greetingWithName', { greeting: greetingWord, name: m.firstName }) : greetingWord}
@@ -115,21 +116,21 @@ export default function MemberHome() {
               title={ms.planName}
               subtitle={
                 ms.status === 'paused'
-                  ? t('member.frozenUntil', { date: fmtLong(ms.pauseEnds ?? ms.expiryDate, language) })
+                  ? t('member.frozenUntil', { date: `\u200E${fmtLong(ms.pauseEnds ?? ms.expiryDate, language)}\u200E` })
                   : ms.status === 'expired'
-                  ? t('member.expiredOn', { date: fmtLong(ms.expiryDate, language) })
+                  ? t('member.expiredOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
                   : ms.status === 'upcoming'
-                  ? t('member.beginsOn', { date: fmtLong(ms.startDate, language) })
+                  ? t('member.beginsOn', { date: `\u200E${fmtLong(ms.startDate, language)}\u200E` })
                   : ms.status === 'expiring'
-                  ? t('member.expiresIn', { days: daysLeft })
-                  : t('member.renewsOn', { date: fmtLong(ms.expiryDate, language) })
+                  ? t('member.expiresIn', { days: `\u200E${daysLeft}\u200E` })
+                  : t('member.renewsOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
               }
               progress={ringProgress}
             />
           ) : null}
 
           <MembershipCard
-            name={m ? `${m.firstName} ${m.lastName}` : t('member.meridianMember')}
+            name={m ? `${m.firstName} ${m.lastName}` : t('member.apexMember')}
             plan={ms ? ms.planName.replace(/ Monthly| Annual/i, '') : t('common.noPlan')}
             validUntil={ms ? fmtLong(ms.expiryDate, language) : m?.memberSince ?? t('common.notAvailable')}
             memberId={m?.id ?? 'MRD-····'}
@@ -143,7 +144,7 @@ export default function MemberHome() {
             <View style={[styles.week, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
               {week.map((wd) => {
                 const visited = m.visits.some((v) => v.date === wd.iso);
-                const isToday = wd.iso === TODAY;
+                const isToday = wd.iso === today;
                 const on = visited && !isToday;
                 return (
                   <View key={wd.iso} style={styles.wd}>
@@ -209,14 +210,14 @@ export default function MemberHome() {
 const styles = StyleSheet.create({
   slabel: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: tracking.caps,
     textTransform: 'uppercase',
   },
   greeting: {
     fontFamily: typography.display,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.015,
     marginTop: 4,
@@ -224,6 +225,7 @@ const styles = StyleSheet.create({
   configError: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 19,
   },
   week: {
@@ -244,7 +246,7 @@ const styles = StyleSheet.create({
   },
   wdLabel: {
     fontFamily: typography.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.06,
     textTransform: 'uppercase',
@@ -252,6 +254,7 @@ const styles = StyleSheet.create({
   noPlan: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 19,
   },
   noticeRow: {
@@ -264,7 +267,7 @@ const styles = StyleSheet.create({
   },
   cat: {
     fontFamily: typography.mono,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.9,
     textTransform: 'uppercase',
@@ -274,7 +277,7 @@ const styles = StyleSheet.create({
   },
   nt: {
     fontFamily: typography.display,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '600',
     lineHeight: 20,
     letterSpacing: -0.1,
@@ -282,12 +285,14 @@ const styles = StyleSheet.create({
   np: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 18,
     marginTop: 3,
   },
   ndt: {
     fontFamily: typography.mono,
     fontSize: 11,
+    letterSpacing: tracking.small,
     paddingTop: 3,
     marginLeft: 6,
     flexShrink: 0,

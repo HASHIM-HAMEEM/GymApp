@@ -20,7 +20,7 @@ export default function Splash() {
     <View style={styles.wrap}>
       <View style={{ alignItems: 'center', marginTop: -20 }}>
         <Logo size={64} strokeWidth={3} />
-        <Text style={[styles.wm, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>Meridian</Text>
+        <Text style={[styles.wm, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>Apex</Text>
         <Text style={[styles.cap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.athleticClub')}</Text>
       </View>
       <Text style={[styles.foot, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.version')}</Text>
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   },
   cap: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
     letterSpacing: 0.14,
     color: colors.ink3,
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   },
   foot: {
     fontFamily: typography.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.18,
     color: colors.ink4,

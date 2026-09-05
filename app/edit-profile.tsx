@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
@@ -10,12 +10,12 @@ import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useUpdateMemberProfile } from '@/data/api/queries';
 
-function egyptPhone(value: string): string {
+function indiaPhone(value: string): string {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
-  if (digits.startsWith('20')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+20${digits.slice(1)}`;
-  return `+20${digits}`;
+  if (digits.startsWith('91')) return `+${digits}`;
+  if (digits.startsWith('0')) return `+91${digits.slice(1)}`;
+  return `+91${digits}`;
 }
 
 export default function EditProfile() {
@@ -27,7 +27,7 @@ export default function EditProfile() {
   const m = memberQuery.data ?? null;
 
   const [first, setFirst] = React.useState(m?.firstName ?? '');
-  const [phone, setPhone] = React.useState(m ? m.phone.replace(/^\+20\s?/, '') : '');
+  const [phone, setPhone] = React.useState(m ? m.phone.replace(/^\+91\s?/, '') : '');
   const [emName, setEmName] = React.useState(m?.emergencyName ?? '');
   const [emPhone, setEmPhone] = React.useState(m?.emergencyPhone ?? '');
   const [nationalId, setNationalId] = React.useState(m?.nationalId ?? '');
@@ -38,7 +38,7 @@ export default function EditProfile() {
   React.useEffect(() => {
     if (m && !first) {
       setFirst(m.firstName);
-      setPhone(m.phone.replace(/^\+20\s?/, ''));
+      setPhone(m.phone.replace(/^\+91\s?/, ''));
       setEmName(m.emergencyName ?? '');
       setEmPhone(m.emergencyPhone ?? '');
       setNationalId(m.nationalId ?? '');
@@ -61,7 +61,7 @@ export default function EditProfile() {
     else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = t('profile.phoneInvalid');
     else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('profile.emergencyBoth');
     else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('profile.emergencyPhoneInvalid');
-    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length !== 14) bad = t('profile.nationalIdInvalid');
+    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length < 4) bad = t('profile.nationalIdInvalid');
     else if (!address.trim()) bad = t('profile.addressRequired');
     if (bad) {
       setFormError(bad);
@@ -73,9 +73,9 @@ export default function EditProfile() {
     try {
       await updateProfile.mutateAsync({
         firstName: first.trim(),
-        phone: egyptPhone(phone),
+        phone: indiaPhone(phone),
         emergencyName: emName.trim(),
-        emergencyPhone: egyptPhone(emPhone),
+        emergencyPhone: indiaPhone(emPhone),
         nationalId: nationalId.trim(),
         address: address.trim(),
       });
@@ -92,6 +92,7 @@ export default function EditProfile() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('profile.editTitle')} onBack={() => router.back()} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
@@ -120,7 +121,7 @@ export default function EditProfile() {
               inputMode="tel"
               leading={
                 <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 11, borderRightWidth: 1, borderRightColor: c.line }}>
-                  <Text style={{ fontSize: 14, fontWeight: '500', color: c.ink2 }}>+20</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: c.ink2, writingDirection: 'ltr' }}>+91</Text>
                 </View>
               }
             />
@@ -157,6 +158,7 @@ export default function EditProfile() {
           </View>
         </Body>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
   },
   lockedEmailText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '500',
   },
 });

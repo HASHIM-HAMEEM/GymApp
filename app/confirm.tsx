@@ -10,6 +10,8 @@ import { useApp } from '@/providers/AppProvider';
 
 type Phase = 'verifying' | 'done' | 'error';
 
+const consumedTokens = new Set<string>();
+
 /**
  * Email link landing route. Supabase auth emails send a one-time token hash
  * here (invite acceptance and password recovery). The hash is exchanged for
@@ -22,8 +24,10 @@ export default function Confirm() {
   const c = useColors(darkMode);
   const [phase, setPhase] = React.useState<Phase>('verifying');
   const [message, setMessage] = React.useState(t('confirm.verifying'));
+  const startedRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (startedRef.current) return;
     const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : '';
     const rawType = typeof params.type === 'string' ? params.type : '';
     const type = rawType === 'invite' || rawType === 'recovery' || rawType === 'email' ? rawType : null;
@@ -38,11 +42,21 @@ export default function Confirm() {
       return;
     }
 
-    let active = true;
+    if (consumedTokens.has(tokenHash)) {
+      setPhase('error');
+      setMessage(t('confirm.alreadyVerified'));
+      return;
+    }
+
+    startedRef.current = true;
+    consumedTokens.add(tokenHash);
+    setPhase('verifying');
+    setMessage(t('confirm.verifying'));
+    router.replace('/confirm');
+
     requireSupabase()
       .auth.verifyOtp({ token_hash: tokenHash, type })
       .then(({ error }) => {
-        if (!active) return;
         if (error) {
           setPhase('error');
           setMessage(t('confirm.expiredLink'));
@@ -56,14 +70,10 @@ export default function Confirm() {
         );
       })
       .catch(() => {
-        if (!active) return;
         setPhase('error');
         setMessage(t('confirm.requestFailed'));
       });
-    return () => {
-      active = false;
-    };
-  }, [params.token_hash, params.type, t]);
+  }, [params.token_hash, params.type, t, router]);
 
   React.useEffect(() => {
     if (phase !== 'done') return;
@@ -133,14 +143,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: typography.display,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   body: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
     maxWidth: 300,

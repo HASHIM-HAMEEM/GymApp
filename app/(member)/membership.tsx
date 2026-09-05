@@ -2,15 +2,16 @@ import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { useColors, spacing, typography } from '@/theme/tokens';
+import { useColors, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { RingCard } from '@/components/RingCard';
 import { Banner, EmptyState, KVList, KVRow } from '@/components/Surfaces';
+import { LtrText } from '@/components/LtrText';
 import { Timeline } from '@/components/Timeline';
 import { useClub, useCurrentMember, usePlans } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
-import { statusVisual, fmtLong, fmtShort, timelineFill, TODAY, daysBetween } from '@/data/format';
+import { statusVisual, fmtLong, fmtShort, timelineFill, todayIso, daysBetween, formatMoney } from '@/data/format';
 import type { Language, TranslationKey } from '@/lib/i18n';
 
 function paymentKey(method?: string): TranslationKey {
@@ -18,6 +19,7 @@ function paymentKey(method?: string): TranslationKey {
     case 'cash': return 'payment.cash';
     case 'card': return 'payment.card';
     case 'wallet': return 'payment.wallet';
+    case 'upi': return 'payment.upi';
     case 'instapay': return 'payment.instapay';
     case 'complimentary': return 'payment.complimentary';
     default: return 'common.notAvailable';
@@ -28,16 +30,17 @@ function subtitleFor(
   status: string,
   planPrice: number | undefined,
   amountDue: number | undefined,
+  currency: string | undefined,
   expiryDate: string,
   language: Language,
   t: (key: TranslationKey, options?: Record<string, unknown>) => string,
 ): string {
-  if (status === 'expired') return t('membership.ended', { date: fmtLong(expiryDate, language) });
-  if (status === 'upcoming') return t('membership.beginsSoon', { date: fmtLong(expiryDate, language) });
+  if (status === 'expired') return t('membership.ended', { date: `\u200E${fmtLong(expiryDate, language)}\u200E` });
+  if (status === 'upcoming') return t('membership.beginsSoon', { date: `\u200E${fmtLong(expiryDate, language)}\u200E` });
   if (status === 'paused') return t('membership.frozen');
-  if (status === 'due') return t('membership.paymentDue', { amount: t('common.egpAmount', { amount: (amountDue ?? 0).toLocaleString() }) });
-  if (planPrice) return t('common.egpAmount', { amount: planPrice.toLocaleString() });
-  return t('membership.validUntil', { date: fmtLong(expiryDate, language) });
+  if (status === 'due') return t('membership.paymentDue', { amount: `\u200E${formatMoney(amountDue ?? 0, currency, language)}\u200E` });
+  if (planPrice) return `\u200E${formatMoney(planPrice, currency, language)}\u200E`;
+  return t('membership.validUntil', { date: `\u200E${fmtLong(expiryDate, language)}\u200E` });
 }
 
 export default function MembershipScreen() {
@@ -70,8 +73,8 @@ export default function MembershipScreen() {
                 {t('membership.contactReception')}
               </Button>
               {clubQuery.data ? (
-                <Text style={{ fontSize: 12.5, color: c.ink3, textAlign: 'center', writingDirection: isRtl ? 'rtl' : 'ltr' }}>
-                  {t('membership.clubContact', { name: clubQuery.data.name, phone: clubQuery.data.phone })}
+                <Text style={{ fontSize: 13, letterSpacing: tracking.small, color: c.ink3, textAlign: 'center', writingDirection: isRtl ? 'rtl' : 'ltr' }}>
+                  {t('membership.clubContact', { name: clubQuery.data.name, phone: `\u200E${clubQuery.data.phone}\u200E` })}
                 </Text>
               ) : null}
             </View>
@@ -84,7 +87,8 @@ export default function MembershipScreen() {
   const vis = statusVisual(ms.status, ms, c, language);
   const tl = timelineFill(ms.startDate, ms.expiryDate);
   const total = daysBetween(ms.expiryDate, ms.startDate);
-  const left = Math.max(0, daysBetween(ms.expiryDate, TODAY));
+  const today = m?.asOf ?? todayIso();
+  const left = Math.max(0, daysBetween(ms.expiryDate, today));
   const progress = total > 0 ? Math.max(0, Math.min(1, left / total)) : 0;
   const ringValue = String(left);
   const showTimeline = ms.status === 'active' || ms.status === 'expiring' || ms.status === 'upcoming';
@@ -107,7 +111,7 @@ export default function MembershipScreen() {
             variant={vis.dotVariant}
             tag={{ label: vis.tagLabel, variant: vis.tagVariant }}
             title={ms.planName}
-            subtitle={subtitleFor(ms.status, plan?.priceEGP, ms.amountDue, ms.expiryDate, language, t)}
+            subtitle={subtitleFor(ms.status, plan?.price, ms.amountDue, ms.currency ?? plan?.currency, ms.expiryDate, language, t)}
             progress={progress}
           >
             {showTimeline ? (
@@ -115,7 +119,7 @@ export default function MembershipScreen() {
                 fill={tl.fill}
                 fillColor={vis.fillColor}
                 l1={[t('membership.timelineStart'), fmtShort(ms.startDate, language)]}
-                l2={[t('membership.timelineToday'), fmtShort(TODAY, language)]}
+                l2={[t('membership.timelineToday'), fmtShort(today, language)]}
                 l3={[t('membership.timelineEnds'), fmtShort(ms.expiryDate, language)]}
               />
             ) : null}
@@ -124,42 +128,46 @@ export default function MembershipScreen() {
           <KVList>
             {ms.status === 'paused' && ms.pauseEnds ? (
               <>
-                <KVRow icon="pause" label={t('membership.resumes')}>{fmtLong(ms.pauseEnds, language)}</KVRow>
+                <KVRow icon="pause" label={t('membership.resumes')}><LtrText>{fmtLong(ms.pauseEnds, language)}</LtrText></KVRow>
                 <KVRow icon="clock" label={t('membership.daysPreserved')}>{t('common.countOfTotal', { count: ringValue, total })}</KVRow>
               </>
             ) : ms.status === 'expired' ? (
               <>
                 <KVRow icon="cal" label={t('membership.expiredOn')}>
-                  <Text style={{ color: c.bad, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{fmtLong(ms.expiryDate, language)}</Text>
+                  <LtrText style={{ color: c.bad }}>{fmtLong(ms.expiryDate, language)}</LtrText>
                 </KVRow>
                 <KVRow icon="clock" label={t('membership.visitsKept')}>{t('membership.visitsHistory', { count: m ? m.visits.length : 0 })}</KVRow>
                 <KVRow icon="receipt" label={t('membership.restartFrom')}>
-                  {plan?.priceEGP ? t('common.egpAmount', { amount: plan.priceEGP.toLocaleString() }) : t('common.notAvailable')}
+                  <LtrText>{plan ? formatMoney(plan.price, plan.currency, language) : t('common.notAvailable')}</LtrText>
                 </KVRow>
               </>
             ) : ms.status === 'due' ? (
               <>
                 <KVRow icon="receipt" label={t('membership.amountDue')}>
-                  <Text style={{ color: c.warn, writingDirection: isRtl ? 'rtl' : 'ltr' }}>
-                    {ms.amountDue ? t('common.egpAmount', { amount: ms.amountDue.toLocaleString() }) : t('common.notAvailable')}
-                  </Text>
+                  <LtrText style={{ color: c.warn }}>
+                    {ms.amountDue ? formatMoney(ms.amountDue, ms.currency, language) : t('common.notAvailable')}
+                  </LtrText>
                 </KVRow>
-                <KVRow icon="cal" label={t('membership.accessUntil')}>{fmtLong(ms.expiryDate, language)}</KVRow>
+                <KVRow icon="cal" label={t('membership.accessUntil')}><LtrText>{fmtLong(ms.expiryDate, language)}</LtrText></KVRow>
               </>
             ) : (
               <>
-                <KVRow icon="cal" label={t('membership.started')}>{fmtLong(ms.startDate, language)}</KVRow>
-                <KVRow icon="cal" label={t('membership.validUntilLabel')}>{fmtLong(ms.expiryDate, language)}</KVRow>
+                <KVRow icon="cal" label={t('membership.started')}><LtrText>{fmtLong(ms.startDate, language)}</LtrText></KVRow>
+                <KVRow icon="cal" label={t('membership.validUntilLabel')}><LtrText>{fmtLong(ms.expiryDate, language)}</LtrText></KVRow>
                 <KVRow icon="receipt" label={t('membership.lastPayment')}>
-                  {t('membership.paymentDetails', {
-                    amount: ms.payment.amountEGP ? t('common.egpAmount', { amount: ms.payment.amountEGP.toLocaleString() }) : t('common.notAvailable'),
-                    method: t(paymentKey(ms.payment.method)),
-                    date: fmtShort(ms.payment.date, language),
-                  })}
+                  {ms.payment
+                    ? t('membership.paymentDetails', {
+                        amount: ms.payment.amount != null
+                          ? `\u200E${formatMoney(ms.payment.amount, ms.payment.currency ?? ms.currency, language)}\u200E`
+                          : t('common.notAvailable'),
+                        method: t(paymentKey(ms.payment.method)),
+                        date: `\u200E${fmtShort(ms.payment.date, language)}\u200E`,
+                      })
+                    : t('membership.noPayment')}
                 </KVRow>
                 <KVRow icon="refresh" label={t('membership.renewal')}>
                   <Text style={{ color: c.ink3, fontWeight: '500', writingDirection: isRtl ? 'rtl' : 'ltr' }}>
-                    {t('membership.renewalAtReception', { date: fmtShort(ms.expiryDate, language) })}
+                    {t('membership.renewalAtReception', { date: `\u200E${fmtShort(ms.expiryDate, language)}\u200E` })}
                   </Text>
                 </KVRow>
               </>
@@ -198,7 +206,7 @@ const styles = StyleSheet.create({
   ctas: { gap: 11, marginTop: 2 },
   appBarTitle: {
     fontFamily: typography.display,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.01,
   },

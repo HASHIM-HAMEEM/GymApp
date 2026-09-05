@@ -65,7 +65,7 @@ export function MembershipCard({
     },
   });
 
-  const qrPayload = qrValue ?? `MERIDIAN|${memberId}|INACTIVE`;
+  const qrPayload = qrValue ?? `APEX|${memberId}|INACTIVE`;
 
   const CardInner = (
     <View
@@ -80,7 +80,7 @@ export function MembershipCard({
         <View style={[styles.topRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
           <View style={[styles.brandRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
             <Logo size={20} color="#FFFFFF" strokeWidth={2.6} />
-            <Text style={styles.wordmark}>Meridian</Text>
+            <Text style={styles.wordmark}>Apex</Text>
           </View>
           <Text style={styles.planChip}>{plan}</Text>
         </View>
@@ -89,14 +89,14 @@ export function MembershipCard({
           <Text style={[styles.holderName, { writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={2}>
             {name}
           </Text>
-          <Text style={[styles.holderId, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{memberId}</Text>
+          <Text style={[styles.holderId, { writingDirection: 'ltr' }]}>{memberId}</Text>
         </View>
       </View>
 
       <View style={[styles.footRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
         <View style={styles.stat}>
           <Text style={[styles.statCap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('membership.validUntilLabel')}</Text>
-          <Text style={[styles.statVal, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{validUntil ?? memberSince ?? '—'}</Text>
+          <Text style={[styles.statVal, { writingDirection: 'ltr' }]}>{validUntil ?? memberSince ?? '—'}</Text>
         </View>
 
         {showQr ? (
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   },
   planChip: {
     fontFamily: typography.display,
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.1,
     color: '#EDEDED',
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   },
   holderName: {
     fontFamily: typography.display,
-    fontSize: 21,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.2,
     color: '#F2F4F8',
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   holderId: {
     fontFamily: typography.mono,
-    fontSize: 12.5,
+    fontSize: 13,
     letterSpacing: 1.0,
     color: 'rgba(242,244,248,0.55)',
     marginTop: 5,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   statCap: {
     fontFamily: typography.fontFamily,
-    fontSize: 9.5,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.5,
     color: 'rgba(242,244,248,0.45)',
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   statVal: {
     fontFamily: typography.display,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#F2F4F8',
   },

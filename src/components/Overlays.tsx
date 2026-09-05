@@ -1,16 +1,16 @@
 import * as React from 'react';
 import {
-  AccessibilityInfo,
   Animated,
-  Easing,
   Platform,
   View,
   Text,
   Pressable,
   Modal,
+  ScrollView,
   StyleSheet,
 } from 'react-native';
-import { colors, useColors, radius, spacing, typography } from '@/theme/tokens';
+import { colors, useColors, radius, spacing, typography, duration, easing, tracking } from '@/theme/tokens';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useApp } from '@/data/store';
 import { Icon } from './Icon';
 import { Button } from './Button';
@@ -31,21 +31,9 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
+  const reduceMotion = useReducedMotion();
   const transition = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [mounted, setMounted] = React.useState(visible);
-  const [reduceMotion, setReduceMotion] = React.useState(false);
-
-  React.useEffect(() => {
-    let active = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((value) => {
-      if (active) setReduceMotion(value);
-    });
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
 
   React.useEffect(() => {
     if (visible) setMounted(true);
@@ -56,12 +44,13 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
     transition.stopAnimation();
     Animated.timing(transition, {
       toValue: visible ? 1 : 0,
-      duration: reduceMotion ? 120 : visible ? 240 : 170,
-      easing: visible ? Easing.bezier(0.23, 1, 0.32, 1) : Easing.in(Easing.quad),
+      duration: reduceMotion ? duration.fast : visible ? duration.slow : duration.default,
+      easing: visible ? easing.enter : easing.exit,
       useNativeDriver: Platform.OS !== 'web',
     }).start(({ finished }) => {
       if (finished && !visible) setMounted(false);
     });
+    return () => transition.stopAnimation();
   }, [mounted, reduceMotion, transition, visible]);
 
   const translateY = transition.interpolate({ inputRange: [0, 1], outputRange: [36, 0] });
@@ -82,6 +71,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
             },
           ]}
         >
+          <ScrollView bounces={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }}>
           <Pressable style={[sheetStyles.sheet, { backgroundColor: c.surface }]} onPress={(e) => e.stopPropagation()}>
             <View style={[sheetStyles.grip, { backgroundColor: c.lineStrong }]} />
             {title ? (
@@ -92,6 +82,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
             ) : null}
             {children}
           </Pressable>
+          </ScrollView>
         </Animated.View>
       </Pressable>
     </Modal>
@@ -110,6 +101,7 @@ const sheetStyles = StyleSheet.create({
   },
   sheetFrame: {
     width: '100%',
+    maxHeight: '92%',
     maxWidth: 390,
     alignSelf: 'center',
     borderTopLeftRadius: radius.sheet,
@@ -142,7 +134,7 @@ const sheetStyles = StyleSheet.create({
   },
   desc: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.ink2,
     marginTop: 6,
     lineHeight: 20,
@@ -177,12 +169,46 @@ export function ConfirmModal({
   const { darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
+  const reduceMotion = useReducedMotion();
+  const transition = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [mounted, setMounted] = React.useState(visible);
   const resolvedCancel = cancelLabel ?? t('common.back');
   const resolvedConfirm = confirmLabel ?? t('common.confirm');
+
+  React.useEffect(() => {
+    if (visible) setMounted(true);
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (!mounted) return;
+    transition.stopAnimation();
+    Animated.timing(transition, {
+      toValue: visible ? 1 : 0,
+      duration: reduceMotion ? duration.fast : duration.default,
+      easing: visible ? easing.enter : easing.exit,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start(({ finished }) => {
+      if (finished && !visible) setMounted(false);
+    });
+    return () => transition.stopAnimation();
+  }, [mounted, reduceMotion, transition, visible]);
+
+  const scale = transition.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={modalStyles.scrim}>
-        <View style={[modalStyles.modal, { backgroundColor: c.surface }]}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onCancel}>
+      <Animated.View style={[modalStyles.scrimColor, { opacity: transition, pointerEvents: 'none' }]} />
+      <View style={modalStyles.center}>
+        <Animated.View
+          style={[
+            modalStyles.modal,
+            { backgroundColor: c.surface },
+            {
+              opacity: transition,
+              transform: reduceMotion ? [] : [{ scale }],
+            },
+          ]}
+        >
           <Text style={[modalStyles.title, { color: c.ink, writingDirection: textDir }]}>{title}</Text>
           <Text style={[modalStyles.body, { color: c.ink2, writingDirection: textDir }]}>{children}</Text>
           <View style={modalStyles.acts}>
@@ -193,19 +219,23 @@ export function ConfirmModal({
               {resolvedConfirm}
             </Button>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
 const modalStyles = StyleSheet.create({
-  scrim: {
+  scrimColor: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(16,29,40,0.4)',
+  },
+  center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 22,
-    backgroundColor: 'rgba(16,29,40,0.4)',
   },
   modal: {
     width: '100%',
@@ -224,7 +254,7 @@ const modalStyles = StyleSheet.create({
   },
   body: {
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     color: colors.ink2,
     marginTop: 10,
     lineHeight: 21,
@@ -282,7 +312,7 @@ export function Segmented({
             <Text
               style={{
                 fontFamily: typography.fontFamily,
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: on ? '600' : '500',
                 color: on ? c.ink : c.ink2,
               }}
@@ -332,6 +362,7 @@ export function Chip({
         style={{
           fontFamily: typography.fontFamily,
           fontSize: 13,
+          letterSpacing: tracking.small,
           fontWeight: on ? '600' : '500',
           color: on ? c.ivory : c.ink2,
         }}
@@ -342,7 +373,8 @@ export function Chip({
         <Text
           style={{
             fontFamily: typography.fontFamily,
-            fontSize: 12,
+            fontSize: 13,
+            letterSpacing: tracking.small,
             color: on ? 'rgba(245,243,236,.7)' : c.ink3,
           }}
         >
@@ -366,6 +398,23 @@ export function Switch({
 }) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
+  const reduceMotion = useReducedMotion();
+  const thumb = React.useRef(new Animated.Value(on ? 18 : 0)).current;
+
+  React.useEffect(() => {
+    thumb.stopAnimation();
+    if (reduceMotion) {
+      thumb.setValue(on ? 18 : 0);
+      return;
+    }
+    Animated.timing(thumb, {
+      toValue: on ? 18 : 0,
+      duration: duration.fast,
+      easing: easing.enter,
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [on, reduceMotion, thumb]);
+
   return (
     <Pressable
       onPress={() => onChange(!on)}
@@ -378,13 +427,13 @@ export function Switch({
         justifyContent: 'center',
       }}
     >
-      <View
+      <Animated.View
         style={{
           width: 22,
           height: 22,
           borderRadius: 11,
           backgroundColor: c.surface,
-          transform: [{ translateX: on ? 18 : 0 }],
+          transform: [{ translateX: thumb }],
         }}
       />
     </Pressable>
@@ -404,7 +453,8 @@ export function Live({ label, color }: { label: string; color?: string }) {
       <Text
         style={{
           fontFamily: typography.fontFamily,
-          fontSize: 12,
+          fontSize: 13,
+          letterSpacing: tracking.small,
           color: c.ink2,
           fontWeight: '500',
         }}

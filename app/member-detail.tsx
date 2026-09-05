@@ -1,16 +1,17 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useColors, radius, spacing, typography } from '@/theme/tokens';
+import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Tag, SectionLabel } from '@/components/Tag';
 import { Sheet } from '@/components/Overlays';
 import { KVRow } from '@/components/Surfaces';
+import { LtrText } from '@/components/LtrText';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
-import { useMemberDetail, useResendMemberInvitation, useSetMembershipState } from '@/data/api/queries';
-import { fmtLong, fmtShort, fmtDateTime, statusVisual } from '@/data/format';
+import { useMemberDetail, useResendMemberInvitation, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
+import { fmtLong, fmtShort, fmtDateTime, statusVisual, formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 import { Language, type TranslationKey } from '@/lib/i18n';
 
@@ -20,13 +21,21 @@ export default function MemberDetail() {
   const member = useMemberDetail(id);
   const resend = useResendMemberInvitation();
   const setState = useSetMembershipState();
+  const settle = useSettleBalance();
+  const waive = useWaiveBalance();
   const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
 
   const [showingFreeze, setShowingFreeze] = React.useState(false);
   const [freezeUntil, setFreezeUntil] = React.useState('');
+  const [showingSettle, setShowingSettle] = React.useState(false);
+  const [settleAmount, setSettleAmount] = React.useState('');
+  const [settleMethod, setSettleMethod] = React.useState<DeskPaymentMethod>('cash');
+  const [showingWaive, setShowingWaive] = React.useState(false);
+  const [waiveReason, setWaiveReason] = React.useState('');
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [actionNote, setActionNote] = React.useState<string | null>(null);
 
   const m = member.data;
 
@@ -47,6 +56,7 @@ export default function MemberDetail() {
 
   function paymentMethodLabel(method: string) {
     const map: Record<string, TranslationKey> = {
+      'UPI': 'payment.upi',
       'InstaPay': 'payment.instapay',
       'Cash': 'payment.cash',
       'Card': 'payment.card',
@@ -68,7 +78,7 @@ export default function MemberDetail() {
   if (member.isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: c.ink3, fontSize: 14, writingDirection: textDir }}>{t('memberDetail.loading')}</Text>
+        <Text style={{ color: c.ink3, fontSize: 15, writingDirection: textDir }}>{t('memberDetail.loading')}</Text>
       </View>
     );
   }
@@ -89,16 +99,16 @@ export default function MemberDetail() {
   const isPaused = ms?.status === 'paused';
   const canResend = m.invitationId && m.invitationStatus !== 'accepted' && m.invitationStatus !== 'revoked';
 
-  async function handleResend() {
+  const handleResend = async () => {
     if (!m.invitationId) return;
     try {
       await resend.mutateAsync(m.invitationId);
     } catch (err) {
       setActionError(t('memberDetail.resendFailed'));
     }
-  }
+  };
 
-  async function handleFreeze() {
+  const handleFreeze = async () => {
     if (!ms?.id) {
       setActionError(t('memberDetail.changeFailed'));
       return;
@@ -127,7 +137,57 @@ export default function MemberDetail() {
     } catch (err) {
       setActionError(t('memberDetail.changeFailed'));
     }
-  }
+  };
+
+  const handleSettle = async () => {
+    if (!ms?.id) return;
+    const amount = Number(settleAmount);
+    const centsOk = Math.abs(amount * 100 - Math.round(amount * 100)) <= 1e-6;
+    if (!settleAmount.trim() || !Number.isFinite(amount) || amount <= 0 || !centsOk) {
+      setActionError(t('memberDetail.amountInvalid'));
+      return;
+    }
+    if (amount > (ms.amountDue ?? 0)) {
+      setActionError(t('memberDetail.amountInvalid'));
+      return;
+    }
+    try {
+      const row = await settle.mutateAsync({ membershipId: ms.id, amount, method: settleMethod });
+      setShowingSettle(false);
+      setSettleAmount('');
+      setActionNote(t('memberDetail.settleSuccess', {
+        amount: `\u200E${formatMoney(Number(row.amount_paid), row.currency, language)}\u200E`,
+        receipt: `\u200E${row.receipt_number ?? t('common.notAvailable')}\u200E`,
+      }));
+      setActionError(null);
+    } catch (err) {
+      setActionError(t('memberDetail.settleFailed'));
+    }
+  };
+
+  const handleWaive = async () => {
+    if (!ms?.id) return;
+    if (!waiveReason.trim()) {
+      setActionError(t('memberDetail.waiveReason'));
+      return;
+    }
+    try {
+      const row = await waive.mutateAsync({ membershipId: ms.id, reason: waiveReason.trim() });
+      setShowingWaive(false);
+      setWaiveReason('');
+      setActionNote(t('memberDetail.waiveSuccess', { receipt: `\u200E${row.receipt_number ?? t('common.notAvailable')}\u200E` }));
+      setActionError(null);
+    } catch (err) {
+      setActionError(t('memberDetail.waiveFailed'));
+    }
+  };
+
+  const settleMethodLabels: Record<DeskPaymentMethod, string> = {
+    cash: t('payment.cash'),
+    card: t('payment.card'),
+    upi: t('payment.upi'),
+    wallet: t('payment.wallet'),
+  };
 
   const tag = ms ? membershipTag(ms) : null;
 
@@ -142,17 +202,22 @@ export default function MemberDetail() {
               <Text style={{ writingDirection: textDir }}>{actionError}</Text>
             </Banner>
           ) : null}
+          {actionNote ? (
+            <Banner variant="info">
+              <Text style={{ writingDirection: textDir }}>{actionNote}</Text>
+            </Banner>
+          ) : null}
 
           <View style={[styles.head, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
             <View style={[styles.avatar, { backgroundColor: c.accentSoft }]}>
-              <Text style={{ fontFamily: typography.display, fontSize: 28, fontWeight: '700', color: c.accent }}>
+              <Text style={{ fontFamily: typography.display, fontSize: 30, fontWeight: '700', color: c.accent }}>
                 {m.firstName.slice(0, 1)}{m.lastName.slice(0, 1)}
               </Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.name, { color: c.ink, writingDirection: textDir }]}>{m.firstName} {m.lastName}</Text>
               <Text style={[styles.sub, { color: c.ink3, writingDirection: textDir }]}>
-                {t('memberDetail.memberSince', { id: m.id, email: m.email, date: m.memberSince })}
+                {t('memberDetail.memberSince', { id: `\u200E${m.id}\u200E`, email: `\u200E${m.email}\u200E`, date: `\u200E${m.memberSince}\u200E` })}
               </Text>
             </View>
             <Tag variant="accent" style={{ alignSelf: 'center' }}>{t('common.member')}</Tag>
@@ -180,9 +245,9 @@ export default function MemberDetail() {
               <View style={[styles.membershipCard, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                 <View style={{ flex: 1, gap: 6 }}>
                   <Text style={[styles.planName, { color: c.ink, writingDirection: textDir }]}>{ms.planName}</Text>
-                  <Text style={[styles.dateLine, { color: c.ink3, writingDirection: textDir }]}>
+                  <LtrText style={[styles.dateLine, { color: c.ink3 }]}>
                     {fmtLong(ms.startDate, language)} — {fmtLong(ms.expiryDate, language)}
-                  </Text>
+                  </LtrText>
                   {ms.pauseEnds ? (
                     <Text style={[styles.pauseNote, { color: c.ink4, writingDirection: textDir }]}>
                       {t('status.pausedUntilBanner', { date: fmtShort(ms.pauseEnds, language) })}
@@ -200,17 +265,22 @@ export default function MemberDetail() {
                 <Text style={{ writingDirection: textDir }}>{ms.planName}</Text>
               </KVRow>
               <KVRow label={t('memberDetail.start')}>
-                <Text style={{ writingDirection: textDir }}>{fmtLong(ms.startDate, language)}</Text>
+                <LtrText>{fmtLong(ms.startDate, language)}</LtrText>
               </KVRow>
               <KVRow label={t('memberDetail.expiry')}>
-                <Text style={{ writingDirection: textDir }}>{fmtLong(ms.expiryDate, language)}</Text>
+                <LtrText>{fmtLong(ms.expiryDate, language)}</LtrText>
               </KVRow>
+              {ms.amountDue ? (
+                <KVRow label={t('membership.amountDue')}>
+                  <LtrText style={{ color: c.warn }}>{formatMoney(ms.amountDue, ms.currency, language)}</LtrText>
+                </KVRow>
+              ) : null}
               {ms.payment ? (
                 <KVRow label={t('memberDetail.payment')}>
                   <Text style={{ writingDirection: textDir }}>
                     {t('memberDetail.paymentSummary', { state: paymentStateLabel(ms.payment.state), method: paymentMethodLabel(ms.payment.method) })}
-                    {ms.payment.date ? ` · ${fmtShort(ms.payment.date, language)}` : ''}
-                    {ms.payment.receiptNumber ? ` · ${ms.payment.receiptNumber}` : ''}
+                    {ms.payment.date ? ` · \u200E${fmtShort(ms.payment.date, language)}\u200E` : ''}
+                    {ms.payment.receiptNumber ? ` · \u200E${ms.payment.receiptNumber}\u200E` : ''}
                   </Text>
                 </KVRow>
               ) : null}
@@ -223,21 +293,21 @@ export default function MemberDetail() {
               <Text style={{ writingDirection: textDir }}>{m.firstName} {m.lastName}</Text>
             </KVRow>
             <KVRow label={t('memberDetail.email')}>
-              <Text style={{ writingDirection: textDir }}>{m.email}</Text>
+              <LtrText>{m.email}</LtrText>
             </KVRow>
             {m.phone ? (
               <KVRow label={t('memberDetail.phone')}>
-                <Text style={{ writingDirection: textDir }}>{m.phone}</Text>
+                <LtrText>{m.phone}</LtrText>
               </KVRow>
             ) : null}
             {m.dateOfBirth ? (
               <KVRow label={t('memberDetail.born')}>
-                <Text style={{ writingDirection: textDir }}>{fmtLong(m.dateOfBirth, language)}</Text>
+                <LtrText>{fmtLong(m.dateOfBirth, language)}</LtrText>
               </KVRow>
             ) : null}
             {m.nationalId ? (
               <KVRow label={t('memberDetail.nationalId')}>
-                <Text style={{ writingDirection: textDir }}>{m.nationalId}</Text>
+                <LtrText>{m.nationalId}</LtrText>
               </KVRow>
             ) : null}
             <KVRow label={t('memberDetail.address')}>
@@ -246,7 +316,7 @@ export default function MemberDetail() {
             {m.emergencyName && m.emergencyPhone ? (
               <KVRow label={t('memberDetail.emergency')}>
                 <Text style={{ writingDirection: textDir }}>
-                  {t('memberDetail.emergencyContact', { name: m.emergencyName, phone: m.emergencyPhone })}
+                  {t('memberDetail.emergencyContact', { name: m.emergencyName, phone: `\u200E${m.emergencyPhone}\u200E` })}
                 </Text>
               </KVRow>
             ) : null}
@@ -262,12 +332,12 @@ export default function MemberDetail() {
               <>
                 {m.visits.slice(0, 8).map((v) => (
                   <View key={v.id} style={[styles.vrow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                    <Text style={[styles.vdate, { color: c.ink, textAlign: isRtl ? 'right' : 'left', writingDirection: textDir }]}>
+                    <LtrText style={[styles.vdate, { color: c.ink, textAlign: isRtl ? 'right' : 'left' }]}>
                       {fmtShort(v.date, language)}
-                    </Text>
-                    <Text style={[styles.vtime, { color: c.ink3, writingDirection: textDir }]}>
+                    </LtrText>
+                    <LtrText style={[styles.vtime, { color: c.ink3 }]}>
                       {v.time}
-                    </Text>
+                    </LtrText>
                     <Text style={[styles.vrec, { color: c.ink4, writingDirection: textDir }]}>
                       {t('memberDetail.visitSource', { source: v.method === 'qr' ? t('memberDetail.qr') : t('memberDetail.desk'), reception: v.reception })}
                     </Text>
@@ -297,7 +367,7 @@ export default function MemberDetail() {
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.logText, { color: c.ink, writingDirection: textDir }]}>{a.text}</Text>
                     <Text style={[styles.logTime, { color: c.ink4, writingDirection: textDir }]}>
-                      {a.author ? t('memberDetail.activityBy', { date: fmtDateTime(a.at, language), author: a.author }) : fmtDateTime(a.at, language)}
+                      {a.author ? t('memberDetail.activityBy', { date: `\u200E${fmtDateTime(a.at, language)}\u200E`, author: a.author }) : fmtDateTime(a.at, language)}
                     </Text>
                   </View>
                 </View>
@@ -322,13 +392,24 @@ export default function MemberDetail() {
               >
                 {isPaused ? t('memberDetail.unpause') : t('memberDetail.freeze')}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onPress={() => router.push({ pathname: '/notice-compose', params: { memberId: m.id } })}
-              >
-                {t('notice.title')}
-              </Button>
+              {ms?.amountDue ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onPress={() => { setActionError(null); setShowingSettle(true); }}
+                >
+                  {t('memberDetail.recordPayment')}
+                </Button>
+              ) : null}
+              {ms?.amountDue ? (
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  onPress={() => { setActionError(null); setShowingWaive(true); }}
+                >
+                  {t('memberDetail.waive')}
+                </Button>
+              ) : null}
             </View>
           </View>
 
@@ -361,6 +442,77 @@ export default function MemberDetail() {
           </Button>
         </View>
       </Sheet>
+
+      <Sheet visible={showingSettle} onClose={() => setShowingSettle(false)}>
+        <KeyboardAvoidingView behavior="padding">
+        <Text style={[styles.sheetTitle, { color: c.ink, writingDirection: textDir }]}>
+          {t('memberDetail.settleTitle')}
+        </Text>
+        <Text style={[styles.sheetBody, { color: c.ink3, writingDirection: textDir }]}>
+          {t('memberDetail.settleBody', { amount: `\u200E${formatMoney(ms?.amountDue, ms?.currency, language)}\u200E` })}
+        </Text>
+        <Field label={t('memberDetail.settleAmount')}>
+          <Control
+            value={settleAmount}
+            onChangeText={setSettleAmount}
+            placeholder={String(ms?.amountDue ?? '')}
+            inputMode="decimal"
+            autoComplete="off"
+          />
+        </Field>
+        <View style={{ gap: 10, marginTop: 14 }}>
+          <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('renew.paymentMethod')}</Text>
+          <View style={[styles.methodRow, { borderColor: c.line }]}>
+            {(['cash', 'card', 'upi', 'wallet'] as DeskPaymentMethod[]).map((method) => {
+              const on = settleMethod === method;
+              return (
+                <Pressable
+                  key={method}
+                  onPress={() => setSettleMethod(method)}
+                  style={[styles.methodBtn, on && { backgroundColor: c.accent }]}
+                >
+                  <Text style={{ fontSize: 13, letterSpacing: tracking.small, fontWeight: '600', color: on ? c.accentInk : c.ink3, writingDirection: textDir }}>
+                    {settleMethodLabels[method]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <Button variant="secondary" onPress={() => setShowingSettle(false)}>{t('common.cancel')}</Button>
+          <Button loading={settle.isPending} onPress={handleSettle}>
+            {t('memberDetail.settleConfirm')}
+          </Button>
+        </View>
+        </KeyboardAvoidingView>
+      </Sheet>
+
+      <Sheet visible={showingWaive} onClose={() => setShowingWaive(false)}>
+        <KeyboardAvoidingView behavior="padding">
+        <Text style={[styles.sheetTitle, { color: c.ink, writingDirection: textDir }]}>
+          {t('memberDetail.waiveTitle')}
+        </Text>
+        <Text style={[styles.sheetBody, { color: c.ink3, writingDirection: textDir }]}>
+          {t('memberDetail.waiveBody')}
+        </Text>
+        <Field label={t('memberDetail.waiveReason')}>
+          <Control
+            value={waiveReason}
+            onChangeText={setWaiveReason}
+            placeholder=""
+            multiline
+            autoComplete="off"
+          />
+        </Field>
+        <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <Button variant="secondary" onPress={() => setShowingWaive(false)}>{t('common.cancel')}</Button>
+          <Button variant="danger" loading={waive.isPending} onPress={handleWaive}>
+            {t('memberDetail.waiveConfirm')}
+          </Button>
+        </View>
+        </KeyboardAvoidingView>
+      </Sheet>
     </View>
   );
 }
@@ -381,13 +533,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: typography.display,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.4,
   },
   sub: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 20,
     marginTop: 2,
   },
@@ -401,12 +554,13 @@ const styles = StyleSheet.create({
   },
   inviteTitle: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   inviteSub: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 20,
   },
   membershipCard: {
@@ -419,17 +573,19 @@ const styles = StyleSheet.create({
   },
   planName: {
     fontFamily: typography.display,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   dateLine: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 20,
   },
   pauseNote: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 18,
   },
   vrow: {
@@ -441,20 +597,24 @@ const styles = StyleSheet.create({
   vdate: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '500',
   },
   vtime: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     flex: 1,
   },
   vrec: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   visitFoot: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     color: 'gray',
     marginTop: 4,
   },
@@ -474,12 +634,14 @@ const styles = StyleSheet.create({
   },
   logText: {
     fontFamily: typography.fontFamily,
-    fontSize: 13.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 22,
   },
   logTime: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   actions: {
@@ -495,7 +657,7 @@ const styles = StyleSheet.create({
   },
   sheetBody: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     marginBottom: 16,
   },
@@ -504,5 +666,24 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 12,
     marginTop: 20,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  methodRow: {
+    flexDirection: 'row',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    padding: 3,
+  },
+  methodBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
   },
 });

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Platform, View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
-import { colors, useColors, spacing, typography } from '@/theme/tokens';
+import { colors, useColors, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar } from '@/components/Chrome';
 import { Tag } from '@/components/Tag';
 import { Button } from '@/components/Button';
@@ -100,7 +100,7 @@ export default function QrScreen() {
         <View style={{ alignItems: 'center' }}>
           <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('qr.memberCard')}</Text>
           <Text style={[styles.name, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-            {m ? `${m.firstName} ${m.lastName}` : t('member.meridianMember')}
+            {m ? `${m.firstName} ${m.lastName}` : t('member.apexMember')}
           </Text>
           <Text style={[styles.id, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{m?.id ?? 'MRD-····'}</Text>
         </View>
@@ -194,14 +194,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: typography.display,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.015 * 24,
     textAlign: 'center',
   },
   id: {
     fontFamily: typography.mono,
-    fontSize: 12.5,
+    fontSize: 13,
     letterSpacing: 0.8,
     marginTop: 6,
   },
@@ -231,6 +231,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
   },
   foot: {
     paddingHorizontal: spacing.screen,

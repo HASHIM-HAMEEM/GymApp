@@ -7,7 +7,7 @@ export default function RootHTML({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
-        <title>Meridian Athletic Club</title>
+        <title>Apex Athletic Club</title>
 
         {/* Fonts — Space Grotesk, Inter, JetBrains Mono, Newsreader, IBM Plex Sans Arabic */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

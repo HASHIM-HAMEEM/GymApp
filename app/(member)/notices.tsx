@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { EmptyState } from '@/components/Surfaces';
+import { LtrText } from '@/components/LtrText';
 import { useNotices } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
@@ -66,7 +67,7 @@ export default function NoticesScreen() {
           ) : null
         }
       >
-        <Text style={{ fontFamily: typography.display, fontSize: 17, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('notices.title')}</Text>
+        <Text style={{ fontFamily: typography.display, fontSize: 18, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('notices.title')}</Text>
       </AppBar>
       <ScrollView
         style={{ flex: 1 }}
@@ -98,7 +99,7 @@ export default function NoticesScreen() {
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 6 }}>
-                    <Text style={[styles.dt, { color: c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{noticeDate(n.date, language)}</Text>
+                    <LtrText style={[styles.dt, { color: c.ink4 }]}>{noticeDate(n.date, language)}</LtrText>
                     {!n.read ? (
                       <View style={[styles.unread, { backgroundColor: c.accent }]} />
                     ) : null}
@@ -116,7 +117,8 @@ export default function NoticesScreen() {
 const styles = StyleSheet.create({
   badge: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '600',
   },
   list: {
@@ -136,7 +138,7 @@ const styles = StyleSheet.create({
     width: 78,
     flexShrink: 0,
     fontFamily: typography.mono,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.9,
     textTransform: 'uppercase',
@@ -145,19 +147,21 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   title: {
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '600',
     lineHeight: 19,
   },
   preview: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 18,
     marginTop: 4,
   },
   dt: {
     fontFamily: typography.mono,
     fontSize: 11,
+    letterSpacing: tracking.small,
     paddingTop: 4,
   },
   unread: {

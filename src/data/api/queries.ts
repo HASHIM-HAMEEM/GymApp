@@ -12,12 +12,19 @@ import type {
   ApiPublishNoticeRow,
   ApiQrPassRow,
   ApiRenewRow,
+  ApiRenewalQuoteRow,
   ApiResendInvitationResult,
   ApiSearchRow,
   ApiMembershipStateRow,
+  ApiSettleRow,
+  ApiWaiveRow,
 } from './api';
 import { fetchClub, fetchPlans, todayIso } from './api';
 import { mapMemberDetail, mapNoticeRow, mapPlan, mapSearchRow } from './mapper';
+import { CLUB } from '@/data/plans';
+import type { Club } from '@/data/types';
+
+type ClubSettings = Club & { timezone?: string; currency?: string };
 
 export class ApiCallError extends Error {
   constructor(
@@ -78,7 +85,17 @@ export function usePlans() {
 }
 
 export function useClub() {
-  return useQuery({ queryKey: ['club'], queryFn: fetchClub, staleTime: 300_000 });
+  return useQuery({
+    queryKey: ['club'],
+    queryFn: fetchClub,
+    staleTime: 300_000,
+    initialData: null,
+    select: (row): ClubSettings => ({
+      ...CLUB,
+      ...(row ?? {}),
+      hours: row?.hours ?? CLUB.hours,
+    }),
+  });
 }
 
 export function useCurrentMember() {
@@ -155,18 +172,21 @@ export function useNotices(asAdmin = false) {
       if (asAdmin) {
         const { data, error } = await client
           .from('notices')
-          .select('id, category, title, body, audience, urgent, published_at, profiles(display_name), notice_deliveries(count)')
+          .select(
+            'id, category, title, body, audience, urgent, published_at, ' +
+              'author:profiles!notices_author_id_fkey(display_name), notice_deliveries(count)',
+          )
           .order('published_at', { ascending: false })
           .limit(60);
         if (error) throw error;
         return (data as unknown as ApiNoticeTableRow[]).map((row) => {
           const raw = row as unknown as {
-            profiles?: { display_name: string | null } | null;
+            author?: { display_name: string | null } | null;
             notice_deliveries?: { count: number | null }[] | null;
           };
           return mapNoticeRow({
             ...row,
-            author_name: raw.profiles?.display_name ?? null,
+            author_name: raw.author?.display_name ?? null,
             delivery_count: raw.notice_deliveries?.[0]?.count ?? 0,
           });
         });
@@ -266,6 +286,14 @@ export function useUpdateClub() {
   });
 }
 
+export type DeskPaymentMethod = 'upi' | 'cash' | 'card' | 'wallet';
+
+function newRequestId(): string {
+  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export function useRenewMembership() {
   const cache = useQueryClient();
   return useMutation({
@@ -273,7 +301,7 @@ export function useRenewMembership() {
       memberId: string;
       planId: string;
       amountPaid: number;
-      paymentMethod: 'instapay' | 'cash' | 'card' | 'wallet';
+      paymentMethod: DeskPaymentMethod;
     }) =>
       callRpc<ApiRenewRow>(
         'renew_membership',
@@ -283,8 +311,72 @@ export function useRenewMembership() {
           p_start_date: null,
           p_amount_paid: input.amountPaid,
           p_payment_method: input.paymentMethod,
+          p_request_id: newRequestId(),
         },
         'The renewal could not be recorded.',
+      ),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ['members'] });
+      void cache.invalidateQueries({ queryKey: ['member'] });
+      void cache.invalidateQueries({ queryKey: ['current-member'] });
+      void cache.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useRenewalQuote(memberId: string | undefined, planId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['renewal-quote', memberId, planId],
+    queryFn: () =>
+      callRpc<ApiRenewalQuoteRow>(
+        'renewal_quote',
+        { p_member_id: memberId!, p_plan_id: planId! },
+        'The renewal details could not be loaded.',
+      ),
+    enabled: Boolean(memberId && planId) && enabled,
+    staleTime: 30_000,
+  });
+}
+
+export function useSettleBalance() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      membershipId: string;
+      amount: number;
+      method: DeskPaymentMethod;
+    }) =>
+      callRpc<ApiSettleRow>(
+        'settle_membership_balance',
+        {
+          p_membership_id: input.membershipId,
+          p_amount: input.amount,
+          p_method: input.method,
+          p_request_id: newRequestId(),
+        },
+        'The payment could not be recorded.',
+      ),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ['members'] });
+      void cache.invalidateQueries({ queryKey: ['member'] });
+      void cache.invalidateQueries({ queryKey: ['current-member'] });
+      void cache.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useWaiveBalance() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { membershipId: string; reason: string }) =>
+      callRpc<ApiWaiveRow>(
+        'waive_membership_balance',
+        {
+          p_membership_id: input.membershipId,
+          p_reason: input.reason,
+          p_request_id: newRequestId(),
+        },
+        'The waiver could not be recorded.',
       ),
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['members'] });
@@ -456,9 +548,8 @@ export function useCreateMemberInvitation() {
       nationalId?: string;
       address?: string;
       planId?: string;
-      membershipStartDate?: string;
       amountPaid?: number;
-      paymentMethod?: 'instapay' | 'cash' | 'card' | 'wallet' | 'complimentary';
+      paymentMethod?: DeskPaymentMethod | 'complimentary';
     }) =>
       invokeEdge<ApiCreateInvitationResult>('create-member-invitation', {
         email: input.email,
@@ -471,7 +562,6 @@ export function useCreateMemberInvitation() {
         nationalId: input.nationalId ?? null,
         address: input.address ?? null,
         planId: input.planId ?? null,
-        membershipStartDate: input.membershipStartDate ?? null,
         amountPaid: input.amountPaid ?? null,
         paymentMethod: input.paymentMethod ?? null,
       }),

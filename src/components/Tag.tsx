@@ -32,7 +32,7 @@ export function Tag({
       <Text
         style={{
           fontFamily: typography.fontFamily,
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: '600',
           letterSpacing: 0.08,
           color: fg,
@@ -121,7 +121,7 @@ export function StatusLine({
   children: React.ReactNode;
   plan?: string;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
@@ -129,13 +129,15 @@ export function StatusLine({
       <Text
         style={{
           fontFamily: typography.fontFamily,
-          fontSize: 13.5,
+          fontSize: 13,
+          letterSpacing: tracking.small,
           fontWeight: '500',
           color: c.ink,
+          writingDirection: isRtl ? 'rtl' : 'ltr',
         }}
       >
         {children}
-        {plan ? <Text style={{ color: c.ink2, fontWeight: '400' }}>{plan}</Text> : null}
+        {plan ? <Text style={{ color: c.ink2, fontWeight: '400', writingDirection: isRtl ? 'rtl' : 'ltr' }}>{plan}</Text> : null}
       </Text>
     </View>
   );
@@ -192,7 +194,7 @@ export type MonogramVariant = 'ok' | 'warn' | 'bad' | 'muted' | 'accent';
 export function Monogram({
   text,
   size = 40,
-  fontSize = 13.5,
+  fontSize = 13,
   bg,
   color,
   variant = 'accent',

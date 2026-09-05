@@ -8,7 +8,8 @@ export type ApiPlanRow = {
   slug: string;
   name: string;
   duration_months: number;
-  price_egp: number | string;
+  price: number | string;
+  currency: string;
   blurb: string | null;
   is_active: boolean;
 };
@@ -18,6 +19,8 @@ export type ApiClubRow = {
   address: string;
   city: string;
   phone: string;
+  timezone: string;
+  currency: string;
   hours: { label: string; value: string }[] | null;
 };
 
@@ -28,18 +31,23 @@ export type ApiMembershipDetail = {
   state: string;
   status: string;
   start_date: string;
+  /** Effective end (physical end plus credited freeze days) */
   end_date: string;
+  physical_end_date?: string;
+  frozen_days?: number;
   amount_due: number | string | null;
   grace_until: string | null;
   pause_until: string | null;
-  price_egp: number | string | null;
+  price: number | string | null;
+  currency: string | null;
 };
 
 export type ApiPaymentDetail = {
   id: string;
   receipt_number: string;
   membership_id: string;
-  amount_egp: number | string | null;
+  amount: number | string | null;
+  currency: string | null;
   method: string;
   kind: string;
   paid_at: string;
@@ -88,6 +96,8 @@ export type ApiMemberDetail = {
   address: string | null;
   account_state: string;
   created_at: string;
+  /** Server as-of date in the club's timezone */
+  as_of: string;
   invitation: ApiInvitationDetail;
   memberships: ApiMembershipDetail[];
   payments: ApiPaymentDetail[];
@@ -118,7 +128,9 @@ export type ApiDashboard = {
   expired_members: number;
   check_ins_today: number;
   pending_invitations: number;
-  payments_this_month_egp: number | string;
+  payments_this_month: number | string;
+  payments_this_month_egp?: number | string;
+  currency?: string;
   expiring_list: {
     member_id: string;
     member_number: string;
@@ -175,6 +187,32 @@ export type ApiRenewRow = {
   end_date: string;
   amount_due: number | string | null;
   status: string;
+  as_of: string;
+};
+
+export type ApiRenewalQuoteRow = {
+  start_date: string;
+  end_date: string;
+  price: number | string;
+  currency: string;
+  as_of: string;
+};
+
+export type ApiSettleRow = {
+  payment_id: string;
+  receipt_number: string | null;
+  amount_paid: number | string;
+  amount_due: number | string;
+  currency: string;
+  as_of: string;
+};
+
+export type ApiWaiveRow = {
+  payment_id: string;
+  receipt_number: string | null;
+  amount_due: number | string;
+  currency: string;
+  as_of: string;
 };
 
 export type ApiMembershipStateRow = {
@@ -229,16 +267,17 @@ export function normalizeStatus(status: string | null | undefined): MembershipSt
   }
 }
 
-export function todayIso(): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
+/** Today's ISO date in a timezone (club default: Asia/Kolkata). */
+export function todayIso(timeZone: string = 'Asia/Kolkata'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
 }
 
 export async function fetchPlans(): Promise<ApiPlanRow[]> {
   const { data, error } = await requireSupabase()
     .from('plans')
-    .select('id, slug, name, duration_months, price_egp, blurb, is_active')
+    .select('id, slug, name, duration_months, price, currency, blurb, is_active')
     .eq('is_active', true)
-    .order('price_egp');
+    .order('price');
   if (error) throw error;
   return (data ?? []) as ApiPlanRow[];
 }
@@ -246,7 +285,7 @@ export async function fetchPlans(): Promise<ApiPlanRow[]> {
 export async function fetchClub(): Promise<ApiClubRow | null> {
   const { data, error } = await requireSupabase()
     .from('club_config')
-    .select('name, address, city, phone, hours')
+    .select('name, address, city, phone, timezone, currency, hours')
     .limit(1)
     .maybeSingle();
   if (error) throw error;

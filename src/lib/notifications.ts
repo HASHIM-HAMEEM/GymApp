@@ -11,7 +11,39 @@ export type NotificationState =
   | 'granted'
   | 'expo-go'
   | 'unconfigured'
+  | 'disabled'
   | 'registered';
+
+export type NotificationStateKey =
+  | 'notifications.state.unsupported'
+  | 'notifications.state.prompt'
+  | 'notifications.state.denied'
+  | 'notifications.state.granted'
+  | 'notifications.state.expoGo'
+  | 'notifications.state.unconfigured'
+  | 'notifications.state.disabled'
+  | 'notifications.state.registered';
+
+export function notificationStateLabel(state: NotificationState): NotificationStateKey {
+  switch (state) {
+    case 'registered':
+      return 'notifications.state.registered';
+    case 'granted':
+      return 'notifications.state.granted';
+    case 'denied':
+      return 'notifications.state.denied';
+    case 'unsupported':
+      return 'notifications.state.unsupported';
+    case 'unconfigured':
+      return 'notifications.state.unconfigured';
+    case 'disabled':
+      return 'notifications.state.disabled';
+    case 'expo-go':
+      return 'notifications.state.expoGo';
+    case 'prompt':
+      return 'notifications.state.prompt';
+  }
+}
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -74,11 +106,16 @@ export async function openNotificationSettings() {
   if (Platform.OS !== 'web') await Linking.openSettings();
 }
 
-export function subscribeToNotificationResponses(onUrl: (url: string) => void) {
+export function subscribeToNotificationResponses(
+  onUrl: (url: string, responseId?: string) => void,
+) {
   if (Platform.OS === 'web') return () => undefined;
   const redirect = (response: Notifications.NotificationResponse | null) => {
-    const url = response?.notification.request.content.data?.url;
-    if (typeof url === 'string' && url.startsWith('/')) onUrl(url);
+    if (!response) return;
+    const url = response.notification.request.content.data?.url;
+    if (typeof url === 'string' && url.startsWith('/')) {
+      onUrl(url, response.notification.request.identifier);
+    }
   };
   void Notifications.getLastNotificationResponseAsync().then(redirect);
   const subscription = Notifications.addNotificationResponseReceivedListener(redirect);

@@ -37,7 +37,8 @@ export function Banner({
         style={{
           flex: 1,
           fontFamily: typography.fontFamily,
-          fontSize: 13.5,
+          fontSize: 13,
+          letterSpacing: tracking.small,
           color: fg,
           lineHeight: 19,
           writingDirection: isRtl ? 'rtl' : 'ltr',
@@ -165,7 +166,7 @@ export function EmptyState({
       <Text
         style={{
           fontFamily: typography.fontFamily,
-          fontSize: 17,
+          fontSize: 18,
           fontWeight: '600',
           color: c.ink,
           textAlign: 'center',
@@ -178,7 +179,7 @@ export function EmptyState({
         <Text
           style={{
             fontFamily: typography.fontFamily,
-            fontSize: 14,
+            fontSize: 15,
             color: c.ink2,
             textAlign: 'center',
             lineHeight: 22,
@@ -253,7 +254,7 @@ export function KVRow({
         <Text
           style={{
             fontFamily: typography.fontFamily,
-            fontSize: 14,
+            fontSize: 15,
             color: c.ink2,
             writingDirection: textDir,
           }}
@@ -265,7 +266,7 @@ export function KVRow({
         <Text
           style={{
             fontFamily: typography.fontFamily,
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: '500',
             letterSpacing: tracking.ui,
             color: c.ink,

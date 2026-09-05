@@ -26,11 +26,13 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 function paymentMethodLabel(method: string): PaymentMethod {
   switch (method) {
-    case 'instapay': return 'InstaPay';
+    case 'upi': return 'UPI';
     case 'cash': return 'Cash';
     case 'card': return 'Card';
     case 'wallet': return 'Wallet';
     case 'complimentary': return 'Complimentary';
+    // Historical fixture rows recorded before the India switch.
+    case 'instapay': return 'InstaPay';
     default: return 'Cash';
   }
 }
@@ -56,20 +58,31 @@ export function mapPlan(row: ApiPlanRow): Plan {
     id: row.id,
     name: row.name,
     duration: row.duration_months,
-    priceEGP: Number(row.price_egp),
+    price: Number(row.price),
+    currency: row.currency,
     blurb: row.blurb ?? '',
   };
 }
 
-export function pickCurrentMembership(rows: ApiMembershipDetail[]): ApiMembershipDetail | null {
-  const today = todayIso();
-  const covering = rows.find(
-    (row) => row.state !== 'cancelled' && row.start_date <= today && today <= row.end_date,
+/**
+ * Pick the term the server considers current, using the server-provided
+ * as-of date: the term covering that date, else the nearest upcoming,
+ * else the latest purchased term. Server `end_date` values are already
+ * effective (freeze credit included).
+ */
+export function pickCurrentMembership(rows: ApiMembershipDetail[], asOf?: string): ApiMembershipDetail | null {
+  const live = rows.filter((row) => row.state !== 'cancelled');
+  if (live.length === 0) return null;
+  const today = asOf ?? todayIso();
+  const covering = live.find(
+    (row) => row.start_date <= today && today <= row.end_date,
   );
   if (covering) return covering;
-  const upcoming = rows.find((row) => row.state !== 'cancelled' && row.start_date > today);
-  if (upcoming) return upcoming;
-  return rows.find((row) => row.state !== 'cancelled') ?? null;
+  const upcoming = live
+    .filter((row) => row.start_date > today)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+  if (upcoming.length > 0) return upcoming[0];
+  return live.reduce((latest, row) => (row.end_date > latest.end_date ? row : latest), live[0]);
 }
 
 export function mapMembership(
@@ -79,11 +92,15 @@ export function mapMembership(
   const status = normalizeStatus(row.status);
   const payment = payments.find((candidate) => candidate.membership_id === row.id) ?? null;
   const amountDue = Number(row.amount_due ?? 0);
+  // Real payment data only — nothing is fabricated. A due membership that
+  // was never paid shows "No payment recorded", not an invented Cash row.
   const paymentState: PaymentState = row.state === 'cancelled'
     ? 'Complimentary'
     : amountDue > 0
       ? 'Payment due'
-      : 'Paid';
+      : payment
+        ? 'Paid'
+        : 'No payment recorded';
   return {
     id: row.id,
     planId: row.plan_id,
@@ -97,13 +114,16 @@ export function mapMembership(
           method: paymentMethodLabel(payment.method),
           state: paymentState,
           date: payment.paid_at.slice(0, 10),
-          amountEGP: payment.amount_egp !== null ? Number(payment.amount_egp) : undefined,
+          amount: payment.amount !== null ? Number(payment.amount) : undefined,
+          currency: payment.currency ?? undefined,
           receiptNumber: payment.receipt_number,
         }
-      : { method: 'Cash', state: paymentState, date: row.start_date },
+      : null,
     pauseEnds: row.pause_until ?? undefined,
     amountDue: amountDue > 0 ? amountDue : undefined,
     graceUntil: row.grace_until ?? undefined,
+    currency: row.currency ?? undefined,
+    frozenDays: row.frozen_days ?? undefined,
   };
 }
 
@@ -142,12 +162,13 @@ export function mapActivity(rows: ApiActivityDetail[]): ActivityEntry[] {
 }
 
 export function mapMemberDetail(detail: ApiMemberDetail): Member {
-  const current = pickCurrentMembership(detail.memberships);
+  const current = pickCurrentMembership(detail.memberships, detail.as_of);
   const membership = current ? mapMembership(current, detail.payments) : null;
   return {
     id: detail.member_number,
     databaseId: detail.id,
     authUserId: undefined,
+    asOf: detail.as_of,
     accountStatus: detail.account_state === 'active'
       ? 'active'
       : detail.account_state === 'suspended'
@@ -183,7 +204,7 @@ export function mapSearchRow(row: ApiSearchRow): Member {
         startDate: '',
         expiryDate: row.membership_end_date,
         status,
-        payment: { method: 'Cash', state: 'Paid', date: '' },
+        payment: null,
       };
   return {
     id: row.member_number,
@@ -226,7 +247,7 @@ export function mapNoticeRow(row: ApiNoticeTableRow): Notice {
     title: row.title,
     body: row.body,
     date: row.published_at.slice(0, 10),
-    author: row.author_name ?? 'Meridian front desk',
+    author: row.author_name ?? 'Apex front desk',
     audience: audienceMap[row.audience] ?? 'All members',
     delivered: row.delivery_count ?? 0,
     urgent: row.urgent,

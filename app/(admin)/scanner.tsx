@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { colors, useColors, radius, spacing, typography } from '@/theme/tokens';
+import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Monogram, Tag } from '@/components/Tag';
@@ -210,6 +210,7 @@ export default function Scanner() {
         title={t('scanner.findManually')}
         desc={t('scanner.findManuallyBody')}
       >
+        <KeyboardAvoidingView behavior="padding">
         <View style={{ gap: 12, marginTop: 8 }}>
           <View style={[styles.manualInput, { backgroundColor: c.surface, borderColor: c.lineStrong }]}>
             <TextInput
@@ -247,7 +248,7 @@ export default function Scanner() {
                   <ManualRow
                     key={candidate.id}
                     name={`${candidate.firstName} ${candidate.lastName}`}
-                    sub={`${candidate.id} · ${candidate.membership?.planName ?? t('common.noPlan')}`}
+                    sub={`${`\u200E${candidate.id}\u200E`} · ${candidate.membership?.planName ?? t('common.noPlan')}`}
                     tag={tagInfo.label}
                     tagVariant={tagInfo.variant}
                     busy={checkInManual.isPending}
@@ -295,7 +296,7 @@ export default function Scanner() {
               })}
             </View>
           ) : manualQuery.trim() ? (
-            <Text style={{ color: c.ink3, fontSize: 12.5, writingDirection: textDir }}>
+            <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, writingDirection: textDir }}>
               {membersQuery.isLoading ? t('scanner.searching') : t('scanner.noMatch')}
             </Text>
           ) : null}
@@ -306,6 +307,7 @@ export default function Scanner() {
             </Button>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Sheet>
     </View>
   );
@@ -333,7 +335,7 @@ function ManualRow({
   const textDir = isRtl ? 'rtl' : 'ltr';
   return (
     <View style={[styles.manualResult, { backgroundColor: c.surface2, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-      <Monogram text={name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()} size={38} fontSize={12.5} />
+      <Monogram text={name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()} size={38} fontSize={13} />
       <View style={{ flex: 1 }}>
         <Text style={[styles.manualName, { color: c.ink, writingDirection: textDir }]}>{name}</Text>
         <Text style={[styles.manualSub, { color: c.ink3, writingDirection: textDir }]}>{sub}</Text>
@@ -396,11 +398,11 @@ function ScanResult({
 
   const speechScript =
     row.verdict === 'expiring'
-      ? t('scanner.expiringPrompt', { name: row.first_name, days })
+      ? t('scanner.expiringPrompt', { name: row.first_name, days: `\u200E${days}\u200E` })
       : row.verdict === 'due'
         ? t('scanner.duePrompt', { name: row.first_name })
         : row.verdict === 'expired'
-          ? t('scanner.expiredPrompt', { date: fmtLong(row.end_date ?? '', language) })
+          ? t('scanner.expiredPrompt', { date: `\u200E${fmtLong(row.end_date ?? '', language)}\u200E` })
           : row.verdict === 'paused'
             ? t('scanner.pausedPrompt')
             : null;
@@ -417,7 +419,7 @@ function ScanResult({
         <Monogram
           text={`${row.first_name?.[0] ?? ''}${row.last_name?.[0] ?? ''}`.toUpperCase()}
           size={44}
-          fontSize={14}
+          fontSize={15}
           bg={
             meta.badge === 'ok'
               ? colors.okSoft
@@ -432,7 +434,7 @@ function ScanResult({
             {row.first_name} {row.last_name}
           </Text>
           <Text style={[styles.scanCardSub, { writingDirection: textDir }]}>
-            {row.member_number} · {row.plan_name ?? t('common.noPlan')}
+            {`\u200E${row.member_number}\u200E`} · {row.plan_name ?? t('common.noPlan')}
           </Text>
         </View>
         <Tag variant={meta.badge}>{meta.title.split(' — ')[0]}</Tag>
@@ -449,11 +451,11 @@ function ScanResult({
       <Text style={[styles.scanTime, { writingDirection: textDir }]}>
         {row.admitted
           ? row.end_date
-            ? t('scanner.admittedAt', { time: fmtTime(row.checked_in_at, language), date: fmtLong(row.end_date, language) })
-            : t('scanner.admittedAtNoEnd', { time: fmtTime(row.checked_in_at, language) })
+            ? t('scanner.admittedAt', { time: `\u200E${fmtTime(row.checked_in_at, language)}\u200E`, date: `\u200E${fmtLong(row.end_date, language)}\u200E` })
+            : t('scanner.admittedAtNoEnd', { time: `\u200E${fmtTime(row.checked_in_at, language)}\u200E` })
           : row.verdict === 'duplicate'
             ? t('scanner.duplicateBody')
-            : t('scanner.doNotAdmit', { date: fmtLong(row.end_date ?? '', language) })}
+            : t('scanner.doNotAdmit', { date: `\u200E${fmtLong(row.end_date ?? '', language)}\u200E` })}
       </Text>
 
       <View style={styles.resultCtas}>
@@ -533,21 +535,23 @@ const styles = StyleSheet.create({
   },
   readyTitle: {
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '500',
     color: colors.ink,
     textAlign: 'center',
   },
   readySub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     color: colors.ink2,
     textAlign: 'center',
     lineHeight: 18,
   },
   live: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '500',
     color: colors.ok,
   },
@@ -579,13 +583,14 @@ const styles = StyleSheet.create({
   },
   manualName: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.ink,
   },
   manualSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     color: colors.ink3,
     marginTop: 2,
   },
@@ -616,14 +621,15 @@ const styles = StyleSheet.create({
   badgeBad: { backgroundColor: colors.badSoft },
   resultTitle: {
     fontFamily: typography.display,
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '600',
     color: colors.ink,
     textAlign: 'center',
   },
   resultSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 13.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     color: colors.ink2,
     textAlign: 'center',
     lineHeight: 20,
@@ -647,13 +653,15 @@ const styles = StyleSheet.create({
   },
   scanCardSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     color: colors.ink3,
     marginTop: 2,
   },
   scanTime: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     color: colors.ink2,
     textAlign: 'center',
     lineHeight: 19,

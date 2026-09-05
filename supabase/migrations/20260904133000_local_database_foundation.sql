@@ -243,7 +243,7 @@ set
 insert into public.club_config (id, name, address, city, phone, currency, timezone, hours, qr_ttl_seconds, duplicate_checkin_window_seconds)
 values (
   1,
-  'Meridian Athletic Club',
+  'Apex Athletic Club',
   '14 El-Nakhil St., Nasser City',
   'Cairo',
   '+20 2 2619 4400',

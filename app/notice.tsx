@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useColors, radius, spacing, typography } from '@/theme/tokens';
+import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { useApp } from '@/providers/AppProvider';
-import { useMarkNoticeRead, useNotices } from '@/data/api/queries';
+import { useMarkNoticeRead, useNotices, useClub } from '@/data/api/queries';
 import { fmtLong } from '@/data/format';
-import { CLUB } from '@/data/plans';
 import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
 
@@ -41,6 +40,7 @@ export default function NoticeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { role, t, isRtl, language, darkMode } = useApp();
   const noticesQuery = useNotices(role === 'admin');
+  const clubQuery = useClub();
   const markRead = useMarkNoticeRead();
   const c = useColors(darkMode);
 
@@ -79,7 +79,7 @@ export default function NoticeDetail() {
             <Text style={[styles.kicker, { color, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(noticeCategoryKey(n.category))}</Text>
             <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{n.title}</Text>
             <Text style={[styles.byline, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-              {t('notice.byline', { author: n.author, date: noticeDate(n.date, language) })}
+              {t('notice.byline', { author: n.author, date: `\u200E${noticeDate(n.date, language)}\u200E` })}
             </Text>
           </View>
 
@@ -89,7 +89,7 @@ export default function NoticeDetail() {
 
           <View style={[styles.foot, { backgroundColor: c.bg1, borderColor: c.line }]}>
             <Text style={[styles.footText, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-              {t('notice.questions', { phone: CLUB.phone })}
+              {t('notice.questions', { phone: `\u200E${clubQuery.data?.phone ?? ''}\u200E` })}
             </Text>
           </View>
         </Body>
@@ -101,7 +101,7 @@ export default function NoticeDetail() {
 const styles = StyleSheet.create({
   appBarTitle: {
     fontFamily: typography.display,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.01,
   },
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: typography.display,
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
     lineHeight: 32,
@@ -123,6 +123,7 @@ const styles = StyleSheet.create({
   byline: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     color: '#888',
     paddingTop: 10,
     paddingBottom: 18,
@@ -134,7 +135,7 @@ const styles = StyleSheet.create({
   },
   paragraph: {
     fontFamily: typography.serif,
-    fontSize: 16,
+    fontSize: 18,
     lineHeight: 28,
   },
   foot: {
@@ -145,7 +146,8 @@ const styles = StyleSheet.create({
   },
   footText: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 18,
   },
 });

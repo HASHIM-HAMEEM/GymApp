@@ -1,14 +1,15 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, spacing, typography, radius } from '@/theme/tokens';
+import { useColors, spacing, typography, radius, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { EmptyState } from '@/components/Surfaces';
+import { LtrText } from '@/components/LtrText';
 import { Button } from '@/components/Button';
 import { Icon } from '@/components/Icon';
 import { useCurrentMember } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
-import { TODAY, fmtShort, fmtLong, formatTime } from '@/data/format';
+import { todayIso, fmtShort, fmtLong, formatTime } from '@/data/format';
 import type { Language } from '@/lib/i18n';
 
 function monthYearLabel(iso: string, language: Language): string {
@@ -32,7 +33,7 @@ export default function VisitsScreen() {
   }, [visits]);
 
   const [selectedMonth, setSelectedMonth] = React.useState<string>(
-    monthKeys.find((k) => k === TODAY.slice(0, 7)) ?? monthKeys[0] ?? TODAY.slice(0, 7)
+    monthKeys.find((k) => k === todayIso().slice(0, 7)) ?? monthKeys[0] ?? todayIso().slice(0, 7)
   );
 
   const filtered = visits
@@ -53,7 +54,7 @@ export default function VisitsScreen() {
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <Pressable onPress={() => setShowSkeleton((v) => !v)}>
-              <Text style={{ fontFamily: typography.mono, fontSize: 11, color: showSkeleton ? c.accent : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }}>
+              <Text style={{ fontFamily: typography.mono, fontSize: 11, letterSpacing: tracking.small, color: showSkeleton ? c.accent : c.ink4, writingDirection: isRtl ? 'rtl' : 'ltr' }}>
                 {showSkeleton ? t('visits.shimmerOn') : t('common.off')}
               </Text>
             </Pressable>
@@ -61,7 +62,7 @@ export default function VisitsScreen() {
           </View>
         }
       >
-        <Text style={{ fontFamily: typography.display, fontSize: 17, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('visits.title')}</Text>
+        <Text style={{ fontFamily: typography.display, fontSize: 18, fontWeight: '600', letterSpacing: -0.01, color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }}>{t('visits.title')}</Text>
       </AppBar>
       <ScrollView
         style={{ flex: 1 }}
@@ -128,14 +129,14 @@ export default function VisitsScreen() {
                   return (
                     <View key={v.id} style={[styles.vrow, { borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }, i === filtered.length - 1 && { borderBottomWidth: 0 }]}>
                       <View style={[styles.date, { backgroundColor: c.bg2, borderColor: c.line }]}>
-                        <Text style={[styles.dateD, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{dayLabel}</Text>
+                        <LtrText style={[styles.dateD, { color: c.ink }]}>{dayLabel}</LtrText>
                         <Text style={[styles.dateM, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{monthLabel}</Text>
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.time, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{sessionLabel(v.time)}</Text>
                         <Text style={[styles.loc, { color: c.ink3, fontFamily: typography.mono, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
                           {t('visits.detail', {
-                            time: formatTime(v.time, language),
+                            time: `\u200E${formatTime(v.time, language)}\u200E`,
                             method: v.method === 'qr' ? t('visits.qrScan') : t('visits.frontDesk'),
                             reception: v.reception,
                           })}
@@ -157,7 +158,8 @@ export default function VisitsScreen() {
 const styles = StyleSheet.create({
   headStat: {
     fontFamily: typography.mono,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   chip: {
     paddingHorizontal: 14,
@@ -168,6 +170,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '500',
   },
   list: {
@@ -192,13 +195,13 @@ const styles = StyleSheet.create({
   },
   dateD: {
     fontFamily: typography.display,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     lineHeight: 17,
   },
   dateM: {
     fontFamily: typography.fontFamily,
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.1,
     textTransform: 'uppercase',
@@ -206,11 +209,12 @@ const styles = StyleSheet.create({
   },
   time: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   loc: {
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
 });

@@ -1,15 +1,14 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Monogram, SectionLabel, StatusDot, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
-import { useDashboard } from '@/data/api/queries';
-import { fmtShort, fmtTime, daysBetween, TODAY } from '@/data/format';
-import { CLUB } from '@/data/plans';
+import { useDashboard, useClub } from '@/data/api/queries';
+import { fmtShort, fmtTime, daysBetween, todayIso } from '@/data/format';
 import type { ColorSet } from '@/theme/tokens';
 import type { Language } from '@/lib/i18n';
 
@@ -17,8 +16,10 @@ export default function AdminToday() {
   const router = useRouter();
   const { adminName, darkMode, t, isRtl, language } = useApp();
   const dashboardQuery = useDashboard();
+  const clubQuery = useClub();
   const c = useColors(darkMode);
   const data = dashboardQuery.data;
+  const today = todayIso(clubQuery.data?.timezone);
   const textDir = isRtl ? 'rtl' : 'ltr';
 
   const greeting = (() => {
@@ -41,7 +42,7 @@ export default function AdminToday() {
         <Text style={[styles.hi, { color: c.ink, writingDirection: textDir }]}>
           {t('adminToday.greetingWithName', { greeting, name: adminName ? adminName.split(' ')[0] : '' })}
         </Text>
-        <Text style={[styles.sub, { color: c.ink3, writingDirection: textDir }]}>{t('adminToday.clubDesk', { club: CLUB.name })}</Text>
+        <Text style={[styles.sub, { color: c.ink3, writingDirection: textDir }]}>{t('adminToday.clubDesk', { club: clubQuery.data?.name ?? '' })}</Text>
       </View>
 
       <View style={styles.actions}>
@@ -81,7 +82,7 @@ export default function AdminToday() {
           label={t('adminToday.checkIns')}
           icon="checkc"
           value={data?.check_ins_today ?? 0}
-          sub={recent[0] ? t('adminToday.lastAt', { time: fmtTime(recent[0].checked_in_at, language) }) : t('adminToday.noneToday')}
+          sub={recent[0] ? t('adminToday.lastAt', { time: `\u200E${fmtTime(recent[0].checked_in_at, language)}\u200E` }) : t('adminToday.noneToday')}
           c={c}
         />
       </View>
@@ -95,7 +96,7 @@ export default function AdminToday() {
             pressed && { opacity: 0.6 },
           ]}
         >
-          <Monogram text="IV" size={36} fontSize={12} />
+          <Monogram text="IV" size={36} fontSize={13} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[styles.inviteTitle, { color: c.ink, writingDirection: textDir }]}>{t('adminToday.invitationsWaiting')}</Text>
             <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
@@ -122,7 +123,7 @@ export default function AdminToday() {
         ) : (
           <View style={[styles.tbl, { backgroundColor: c.bg1, borderColor: c.line }]}>
             {expiring.slice(0, 4).map((m) => {
-              const days = m.end_date ? daysBetween(m.end_date, TODAY) : 0;
+              const days = m.end_date ? daysBetween(m.end_date, today) : 0;
               return (
                 <Pressable
                   key={m.member_id}
@@ -131,16 +132,16 @@ export default function AdminToday() {
                 >
                   <View style={[styles.expTop, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                     <View style={[styles.expLeft, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                      <Monogram text={`${m.first_name[0]}${m.last_name[0]}`.toUpperCase()} size={36} fontSize={12} />
+                      <Monogram text={`${m.first_name[0]}${m.last_name[0]}`.toUpperCase()} size={36} fontSize={13} />
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={[styles.expName, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>{m.first_name} {m.last_name}</Text>
-                        <Text style={[styles.expSub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{m.plan_name ?? t('common.noPlan')} · {m.member_number}</Text>
+                        <Text style={[styles.expSub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{m.plan_name ?? t('common.noPlan')} · {`\u200E${m.member_number}\u200E`}</Text>
                       </View>
                     </View>
                     <Tag variant="warn">{t('adminToday.daysShort', { count: Math.max(0, days) })}</Tag>
                   </View>
                   <View style={styles.expBottom}>
-                    <Text style={[styles.expDate, { color: c.ink2, writingDirection: textDir }]}>{t('adminToday.ends', { date: m.end_date ? fmtShort(m.end_date, language) : '-' })}</Text>
+                    <Text style={[styles.expDate, { color: c.ink2, writingDirection: textDir }]}>{t('adminToday.ends', { date: `\u200E${m.end_date ? fmtShort(m.end_date, language) : '-'}\u200E` })}</Text>
                     <Button size="sm" onPress={() => router.push({ pathname: '/renew', params: { id: m.member_number } })}>{t('adminToday.renew')}</Button>
                   </View>
                 </Pressable>
@@ -167,7 +168,7 @@ export default function AdminToday() {
                     {t('adminToday.checkInDetail', { source: ci.source === 'qr' ? t('visits.qrScan') : t('visits.frontDesk'), reception: ci.reception ?? 'A' })}
                   </Text>
                 </View>
-                <Text style={[styles.ciTime, { color: c.ink, writingDirection: textDir }]}>
+                <Text style={[styles.ciTime, { color: c.ink, writingDirection: 'ltr' }]}>
                   {fmtTime(ci.checked_in_at, language)}
                 </Text>
               </View>
@@ -213,13 +214,14 @@ function StatCell({ label, dot, icon, value, sub, valueColor, c, borderRight, bo
 const styles = StyleSheet.create({
   hi: {
     fontFamily: typography.fontFamily,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
   },
   sub: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
   },
   actions: { flexDirection: 'row', gap: 10 },
   statGrid: {
@@ -252,14 +254,15 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: typography.display,
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '600',
     letterSpacing: -0.02,
     marginTop: 4,
   },
   statSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   inviteRow: {
     flexDirection: 'row',
@@ -271,12 +274,13 @@ const styles = StyleSheet.create({
   },
   inviteTitle: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   inviteSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 18,
     marginTop: 2,
   },
@@ -301,6 +305,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
   },
   expRow: {
     paddingVertical: 14,
@@ -322,12 +327,13 @@ const styles = StyleSheet.create({
   },
   expName: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   expSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   expBottom: {
@@ -338,7 +344,8 @@ const styles = StyleSheet.create({
   },
   expDate: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   ciRow: {
     flexDirection: 'row',
@@ -350,17 +357,19 @@ const styles = StyleSheet.create({
   },
   ciName: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   ciSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   ciTime: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '600',
     flexShrink: 0,
   },

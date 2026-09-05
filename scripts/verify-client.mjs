@@ -38,9 +38,10 @@ const format = runModule('src/data/format.ts', {
   '@/lib/i18n': i18n,
 });
 
-const en = fs.readFileSync(path.join(root, 'src/lib/i18n.ts'), 'utf8');
-const enKeys = [...en.matchAll(/^  '([a-zA-Z0-9.]+)':/gm)].map((m) => m[1]);
-const urSection = en.slice(en.indexOf('const ur'));
+const source = fs.readFileSync(path.join(root, 'src/lib/i18n.ts'), 'utf8');
+const enSection = source.slice(source.indexOf('const en'), source.indexOf('const ur'));
+const urSection = source.slice(source.indexOf('const ur'));
+const enKeys = [...enSection.matchAll(/^  '([a-zA-Z0-9.]+)':/gm)].map((m) => m[1]);
 const urKeys = [...urSection.matchAll(/^  '([a-zA-Z0-9.]+)':/gm)].map((m) => m[1]);
 const placeholders = (s) => new Set([...String(s).matchAll(/%\{(\w+)\}/g)].map((m) => m[1]));
 
@@ -57,10 +58,24 @@ const placeholders = (s) => new Set([...String(s).matchAll(/%\{(\w+)\}/g)].map((
     const b = [...placeholders(urV)].sort().join(',');
     if (a !== b) mismatches.push(`${key} [${a}] vs [${b}]`);
   }
-  const known = ['member.homeGreeting [name,period] vs [name]'];
-  const unexpected = [...new Set(mismatches)].filter((m) => !known.includes(m));
-  check('dictionary interpolation parity', unexpected.length === 0, unexpected.join(' | '));
-  if (mismatches.length) console.log(`note - interpolation exceptions: ${mismatches.join(' | ')}`);
+  check('dictionary interpolation parity', mismatches.length === 0, mismatches.join(' | '));
+}
+
+{
+  eq('interpolation preserves literal $&',
+    translate('en', 'member.greetingWithName', { greeting: 'a$&b', name: 'x' }), 'a$&b, x');
+  eq('interpolation preserves literal backtick-dollar',
+    translate('en', 'member.greetingWithName', { greeting: "a$`b", name: 'x' }), 'a$`b, x');
+  eq('interpolation preserves literal dollar-quote',
+    translate('en', 'member.greetingWithName', { greeting: "a$'b", name: 'x' }), "a$'b, x");
+  eq('interpolation is single-pass (no placeholder reprocessing)',
+    translate('en', 'member.greetingWithName', { greeting: '%{name}', name: 'x' }), '%{name}, x');
+  eq('interpolation preserves unknown placeholders',
+    translate('en', 'member.greetingWithName', { name: 'x' }), '%{greeting}, x');
+  eq('interpolation replaces repeated placeholders',
+    translate('en', 'member.greetingWithName', { greeting: 'Hi', name: 'Hi' }), 'Hi, Hi');
+  eq('interpolation handles urdu and punctuation',
+    translate('ur', 'member.greetingWithName', { greeting: 'شام', name: 'Ahmad$&' }), 'Ahmad$&، شام');
 }
 
 eq('fmtLong en', format.fmtLong('2026-09-24'), '24 Sep 2026');
@@ -85,7 +100,7 @@ eq('fmtDateTime with seconds', format.fmtDateTime('2026-09-18T18:41:30'), '18 Se
 eq('fmtTime from datetime', format.fmtTime('2026-09-18T18:41:30'), '6:41 PM');
 
 {
-  const today = new Date(format.TODAY + 'T00:00:00Z');
+  const today = new Date(format.todayIso() + 'T00:00:00Z');
   const later = new Date(today.getTime() + 5 * 86400000).toISOString().slice(0, 10);
   const visEn = format.statusVisual('expiring', { expiryDate: later });
   const visUr = format.statusVisual('expiring', { expiryDate: later }, undefined, 'ur');
@@ -93,6 +108,11 @@ eq('fmtTime from datetime', format.fmtTime('2026-09-18T18:41:30'), '6:41 PM');
   eq('statusVisual ur tag', visUr.tagLabel, 'جلد ختم ہونے والی');
   check('statusVisual ur banner localized', visUr.bannerText.includes('تجدید'), visUr.bannerText);
   check('statusVisual en banner localized', visEn.bannerText.includes('Renew'), visEn.bannerText);
+  eq('todayIso defaults to the club timezone date', format.todayIso().length, 10);
+  eq('todayIso accepts an explicit timezone', format.todayIso('UTC').length, 10);
+  eq('formatMoney renders INR with the rupee symbol', format.formatMoney(2499, 'INR'), '₹2,499');
+  eq('formatMoney renders EGP for historical rows', format.formatMoney(1500, 'EGP'), 'E£1,500');
+  eq('formatMoney renders urdu interpolation safely', format.formatMoney(19.99, 'INR', 'ur'), '₹19.99');
 }
 
 const recordedKeys = [];
@@ -117,7 +137,7 @@ const env = {
 };
 const supabaseMod = runModule('src/lib/supabase.ts', {
   'react-native-url-polyfill/auto': {},
-  'expo-linking': { createURL: () => 'meridian://confirm' },
+  'expo-linking': { createURL: () => 'apex://confirm' },
   'expo-secure-store': secureStore,
   'react-native': { Platform: { OS: 'ios' }, AppState: { addEventListener: () => ({ remove: () => {} }) } },
   '@supabase/supabase-js': { createClient: (url, key, opts) => { captured = opts; return { auth: {} }; } },

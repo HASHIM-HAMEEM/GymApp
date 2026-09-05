@@ -63,14 +63,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: typography.display,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   body: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
     maxWidth: 310,

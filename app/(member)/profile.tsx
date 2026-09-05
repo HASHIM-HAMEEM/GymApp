@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
 import { Monogram } from '@/components/Tag';
@@ -44,16 +44,16 @@ export default function ProfileScreen() {
       >
         <Body style={{ gap: 16 }}>
           {authError ? (
-            <Text style={{ color: c.bad, fontSize: 13, lineHeight: 19 }}>{authError}</Text>
+            <Text style={{ color: c.bad, fontSize: 13, letterSpacing: tracking.small, lineHeight: 19 }}>{authError}</Text>
           ) : null}
 
           <View style={[styles.head, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-            <Monogram text={initials} size={62} fontSize={20} />
+            <Monogram text={initials} size={62} fontSize={18} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.name, { color: c.ink, textAlign: isRtl ? 'right' : 'left' }]}>
+              <Text style={[styles.name, { color: c.ink, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
                 {m ? `${m.firstName} ${m.lastName}` : t('common.loading')}
               </Text>
-              <Text style={[styles.sub, { color: c.ink3, textAlign: isRtl ? 'right' : 'left' }]}>
+              <Text style={[styles.sub, { color: c.ink3, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
                 {m ? `${m.id} · ${t('profile.joined', { date: m.memberSince })}` : ''}
               </Text>
             </View>
@@ -66,7 +66,6 @@ export default function ProfileScreen() {
             {m?.emergencyName ? (
               <ProfileRow label={t('profile.emergency')} value={`${m.emergencyName} · ${m.emergencyPhone ?? ''}`} />
             ) : null}
-            <ProfileRow label={t('profile.nationalId')} value={m?.nationalId || '—'} />
             <ProfileRow label={t('profile.address')} value={m?.address || '—'} last />
           </View>
 
@@ -88,8 +87,8 @@ function ProfileRow({ label, value, last }: { label: string; value: string; last
         { borderBottomWidth: last ? 0 : 1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' },
       ]}
     >
-      <Text style={[styles.key, { color: c.ink3, textAlign: isRtl ? 'right' : 'left' }]}>{label}</Text>
-      <Text style={[styles.value, { color: c.ink, textAlign: isRtl ? 'left' : 'right' }]} numberOfLines={1}>
+      <Text style={[styles.key, { color: c.ink3, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{label}</Text>
+      <Text style={[styles.value, { color: c.ink, textAlign: isRtl ? 'left' : 'right', writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
         {value}
       </Text>
     </View>
@@ -104,12 +103,13 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: typography.display,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
   },
   sub: {
     fontFamily: typography.mono,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 5,
   },
   list: {
@@ -130,6 +130,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
   },
   value: {
     flex: 1,

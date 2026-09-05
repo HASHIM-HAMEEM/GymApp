@@ -14,6 +14,7 @@ function RootNav() {
   const pathname = usePathname();
   const router = useRouter();
   const c = useColors(darkMode);
+  const handledResponses = React.useRef(new Set<string>());
 
   React.useEffect(() => {
     if (!authLoading) SplashScreen.hide();
@@ -21,7 +22,13 @@ function RootNav() {
 
   React.useEffect(() => {
     if (authLoading || !session) return;
-    return subscribeToNotificationResponses((url) => router.push(url as never));
+    return subscribeToNotificationResponses((url, responseId) => {
+      if (responseId) {
+        if (handledResponses.current.has(responseId)) return;
+        handledResponses.current.add(responseId);
+      }
+      router.push(url as never);
+    });
   }, [authLoading, router, session]);
 
   React.useEffect(() => {
@@ -107,8 +114,9 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
     return <View style={{ flex: 1, direction: isRtl ? 'rtl' : 'ltr' }}>{children}</View>;
   }
 
-  const frameWidth = Math.min(390, Math.max(280, width - 24));
-  const frameHeight = Math.min(844, Math.max(480, height - 24));
+  const mobile = width < 600;
+  const frameWidth = mobile ? width : Math.min(390, width - 24);
+  const frameHeight = mobile ? height : Math.min(844, height - 24);
 
   return (
     <View style={[webStyles.backdrop, { backgroundColor: darkMode ? '#0A0A0A' : '#EDEDED' }]}>
@@ -118,7 +126,8 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
           {
             width: frameWidth,
             height: frameHeight,
-            borderRadius: frameWidth < 360 ? 34 : 46,
+            borderRadius: mobile ? 0 : 46,
+            borderWidth: mobile ? 0 : 1,
             backgroundColor: c.bg,
             borderColor: darkMode ? '#2A2A2A' : '#D6D6D6',
           },

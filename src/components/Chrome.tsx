@@ -111,7 +111,7 @@ export function AppBar({ title, onBack, onClose, right, sub, dark, children }: A
           <Text
             style={{
               fontFamily: typography.display,
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: '600',
               letterSpacing: -0.01,
               color: c.ink,
@@ -123,7 +123,8 @@ export function AppBar({ title, onBack, onClose, right, sub, dark, children }: A
             <Text
               style={{
                 fontFamily: typography.mono,
-                fontSize: 12,
+                fontSize: 13,
+                letterSpacing: tracking.small,
                 color: c.ink3,
                 marginLeft: 6,
               }}
@@ -159,7 +160,7 @@ export interface TabBarProps {
 
 export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
   const insets = useSafeAreaInsets();
-  const { darkMode } = useApp();
+  const { darkMode, t } = useApp();
   const isDark = dark || darkMode;
   const c = useColors(isDark);
 
@@ -213,6 +214,8 @@ export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
         <View style={{ width: 68, alignItems: 'center' }}>
           <Link href={fab.href} asChild>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.add')}
               style={{
                 width: 52,
                 height: 52,
@@ -364,7 +367,7 @@ export function Greeting({ hi, name }: { hi: string; name: string }) {
       <Text
         style={{
           fontFamily: typography.display,
-          fontSize: 19,
+          fontSize: 18,
           fontWeight: '600',
           color: c.ink,
           letterSpacing: -0.015,

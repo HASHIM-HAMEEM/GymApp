@@ -3,7 +3,7 @@ import { Svg, Circle, Path } from 'react-native-svg';
 import { useColors } from '@/theme/tokens';
 import { useApp } from '@/data/store';
 
-/** Meridian V2 mark — horizon arc crossing a circle. */
+/** Apex V2 mark — horizon arc crossing a circle. */
 export function Logo({
   size = 48,
   color,

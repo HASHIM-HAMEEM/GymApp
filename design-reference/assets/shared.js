@@ -1,5 +1,5 @@
 /* ============================================================
-   MERIDIAN V2 · shared.js — icon system, device chrome, QR
+   APEX V2 · shared.js — icon system, device chrome, QR
    ============================================================ */
 
 const ICONS = {
@@ -52,9 +52,9 @@ function iconSVG(name, size = 20, cls = '') {
   return `<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 }
 
-/* Meridian mark — horizon arc */
+/* Apex mark — horizon arc */
 function logoSVG(size = 28, cls = '') {
-  return `<svg class="${cls}" width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" aria-label="Meridian" role="img"><circle cx="24" cy="24" r="19" stroke="currentColor" stroke-width="3"/><path d="M5 24 H43" stroke="currentColor" stroke-width="3"/><circle cx="35.4" cy="24" r="5.6" fill="currentColor"/></svg>`;
+  return `<svg class="${cls}" width="${size}" height="${size}" viewBox="0 0 48 48" fill="none" aria-label="Apex" role="img"><circle cx="24" cy="24" r="19" stroke="currentColor" stroke-width="3"/><path d="M5 24 H43" stroke="currentColor" stroke-width="3"/><circle cx="35.4" cy="24" r="5.6" fill="currentColor"/></svg>`;
 }
 
 /* Status bar — iOS chrome */

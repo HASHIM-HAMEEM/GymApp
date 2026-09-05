@@ -53,7 +53,7 @@ const queryClient = new QueryClient({
 });
 
 function mapProfile(row: Record<string, unknown>): AppProfile {
-  const name = String(row.display_name ?? 'Meridian member');
+  const name = String(row.display_name ?? 'Apex member');
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
@@ -95,6 +95,7 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
   );
   const [notificationState, setNotificationState] = React.useState<NotificationState>('prompt');
   const pushToken = React.useRef<string | null>(null);
+  const previousUserId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!supabase) return;
@@ -106,9 +107,13 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
       setInitialized(true);
     });
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      const nextUserId = nextSession?.user.id ?? null;
+      if (previousUserId.current !== nextUserId) {
+        cache.clear();
+        previousUserId.current = nextUserId;
+      }
       setSession(nextSession);
       setInitialized(true);
-      if (!nextSession) cache.clear();
     });
     const stopRefreshListener = listenForAuthRefresh();
     return () => {
@@ -158,7 +163,7 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (profileQuery.error) {
-      setAuthError('This account is not connected to a Meridian profile. Ask an administrator for help.');
+      setAuthError('This account is not connected to a Apex profile. Ask an administrator for help.');
     }
   }, [profileQuery.error]);
 

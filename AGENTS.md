@@ -2,7 +2,7 @@
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
 
-# Meridian — Boutique Gym Membership App
+# Apex — Boutique Gym Membership App
 
 Expo Router + TypeScript on a Supabase backend (Postgres + Auth + Edge Functions). Two roles: member + admin. **No SMS anywhere** — email only, via Supabase Auth with Resend custom SMTP (configured in the dashboard, not in code).
 
@@ -29,7 +29,7 @@ Expo Router + TypeScript on a Supabase backend (Postgres + Auth + Edge Functions
 
 ## Backend layout (`supabase/`)
 
-- `config.toml` — local auth settings: signup off, email confirmations on, 15-min OTP expiry, Mailpit at :54324, redirect allow-list (`meridian://**`, `http://localhost:8081/**`, `exp://**`)
+- `config.toml` — local auth settings: signup off, email confirmations on, 15-min OTP expiry, Mailpit at :54324, redirect allow-list (`apex://**`, `http://localhost:8081/**`, `exp://**`)
 - `migrations/` — chronological SQL, all verified against a throwaway Postgres instance and applied to the hosted project: (1) schema + RLS + core RPCs; (2) invitation operations + member views; (3) profiles.reception; (4) permission/index hardening + consolidated RLS policies; (5) account lifecycle fixes (first-admin onboarding, single-attempt counting, active-only `current_member_id`); (6) fast rotating QR passes; (7) club settings + cancelled-last status ordering.
 - `templates/` — invite + recovery emails using one-time `{{ .TokenHash }}` links to `{{ .RedirectTo }}` (hosted project: equivalents configured in Dashboard → Auth → Emails).
 - `functions/` — Deno Edge Functions (`create-member-invitation`, `resend-member-invitation`) with `_shared/` helpers. Pinned `npm:@supabase/supabase-js@2.112.4`. Checked with the shim in `runtime.d.ts` (see Verification below).
@@ -85,7 +85,7 @@ Copy `.env.example` → `.env.local`. App needs `EXPO_PUBLIC_SUPABASE_URL` + `EX
 
 ## Design Craft (Refero Skill)
 
-Meridian follows the `refero-design` skill recorded in `skills-lock.json`. Apply these conventions to UI work.
+Apex follows the `refero-design` skill recorded in `skills-lock.json`. Apply these conventions to UI work.
 
 ### Typography
 - Type scale uses max 6–8 sizes. Preferred set: **11, 13, 15, 18, 26, 30 px** (Minor Third 1.200).
@@ -117,7 +117,7 @@ Meridian follows the `refero-design` skill recorded in `skills-lock.json`. Apply
 - Empty states should teach and guide.
 
 ### Anti-AI-Slop Watchlist
-- Dark-by-default is intentional for Meridian's monochrome brand — keep it.
+- Dark-by-default is intentional for Apex's monochrome brand — keep it.
 - Avoid generic AI tells: indigo/violet defaults, cards everywhere, emoji icons, left accent stripes, fake graphics, token role drift.
 - Prefer sections with dividers over card wrappers where appropriate.
 

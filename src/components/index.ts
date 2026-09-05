@@ -9,4 +9,5 @@ export * from './MembershipCard';
 export * from './Timeline';
 export * from './QrCode';
 export * from './Overlays';
+export * from './LtrText';
 export { StatusBar } from './Chrome';

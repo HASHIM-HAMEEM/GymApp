@@ -91,8 +91,30 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((da - db) / 86400000);
 }
 
-/** Today's ISO date in the club's timezone (Africa/Cairo). */
-export const TODAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo' }).format(new Date());
+/** Today's ISO date in a timezone (club default: Asia/Kolkata). */
+export function todayIso(timeZone: string = 'Asia/Kolkata'): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date());
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  INR: '₹',
+  EGP: 'E£',
+  USD: '$',
+  AED: 'AED ',
+};
+
+/** Currency-aware money label, e.g. "₹2,499" for INR. */
+export function formatMoney(
+  amount: number | null | undefined,
+  currency: string | undefined,
+  language?: Language,
+): string {
+  const symbol = CURRENCY_SYMBOLS[currency ?? 'INR'] ?? `${currency ?? ''} `;
+  return translate(language ?? 'en', 'common.money', {
+    symbol,
+    amount: (amount ?? 0).toLocaleString('en-IN'),
+  });
+}
 
 export interface StatusVisual {
   tagLabel: string;
@@ -110,10 +132,11 @@ export function statusVisual(status: MembershipStatus, membership: {
   amountDue?: number;
   pauseEnds?: string;
   graceUntil?: string;
+  currency?: string;
 }, cs?: ColorSet, language: Language = 'en'): StatusVisual {
   const c = cs ?? colors as ColorSet;
-  const days = daysBetween(membership.expiryDate, TODAY);
-  const egpAmount = translate(language, 'common.egpAmount', { amount: membership.amountDue?.toLocaleString() ?? '1,500' });
+  const days = daysBetween(membership.expiryDate, todayIso());
+  const dueAmount = formatMoney(membership.amountDue, membership.currency, language);
 
   switch (status) {
     case 'active':
@@ -169,7 +192,7 @@ export function statusVisual(status: MembershipStatus, membership: {
         nowColor: c.accent,
         endColor: c.accent,
         bannerVariant: 'warn',
-        bannerText: translate(language, 'status.dueBanner', { amount: egpAmount }),
+        bannerText: translate(language, 'status.dueBanner', { amount: dueAmount }),
       };
     case 'upcoming':
       return {
@@ -195,10 +218,10 @@ export function statusVisual(status: MembershipStatus, membership: {
   }
 }
 
-/** Compute timeline fill % from start → today → end. */
-export function timelineFill(startDate: string, endDate: string): { fill: number; now: number } {
+/** Compute timeline fill % from start → as-of → end. */
+export function timelineFill(startDate: string, endDate: string, asOf?: string): { fill: number; now: number } {
   const total = daysBetween(endDate, startDate);
-  const done = daysBetween(TODAY, startDate);
+  const done = daysBetween(asOf ?? todayIso(), startDate);
   if (total <= 0) return { fill: 100, now: -1 };
   const fill = Math.max(0, Math.min(100, Math.round((done / total) * 100)));
   return { fill, now: fill };

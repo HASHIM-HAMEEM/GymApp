@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
 import { ConfirmModal } from '@/components/Overlays';
 import { Banner } from '@/components/Surfaces';
+import { LtrText } from '@/components/LtrText';
 import { useDeleteNotice, useNotices } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
@@ -69,7 +70,7 @@ export default function AdminNotices() {
         <Body>
           {deleteError ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{deleteError}</Text></Banner> : null}
           {notices.length === 0 ? (
-            <Text style={{ color: c.ink3, fontSize: 13, textAlign: 'center', paddingVertical: 24, writingDirection: textDir }}>
+            <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, textAlign: 'center', paddingVertical: 24, writingDirection: textDir }}>
               {noticesQuery.isLoading ? t('notices.loading') : t('notices.adminEmpty')}
             </Text>
           ) : (
@@ -92,9 +93,9 @@ export default function AdminNotices() {
                       <Text style={[styles.cat, { color, textAlign: isRtl ? 'right' : 'left', writingDirection: textDir }]}>{t(categoryKey[n.category])}</Text>
                       <View style={styles.grow}>
                         <Text style={[styles.title, { color: c.ink, writingDirection: textDir }]} numberOfLines={2}>{n.title}</Text>
-                        <Text style={[styles.dt, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>
+                        <LtrText style={[styles.dt, { color: c.ink3 }]} numberOfLines={1}>
                           {fmtShort(n.date, language)} · {t(audienceKey[n.audience])} · {t('notices.delivered', { count: n.delivered.toLocaleString() })}
-                        </Text>
+                        </LtrText>
                       </View>
                     </Pressable>
                     <TextButton color={c.bad} onPress={() => setSelectedNotice(n)}><Text style={{ writingDirection: textDir }}>{t('common.delete')}</Text></TextButton>
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
     width: 62,
     flexShrink: 0,
     fontFamily: typography.mono,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.9,
     textTransform: 'uppercase',
@@ -154,13 +155,14 @@ const styles = StyleSheet.create({
   grow: { flex: 1, minWidth: 0 },
   title: {
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '600',
     lineHeight: 19,
   },
   dt: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     color: '#888',
     marginTop: 4,
   },

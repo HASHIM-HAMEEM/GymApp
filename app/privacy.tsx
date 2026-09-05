@@ -4,16 +4,15 @@ import { useRouter } from 'expo-router';
 import { AppBar, Body } from '@/components/Chrome';
 import { Icon, type IconName } from '@/components/Icon';
 import { useClub } from '@/data/api/queries';
-import { CLUB } from '@/data/plans';
 import { useApp } from '@/providers/AppProvider';
-import { radius, typography, useColors } from '@/theme/tokens';
+import { radius, typography, useColors, tracking } from '@/theme/tokens';
 
 export default function PrivacyScreen() {
   const router = useRouter();
   const { darkMode, isRtl, t } = useApp();
   const c = useColors(darkMode);
   const clubQuery = useClub();
-  const phone = clubQuery.data?.phone ?? CLUB.phone;
+  const phone = clubQuery.data?.phone;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -22,12 +21,12 @@ export default function PrivacyScreen() {
         <Body style={{ gap: 16 }}>
           <View style={[styles.promise, { backgroundColor: c.accentSoft, borderColor: c.line2 }]}>
             <Icon name="shield" size={24} color={c.accentHi} />
-            <Text style={[styles.promiseText, { color: c.ink, textAlign: isRtl ? 'right' : 'left' }]}>
+            <Text style={[styles.promiseText, { color: c.ink, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
               {t('privacy.promise')}
             </Text>
           </View>
 
-          <Text style={[styles.intro, { color: c.ink2, textAlign: isRtl ? 'right' : 'left' }]}>
+          <Text style={[styles.intro, { color: c.ink2, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {t('privacy.intro')}
           </Text>
 
@@ -38,7 +37,7 @@ export default function PrivacyScreen() {
             <PrivacyRow icon="info" title={t('privacy.controlTitle')} body={t('privacy.controlBody')} last />
           </View>
 
-          <Text style={[styles.contact, { color: c.ink3, textAlign: isRtl ? 'right' : 'left' }]}>
+          <Text style={[styles.contact, { color: c.ink3, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {t('privacy.contact', { phone })}
           </Text>
         </Body>
@@ -62,8 +61,8 @@ function PrivacyRow({ icon, title, body, last }: { icon: IconName; title: string
         <Icon name={icon} size={19} color={c.ink2} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.title, { color: c.ink, textAlign: isRtl ? 'right' : 'left' }]}>{title}</Text>
-        <Text style={[styles.body, { color: c.ink3, textAlign: isRtl ? 'right' : 'left' }]}>{body}</Text>
+        <Text style={[styles.title, { color: c.ink, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{title}</Text>
+        <Text style={[styles.body, { color: c.ink3, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{body}</Text>
       </View>
     </View>
   );
@@ -89,7 +88,7 @@ const styles = StyleSheet.create({
   },
   intro: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
   },
   list: {
@@ -118,12 +117,14 @@ const styles = StyleSheet.create({
   body: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 20,
     marginTop: 5,
   },
   contact: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     lineHeight: 18,
     paddingHorizontal: 4,
   },

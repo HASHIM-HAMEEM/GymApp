@@ -1,4 +1,4 @@
-project_id = "meridian"
+project_id = "apex"
 
 [api]
 enabled = true
@@ -43,8 +43,8 @@ enabled = true
 port = 54324
 smtp_port = 54325
 pop3_port = 54326
-admin_email = "hello@meridian.local"
-sender_name = "Meridian Athletic Club"
+admin_email = "hello@apex.local"
+sender_name = "Apex Athletic Club"
 
 [storage]
 enabled = false
@@ -54,7 +54,7 @@ file_size_limit = "50MiB"
 enabled = true
 site_url = "http://localhost:8081"
 additional_redirect_urls = [
-  "meridian://**",
+  "apex://**",
   "http://localhost:8081/**",
   "https://localhost:8081/**",
   "exp://**",
@@ -87,11 +87,11 @@ otp_length = 6
 otp_expiry = 900
 
 [auth.email.template.invite]
-subject = "Your Meridian membership invitation"
+subject = "Your Apex membership invitation"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.recovery]
-subject = "Reset your Meridian password"
+subject = "Reset your Apex password"
 content_path = "./supabase/templates/recovery.html"
 
 [auth.sms]

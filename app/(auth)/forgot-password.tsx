@@ -44,7 +44,7 @@ export default function ForgotPassword() {
 
   const titleStyle = {
     fontFamily: typography.display,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.01,
     color: c.ink,
@@ -145,13 +145,13 @@ const styles = StyleSheet.create({
   },
   sentTitle: {
     fontFamily: typography.display,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
   },
   sentBody_: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   lede: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 10,
     lineHeight: 22,
   },

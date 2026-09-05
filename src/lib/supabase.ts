@@ -13,6 +13,38 @@ function secureKey(key: string, suffix?: string) {
   return suffix ? `${normalized}.${suffix}` : normalized;
 }
 
+function utf8ByteLength(value: string): number {
+  if (typeof TextEncoder !== 'undefined') return new TextEncoder().encode(value).length;
+  let bytes = 0;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xd800 && code <= 0xdbff) { bytes += 4; i++; }
+    else bytes += 3;
+  }
+  return bytes;
+}
+
+function chunkByBytes(value: string, maxBytes: number): string[] {
+  const chunks: string[] = [];
+  let start = 0;
+  for (let i = 0; i < value.length; i++) {
+    if (utf8ByteLength(value.slice(start, i + 1)) > maxBytes) {
+      chunks.push(value.slice(start, i));
+      start = i;
+    }
+  }
+  if (start < value.length) chunks.push(value.slice(start));
+  return chunks;
+}
+
+export function parseManifestCount(raw: string | null): number | null {
+  if (raw === null) return null;
+  const count = Number.parseInt(raw, 10);
+  return Number.isFinite(count) && count >= 1 ? count : null;
+}
+
 const webStorage = {
   async getItem(key: string) {
     return typeof localStorage === 'undefined' ? null : localStorage.getItem(key);
@@ -25,32 +57,50 @@ const webStorage = {
   },
 };
 
+async function repairOrphans(key: string, count: number) {
+  await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      SecureStore.deleteItemAsync(secureKey(key, String(index))).catch(() => undefined),
+    ),
+  );
+  await SecureStore.deleteItemAsync(secureKey(key, 'chunks')).catch(() => undefined);
+}
+
 const secureStorage = {
   async getItem(key: string) {
-    const countValue = await SecureStore.getItemAsync(secureKey(key, 'chunks'));
-    if (!countValue) return SecureStore.getItemAsync(secureKey(key));
-    const count = Number.parseInt(countValue, 10);
-    if (!Number.isFinite(count) || count < 1) return null;
+    const count = parseManifestCount(await SecureStore.getItemAsync(secureKey(key, 'chunks')));
+    if (count === null) return SecureStore.getItemAsync(secureKey(key));
     const values = await Promise.all(
       Array.from({ length: count }, (_, index) => SecureStore.getItemAsync(secureKey(key, String(index)))),
     );
-    return values.some((value) => value === null) ? null : values.join('');
+    if (values.some((value) => value === null)) {
+      await repairOrphans(key, count);
+      return null;
+    }
+    return values.join('');
   },
   async setItem(key: string, value: string) {
-    await this.removeItem(key);
-    const chunks = Array.from(
-      { length: Math.ceil(value.length / chunkSize) },
-      (_, index) => value.slice(index * chunkSize, (index + 1) * chunkSize),
-    );
-    await Promise.all(
-      chunks.map((chunk, index) => SecureStore.setItemAsync(secureKey(key, String(index)), chunk)),
-    );
+    const previousCount = parseManifestCount(await SecureStore.getItemAsync(secureKey(key, 'chunks'))) ?? 0;
+    const chunks = chunkByBytes(value, chunkSize);
+    try {
+      await Promise.all(
+        chunks.map((chunk, index) => SecureStore.setItemAsync(secureKey(key, String(index)), chunk)),
+      );
+    } catch {
+      return;
+    }
     await SecureStore.setItemAsync(secureKey(key, 'chunks'), String(chunks.length));
+    if (previousCount > chunks.length) {
+      await Promise.all(
+        Array.from({ length: previousCount - chunks.length }, (_, offset) =>
+          SecureStore.deleteItemAsync(secureKey(key, String(chunks.length + offset))).catch(() => undefined),
+        ),
+      );
+    }
   },
   async removeItem(key: string) {
-    const countValue = await SecureStore.getItemAsync(secureKey(key, 'chunks'));
-    const count = Number.parseInt(countValue ?? '0', 10);
-    if (Number.isFinite(count) && count > 0) {
+    const count = parseManifestCount(await SecureStore.getItemAsync(secureKey(key, 'chunks'))) ?? 0;
+    if (count > 0) {
       await Promise.all(
         Array.from({ length: count }, (_, index) => SecureStore.deleteItemAsync(secureKey(key, String(index)))),
       );

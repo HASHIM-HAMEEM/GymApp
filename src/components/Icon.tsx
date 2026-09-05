@@ -3,7 +3,7 @@ import { Svg, Path, Rect, Circle, G, Line } from 'react-native-svg';
 import { colors } from '@/theme/tokens';
 
 /**
- * Meridian icon set — 1.6 px stroke, round caps, 24 grid.
+ * Apex icon set — 1.6 px stroke, round caps, 24 grid.
  * Ported from assets/shared.js ICONS map. Each entry is a render function
  * that returns the inner SVG nodes; the wrapper <Svg> is shared.
  */

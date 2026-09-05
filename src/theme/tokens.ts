@@ -1,7 +1,7 @@
-import { Platform } from 'react-native';
+import { Platform, Easing } from 'react-native';
 
 /**
- * Meridian V2 — design tokens.
+ * Apex V2 — design tokens.
  * Dark-first monochrome system with a pure white accent.
  * Ported verbatim from assets/style.css.
  */
@@ -170,6 +170,13 @@ export const type = {
   overline: { size: 11, weight: '600' as const, track: tracking.caps },
 } as const;
 
+export const duration = { fast: 120, default: 200, slow: 320 } as const;
+
+export const easing = {
+  enter: Easing.bezier(0.23, 1, 0.32, 1),
+  exit: Easing.in(Easing.quad),
+} as const;
+
 export const theme = {
   colors,
   spacing,
@@ -178,6 +185,8 @@ export const theme = {
   typography,
   tracking,
   type,
+  duration,
+  easing,
 };
 
 export type Theme = typeof theme;

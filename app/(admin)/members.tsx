@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Monogram, StatusDot, Tag } from '@/components/Tag';
@@ -64,7 +64,7 @@ export default function AdminMembers() {
       </ScrollView>
 
       {membersQuery.isLoading ? (
-        <Text style={{ color: c.ink3, fontSize: 13, textAlign: 'center', paddingVertical: 20, writingDirection: textDir }}>
+        <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, textAlign: 'center', paddingVertical: 20, writingDirection: textDir }}>
           {t('adminMembers.loading')}
         </Text>
       ) : members.length === 0 ? (
@@ -91,10 +91,10 @@ export default function AdminMembers() {
               >
                 <View style={[styles.mtop, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                   <View style={[styles.mleft, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                    <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={36} fontSize={12} />
+                    <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={36} fontSize={13} />
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={[styles.mname, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>{m.firstName} {m.lastName}</Text>
-                      <Text style={[styles.msub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{m.id} · {m.email}</Text>
+                      <Text style={[styles.msub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{`\u200E${m.id}\u200E`} · {`\u200E${m.email}\u200E`}</Text>
                     </View>
                   </View>
                   {invited ? (
@@ -108,9 +108,9 @@ export default function AdminMembers() {
                 <View style={styles.mbottom}>
                   <Text style={[styles.mplan, { color: c.ink2, writingDirection: textDir }]} numberOfLines={1}>{ms?.planName ?? t('common.noPlan')}</Text>
                   <View style={styles.mmeta}>
-                    <Text style={[styles.mexp, { color: c.ink, writingDirection: textDir }]}>{ms ? fmtShort(ms.expiryDate, language) : '-'}</Text>
+                    <Text style={[styles.mexp, { color: c.ink, writingDirection: 'ltr' }]}>{ms ? fmtShort(ms.expiryDate, language) : '-'}</Text>
                     <Text style={[styles.mdot, { color: c.ink3 }]}>·</Text>
-                    <Text style={[styles.mlast, { color: c.ink2, writingDirection: textDir }]}>{lastVisit ?? t('adminMembers.noVisits')}</Text>
+                    <Text style={[styles.mlast, { color: c.ink2, writingDirection: textDir }]}>{lastVisit ? `\u200E${lastVisit}\u200E` : t('adminMembers.noVisits')}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -170,12 +170,13 @@ const styles = StyleSheet.create({
   },
   mname: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   msub: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   mbottom: {
@@ -187,7 +188,8 @@ const styles = StyleSheet.create({
   },
   mplan: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     flex: 1,
     minWidth: 0,
   },
@@ -199,20 +201,24 @@ const styles = StyleSheet.create({
   },
   mexp: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '600',
   },
   mdot: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   mlast: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   foot: { alignItems: 'center', paddingTop: 8 },
   footText: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
 });

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { useColors, radius, spacing, typography } from '@/theme/tokens';
+import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button, TextButton } from '@/components/Button';
 import { Monogram, SectionLabel, Tag } from '@/components/Tag';
@@ -14,7 +14,6 @@ import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
 import { useClub, useUpdateAdminProfile, useUpdateClub } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
-import { CLUB } from '@/data/plans';
 
 type ClubHours = { label: string; value: string };
 
@@ -25,9 +24,7 @@ export default function AdminProfile() {
   const updateAdminProfile = useUpdateAdminProfile();
   const updateClub = useUpdateClub();
   const c = useColors(darkMode);
-  const club = clubQuery.data
-    ? { ...CLUB, ...clubQuery.data, hours: clubQuery.data.hours ?? CLUB.hours }
-    : CLUB;
+  const club = clubQuery.data;
 
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [clubOpen, setClubOpen] = React.useState(false);
@@ -52,7 +49,7 @@ export default function AdminProfile() {
         <Body style={{ gap: 16 }}>
 
           {authError ? (
-            <Text style={{ color: c.bad, fontSize: 13, lineHeight: 19 }}>{authError}</Text>
+            <Text style={{ color: c.bad, fontSize: 13, letterSpacing: tracking.small, lineHeight: 19 }}>{authError}</Text>
           ) : null}
 
           <View style={[styles.head, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
@@ -308,16 +305,16 @@ function ClubSheet({
       <View style={{ gap: 14, marginTop: 12 }}>
         {error ? <Banner variant="error">{error}</Banner> : null}
         <Field label="Club name">
-          <Control value={name} onChangeText={setName} placeholder="Meridian Athletic Club" />
+          <Control value={name} onChangeText={setName} placeholder="Apex Athletic Club" />
         </Field>
         <Field label="Address">
           <Control value={address} onChangeText={setAddress} placeholder="Street, area" />
         </Field>
         <Field label="City">
-          <Control value={city} onChangeText={setCity} placeholder="Cairo" />
+          <Control value={city} onChangeText={setCity} placeholder="Mumbai" />
         </Field>
         <Field label="Front desk phone" hint="Members see this on notices and membership screens.">
-          <Control value={phone} onChangeText={setPhone} inputMode="tel" placeholder="+20 2 2619 4400" />
+          <Control value={phone} onChangeText={setPhone} inputMode="tel" placeholder="+91 22 2619 4400" />
         </Field>
         <Field label="Opening hours" hint="One entry per line: Mon–Thu, Fri, Sat.">
           <Control value={monThu} onChangeText={setMonThu} placeholder="Mon–Thu · e.g. 6 AM–11 PM" />
@@ -374,13 +371,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: typography.fontFamily,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.3,
   },
   sub: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 3,
   },
   sectionHead: {
@@ -391,7 +389,8 @@ const styles = StyleSheet.create({
   },
   hint: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     lineHeight: 16,
     marginTop: 8,
     paddingLeft: 3,
@@ -412,12 +411,13 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontFamily: typography.fontFamily,
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '500',
   },
   rowSub: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   deskOption: {
@@ -430,7 +430,8 @@ const styles = StyleSheet.create({
   },
   version: {
     fontFamily: typography.fontFamily,
-    fontSize: 11.5,
+    fontSize: 11,
+    letterSpacing: tracking.small,
     textAlign: 'center',
     marginTop: 12,
   },

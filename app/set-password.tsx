@@ -17,7 +17,7 @@ const MIN_LENGTH = 10;
  */
 export default function SetPassword() {
   const router = useRouter();
-  const { session, profile, setPassword, darkMode, t, isRtl } = useApp();
+  const { session, profile, setPassword, signOut, darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
   const [password, setPasswordValue] = React.useState('');
   const [confirm, setConfirmValue] = React.useState('');
@@ -47,9 +47,17 @@ export default function SetPassword() {
 
   React.useEffect(() => {
     if (!done) return;
-    const timer = setTimeout(() => router.replace('/'), 1100);
+    if (isInviteFlow) {
+      const timer = setTimeout(() => router.replace('/'), 1100);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => {
+      void signOut()
+        .catch(() => undefined)
+        .finally(() => router.replace('/signin'));
+    }, 1100);
     return () => clearTimeout(timer);
-  }, [done, router]);
+  }, [done, isInviteFlow, router, signOut]);
 
   const submit = async () => {
     const found = passwordProblem(password);
@@ -75,7 +83,7 @@ export default function SetPassword() {
 
   const titleStyle = {
     fontFamily: typography.display,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.01,
     color: c.ink,
@@ -196,7 +204,7 @@ const styles = StyleSheet.create({
   },
   doneBodyText: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
   },
@@ -209,7 +217,7 @@ const styles = StyleSheet.create({
   },
   lede: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 10,
     lineHeight: 22,
   },

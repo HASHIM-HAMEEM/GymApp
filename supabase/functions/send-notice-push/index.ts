@@ -12,7 +12,9 @@ interface PushRow {
 
 interface ExpoPushTicket {
   status?: string;
+  id?: string;
   details?: { error?: string };
+  message?: string;
 }
 
 Deno.serve((request) =>
@@ -35,6 +37,7 @@ Deno.serve((request) =>
     let sent = 0;
     let failed = 0;
     const invalidTokens: string[] = [];
+    const receipts: unknown[] = [];
 
     for (let index = 0; index < rows.length; index += 100) {
       const chunk = rows.slice(index, index + 100);
@@ -61,26 +64,85 @@ Deno.serve((request) =>
           signal: AbortSignal.timeout(10_000),
         });
       } catch {
-        throw new ApiError(502, "PUSH_SERVICE_UNAVAILABLE", "The push service could not be reached.");
+        for (const row of chunk) {
+          receipts.push({
+            expo_push_token: row.expo_push_token,
+            expo_ticket_id: null,
+            status: "failed",
+            error_code: "PUSH_SERVICE_UNAVAILABLE",
+            error_message: "The push service could not be reached.",
+          });
+          failed += 1;
+        }
+        continue;
       }
 
       if (!response.ok) {
-        throw new ApiError(502, "PUSH_SERVICE_REJECTED", "The push service rejected the request.");
+        for (const row of chunk) {
+          receipts.push({
+            expo_push_token: row.expo_push_token,
+            expo_ticket_id: null,
+            status: "failed",
+            error_code: "PUSH_SERVICE_REJECTED",
+            error_message: "The push service rejected the request.",
+          });
+          failed += 1;
+        }
+        continue;
       }
 
       const payload = await response.json() as { data?: ExpoPushTicket[] };
       const tickets = Array.isArray(payload.data) ? payload.data : [];
       tickets.forEach((ticket, ticketIndex) => {
+        const token = chunk[ticketIndex]?.expo_push_token;
         if (ticket.status === "ok") {
           sent += 1;
+          if (token) {
+            receipts.push({
+              expo_push_token: token,
+              expo_ticket_id: ticket.id ?? null,
+              status: "pending",
+            });
+          }
         } else {
           failed += 1;
-          if (ticket.details?.error === "DeviceNotRegistered") {
-            invalidTokens.push(chunk[ticketIndex].expo_push_token);
+          const errorCode = ticket.details?.error ?? "EXPO_TICKET_ERROR";
+          if (token) {
+            receipts.push({
+              expo_push_token: token,
+              expo_ticket_id: null,
+              status: "failed",
+              error_code: errorCode,
+              error_message: ticket.message ?? null,
+            });
+            if (errorCode === "DeviceNotRegistered") {
+              invalidTokens.push(token);
+            }
           }
         }
       });
-      if (tickets.length < chunk.length) failed += chunk.length - tickets.length;
+      if (tickets.length < chunk.length) {
+        for (let i = tickets.length; i < chunk.length; i++) {
+          const token = chunk[i]?.expo_push_token;
+          if (token) {
+            receipts.push({
+              expo_push_token: token,
+              expo_ticket_id: null,
+              status: "failed",
+              error_code: "EXPO_TICKET_MISSING",
+              error_message: "Expo did not return a ticket for this message.",
+            });
+          }
+          failed += 1;
+        }
+      }
+    }
+
+    if (receipts.length > 0) {
+      await context.service.rpc("record_push_receipts", {
+        p_notice_id: body.noticeId,
+        p_receipts: receipts,
+      });
     }
 
     if (invalidTokens.length > 0) {
@@ -93,6 +155,10 @@ Deno.serve((request) =>
       attempted: rows.length,
       failed,
       sent,
+      queued: receipts.filter((r) => {
+        const row = r as { status?: string };
+        return row.status === "pending";
+      }).length,
     });
   })
 );

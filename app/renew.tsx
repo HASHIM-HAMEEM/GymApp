@@ -1,18 +1,18 @@
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
-import { useColors, radius, typography } from '@/theme/tokens';
+import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Tag } from '@/components/Tag';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
-import { useMemberDetail, usePlans, useRenewMembership } from '@/data/api/queries';
+import { useMemberDetail, usePlans, useRenewMembership, useRenewalQuote, type DeskPaymentMethod } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
-import { fmtLong, fmtShort, TODAY } from '@/data/format';
+import { fmtLong, fmtShort, todayIso, formatMoney } from '@/data/format';
 import { Language, type TranslationKey } from '@/lib/i18n';
 
-type PayMethod = 'cash' | 'card' | 'wallet' | 'instapay';
+type PayMethod = DeskPaymentMethod;
 
 export default function RenewFlow() {
   return (
@@ -39,7 +39,14 @@ function RenewFlowInner() {
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [selectedPlanId, setSelectedPlanId] = React.useState('');
   const [payMethod, setPayMethod] = React.useState<PayMethod>('cash');
-  const [result, setResult] = React.useState<{ receiptNumber: string | null; startDate: string; endDate: string } | null>(null);
+  const [result, setResult] = React.useState<{
+    receiptNumber: string | null;
+    startDate: string;
+    endDate: string;
+    amountPaid: number;
+    amountDue: number;
+    currency: string;
+  } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -50,7 +57,7 @@ function RenewFlowInner() {
     cash: t('payment.cash'),
     card: t('payment.card'),
     wallet: t('payment.wallet'),
-    instapay: t('payment.instapay'),
+    upi: t('payment.upi'),
   };
 
   if (!m) {
@@ -65,8 +72,12 @@ function RenewFlowInner() {
   }
 
   const plan = plans.find((p) => p.id === selectedPlanId) ?? plans[0];
-  const currentExpiry = m.membership?.expiryDate ?? TODAY;
-  const hasActiveTerm = Boolean(m.membership && m.membership.expiryDate >= TODAY);
+  const today = m.asOf ?? todayIso();
+  const currentExpiry = m.membership?.expiryDate ?? today;
+  const hasActiveTerm = Boolean(m.membership && m.membership.expiryDate >= today);
+  // Server quote: the exact term the server will sell for this member.
+  const quoteQuery = useRenewalQuote(m.databaseId, plan?.id);
+  const quote = quoteQuery.data ?? null;
 
   const confirmRenewal = async () => {
     if (!plan || !m.databaseId) return;
@@ -75,13 +86,16 @@ function RenewFlowInner() {
       const renewal = await renewMembership.mutateAsync({
         memberId: m.databaseId,
         planId: plan.id,
-        amountPaid: plan.priceEGP,
+        amountPaid: plan.price,
         paymentMethod: payMethod,
       });
       setResult({
         receiptNumber: renewal.receipt_number,
         startDate: renewal.start_date,
         endDate: renewal.end_date,
+        amountPaid: plan.price,
+        amountDue: Number(renewal.amount_due ?? 0),
+        currency: plan.currency,
       });
       setStep(3);
     } catch (err) {
@@ -119,10 +133,10 @@ function RenewFlowInner() {
 
             <View style={[styles.receiptCard, { backgroundColor: c.bg1, borderColor: c.line }]}>
               <ReceiptRow label={t('renew.receiptReference')} value={result.receiptNumber ?? t('common.notAvailable')} isMono />
-              <ReceiptRow label={t('renew.paymentRecorded', { method: paymentMethodLabels[payMethod] })} value={t('common.egpAmount', { amount: plan?.priceEGP.toLocaleString() ?? '' })} />
+              <ReceiptRow label={t('renew.paymentRecorded', { method: paymentMethodLabels[payMethod] })} value={formatMoney(result.amountPaid, result.currency, language)} />
               <ReceiptRow label={t('renew.starts')} value={fmtLong(result.startDate, language)} />
               <ReceiptRow label={t('renew.staff')} value={adminName || t('common.frontDesk')} />
-              <ReceiptRow label={t('renew.status')} value={t('renew.paidInFull')} last />
+              <ReceiptRow label={t('renew.status')} value={result.amountDue > 0 ? t('payment.due') : t('renew.paidInFull')} last />
             </View>
 
             <View style={{ gap: 12, marginTop: 12 }}>
@@ -169,16 +183,20 @@ function RenewFlowInner() {
               <ReceiptRow label={t('renew.plan')} value={plan?.name ?? t('common.notAvailable')} />
               <ReceiptRow
                 label={t('renew.period')}
-                value={hasActiveTerm ? t('renew.startsAfter', { date: fmtShort(currentExpiry, language) }) : t('renew.startsToday', { date: fmtShort(TODAY, language) })}
+                value={quote
+                  ? `${fmtShort(quote.start_date, language)} — ${fmtLong(quote.end_date, language)}`
+                  : hasActiveTerm
+                    ? t('renew.startsAfter', { date: fmtShort(currentExpiry, language) })
+                    : t('renew.startsToday', { date: fmtShort(today, language) })}
               />
               <ReceiptRow
                 label={t('renew.payment')}
-                value={t('renew.paymentSummary', { method: paymentMethodLabels[payMethod], amount: t('common.egpAmount', { amount: plan?.priceEGP.toLocaleString() ?? '' }) })}
+                value={t('renew.paymentSummary', { method: paymentMethodLabels[payMethod], amount: formatMoney(plan?.price, plan?.currency, language) })}
               />
               <View style={[styles.totalRow, { backgroundColor: c.accentSoft, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                 <Text style={[styles.totalLabel, { color: c.ink, writingDirection: textDir }]}>{t('renew.totalDue')}</Text>
                 <Text style={[styles.totalVal, { color: c.accentHi, writingDirection: textDir }]}>
-                  {t('common.egpAmount', { amount: plan?.priceEGP.toLocaleString() ?? '' })}
+                  {formatMoney(plan?.price, plan?.currency, language)}
                 </Text>
               </View>
             </View>
@@ -232,29 +250,31 @@ function RenewFlowInner() {
                     <Text style={[styles.planPeriod, { color: c.ink3, writingDirection: textDir }]}>{p.blurb}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.planPrice, { color: c.ink, writingDirection: textDir }]}>{t('common.egpAmount', { amount: p.priceEGP.toLocaleString() })}</Text>
+                    <Text style={[styles.planPrice, { color: c.ink, writingDirection: textDir }]}>{formatMoney(p.price, p.currency, language)}</Text>
                     <Text style={[styles.planPricePeriod, { color: c.ink3, writingDirection: textDir }]}>{periodLabel}</Text>
                   </View>
                 </Pressable>
               );
             })}
             {plansQuery.isLoading ? (
-              <Text style={{ color: c.ink3, fontSize: 13, writingDirection: textDir }}>{t('memberNew.loadingPlans')}</Text>
+              <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, writingDirection: textDir }}>{t('memberNew.loadingPlans')}</Text>
             ) : null}
           </View>
 
           <Banner variant="info">
             <Text style={{ writingDirection: textDir }}>
-              {hasActiveTerm
-                ? t('renew.startsAfterTerm', { date: fmtLong(currentExpiry, language) })
-                : t('renew.startsNow')}
+              {quote
+                ? t('renew.startsQuote', { date: fmtLong(quote.start_date, language), end: fmtLong(quote.end_date, language) })
+                : hasActiveTerm
+                  ? t('renew.startsAfterTerm', { date: fmtLong(currentExpiry, language) })
+                  : t('renew.startsNow')}
             </Text>
           </Banner>
 
           <View style={{ gap: 8 }}>
             <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('renew.paymentMethod')}</Text>
             <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-              {(['cash', 'card', 'wallet', 'instapay'] as PayMethod[]).map((method) => {
+              {(['cash', 'card', 'upi', 'wallet'] as PayMethod[]).map((method) => {
                 const on = payMethod === method;
                 return (
                   <Pressable
@@ -297,7 +317,7 @@ function ReceiptRow({
   return (
     <View style={[styles.rrow, { borderBottomColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }, last && { borderBottomWidth: 0 }]}>
       <Text style={[styles.rk, { color: c.ink3, writingDirection: textDir }]}>{label}</Text>
-      <Text style={[styles.rv, { color: c.ink, writingDirection: textDir }, isMono && { fontFamily: typography.mono, fontSize: 13 }]}>
+      <Text style={[styles.rv, { color: c.ink, writingDirection: textDir }, isMono && { fontFamily: typography.mono, fontSize: 13, letterSpacing: tracking.small, }]}>
         {value}
       </Text>
     </View>
@@ -333,7 +353,7 @@ const styles = StyleSheet.create({
   },
   desc: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     marginTop: 6,
     lineHeight: 22,
   },
@@ -353,12 +373,13 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     fontFamily: typography.display,
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: '600',
   },
   planPeriod: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   planPrice: {
@@ -369,11 +390,12 @@ const styles = StyleSheet.create({
   planPricePeriod: {
     fontFamily: typography.fontFamily,
     fontSize: 11,
+    letterSpacing: tracking.small,
     marginTop: 1,
   },
   fieldLabel: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -394,6 +416,7 @@ const styles = StyleSheet.create({
   segText: {
     fontFamily: typography.fontFamily,
     fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '600',
   },
   receiptCard: {
@@ -411,11 +434,12 @@ const styles = StyleSheet.create({
   },
   rk: {
     fontFamily: typography.fontFamily,
-    fontSize: 13.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
   },
   rv: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   totalRow: {

@@ -1,25 +1,26 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useColors, radius, spacing, typography } from '@/theme/tokens';
+import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { Icon } from '@/components/Icon';
-import { useCreateMemberInvitation, usePlans } from '@/data/api/queries';
+import { useCreateMemberInvitation, usePlans, useClub, type DeskPaymentMethod } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
-import { CLUB } from '@/data/plans';
+import { formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 
-type PaymentMethod = 'instapay' | 'cash' | 'card' | 'wallet' | 'complimentary';
+type PaymentMethod = DeskPaymentMethod | 'complimentary';
 
-function egyptPhone(value: string): string | undefined {
+/** Normalize a phone entry to international format with the club's +91 default. */
+function indiaPhone(value: string): string | undefined {
   const digits = value.replace(/\D/g, '');
   if (!digits) return undefined;
-  if (digits.startsWith('20')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+20${digits.slice(1)}`;
-  return `+20${digits}`;
+  if (digits.startsWith('91')) return `+${digits}`;
+  if (digits.startsWith('0')) return `+91${digits.slice(1)}`;
+  return `+91${digits}`;
 }
 
 /**
@@ -31,7 +32,8 @@ export default function MemberNew() {
   const router = useRouter();
   const plansQuery = usePlans();
   const createInvitation = useCreateMemberInvitation();
-  const { darkMode, t, isRtl } = useApp();
+  const clubQuery = useClub();
+  const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
 
@@ -57,7 +59,7 @@ export default function MemberNew() {
     cash: t('payment.cash'),
     card: t('payment.card'),
     wallet: t('payment.wallet'),
-    instapay: t('payment.instapay'),
+    upi: t('payment.upi'),
     complimentary: t('payment.complimentaryShort'),
   };
 
@@ -96,12 +98,15 @@ export default function MemberNew() {
     else if (dateOfBirth.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth.trim())) bad = t('memberNew.birthDateInvalid');
     else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('memberNew.emergencyBoth');
     else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('memberNew.emergencyPhoneInvalid');
-    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length !== 14) bad = t('memberNew.nationalIdInvalid');
+    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length < 4) bad = t('memberNew.nationalIdInvalid');
     else if (!address.trim()) bad = t('memberNew.addressRequired');
     else if (planId && payMethod !== 'complimentary') {
       const amount = Number(amountPaid);
+      // Floating-point-safe two-decimal check (19.99 * 100 is inexact).
+      const centsOk = Math.abs(amount * 100 - Math.round(amount * 100)) <= 1e-6;
       if (!amountPaid.trim() || !Number.isFinite(amount) || amount <= 0) bad = t('memberNew.amountRequired');
-      else if (amount > (selectedPlan?.priceEGP ?? 0)) bad = t('memberNew.amountTooHigh');
+      else if (!centsOk) bad = t('memberNew.amountDecimals');
+      else if (amount > (selectedPlan?.price ?? 0)) bad = t('memberNew.amountTooHigh');
     }
     if (bad) {
       setFormError(bad);
@@ -114,10 +119,10 @@ export default function MemberNew() {
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        phone: egyptPhone(phone),
+        phone: indiaPhone(phone),
         dateOfBirth: dateOfBirth.trim() || undefined,
         emergencyName: emName.trim() || undefined,
-        emergencyPhone: egyptPhone(emPhone),
+        emergencyPhone: indiaPhone(emPhone),
         nationalId: nationalId.trim() || undefined,
         address: address.trim(),
         planId: planId || undefined,
@@ -144,6 +149,7 @@ export default function MemberNew() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('memberNew.title')} onBack={() => router.back()} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
@@ -169,11 +175,11 @@ export default function MemberNew() {
             <Control
               value={phone}
               onChangeText={setPhone}
-              placeholder="10 1234 5678"
+              placeholder="98765 43210"
               inputMode="tel"
               leading={
                 <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', paddingRight: 11, borderRightWidth: 1, borderRightColor: c.line }}>
-                  <Text style={{ fontSize: 14, fontWeight: '500', color: c.ink2, writingDirection: textDir }}>+20</Text>
+                  <Text style={{ fontSize: 15, fontWeight: '500', color: c.ink2, writingDirection: 'ltr' }}>+91</Text>
                 </View>
               }
             />
@@ -200,7 +206,7 @@ export default function MemberNew() {
             <Control
               value={nationalId}
               onChangeText={setNationalId}
-              placeholder="00000000000000"
+              placeholder="1234 5678 9012"
               inputMode="numeric"
               autoComplete="off"
             />
@@ -230,7 +236,7 @@ export default function MemberNew() {
                     <Text style={[styles.planPeriod, { color: c.ink3, writingDirection: textDir }]}>{p.blurb}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.planPrice, { color: c.ink, writingDirection: textDir }]}>{t('common.egpAmount', { amount: p.priceEGP.toLocaleString() })}</Text>
+                    <Text style={[styles.planPrice, { color: c.ink, writingDirection: textDir }]}>{formatMoney(p.price, p.currency, language)}</Text>
                     <Text style={[styles.planPricePeriod, { color: c.ink3, writingDirection: textDir }]}>
                       {periodLabel}
                     </Text>
@@ -239,7 +245,7 @@ export default function MemberNew() {
               );
             })}
             {plansQuery.isLoading ? (
-              <Text style={{ color: c.ink3, fontSize: 12.5, writingDirection: textDir }}>{t('memberNew.loadingPlans')}</Text>
+              <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, writingDirection: textDir }}>{t('memberNew.loadingPlans')}</Text>
             ) : null}
           </View>
 
@@ -247,7 +253,7 @@ export default function MemberNew() {
             <View style={{ gap: 10 }}>
               <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberNew.paymentAtDesk')}</Text>
               <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
-                {(['cash', 'card', 'wallet', 'instapay', 'complimentary'] as PaymentMethod[]).map((method) => {
+                {(['cash', 'card', 'upi', 'wallet', 'complimentary'] as PaymentMethod[]).map((method) => {
                   const on = payMethod === method;
                   return (
                     <Pressable
@@ -265,12 +271,12 @@ export default function MemberNew() {
               {payMethod !== 'complimentary' ? (
                 <Field
                   label={t('memberNew.amountPaid')}
-                  hint={selectedPlan ? t('memberNew.planPriceHint', { amount: t('common.egpAmount', { amount: selectedPlan.priceEGP.toLocaleString() }) }) : undefined}
+                  hint={selectedPlan ? t('memberNew.planPriceHint', { amount: formatMoney(selectedPlan.price, selectedPlan.currency, language) }) : undefined}
                 >
                   <Control
                     value={amountPaid}
                     onChangeText={setAmountPaid}
-                    placeholder={String(selectedPlan?.priceEGP ?? '')}
+                    placeholder={String(selectedPlan?.price ?? '')}
                     inputMode="decimal"
                     autoComplete="off"
                   />
@@ -294,10 +300,11 @@ export default function MemberNew() {
           </Button>
 
           <Text style={[styles.foot, { color: c.ink4, writingDirection: textDir }]}>
-            {t('memberNew.footer', { club: CLUB.name })}
+            {t('memberNew.footer', { club: clubQuery.data?.name ?? '' })}
           </Text>
         </Body>
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -312,20 +319,20 @@ const styles = StyleSheet.create({
   },
   h1: {
     fontFamily: typography.display,
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '600',
     letterSpacing: -0.5,
     textAlign: 'center',
   },
   desc: {
     fontFamily: typography.fontFamily,
-    fontSize: 14,
+    fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
   },
   fieldLabel: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -346,12 +353,13 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     fontFamily: typography.display,
-    fontSize: 15.5,
+    fontSize: 15,
     fontWeight: '600',
   },
   planPeriod: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   planPrice: {
@@ -362,6 +370,7 @@ const styles = StyleSheet.create({
   planPricePeriod: {
     fontFamily: typography.fontFamily,
     fontSize: 11,
+    letterSpacing: tracking.small,
     marginTop: 1,
   },
   segWrap: {
@@ -379,12 +388,13 @@ const styles = StyleSheet.create({
   },
   segText: {
     fontFamily: typography.fontFamily,
-    fontSize: 12.5,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     fontWeight: '600',
   },
   foot: {
     fontFamily: typography.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.18,
     textTransform: 'uppercase',

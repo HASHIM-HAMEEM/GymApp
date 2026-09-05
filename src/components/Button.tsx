@@ -11,7 +11,8 @@ import {
   Animated,
 } from 'react-native';
 import { Link, type Href } from 'expo-router';
-import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
+import { colors, useColors, radius, spacing, typography, tracking, duration } from '@/theme/tokens';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useApp } from '@/data/store';
 import { Icon, IconName } from './Icon';
 import type { TranslationKey } from '@/lib/i18n';
@@ -52,11 +53,12 @@ export function Button({
 }: ButtonProps) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const reduceMotion = useReducedMotion();
   const scale = React.useRef(new Animated.Value(1)).current;
 
-  const height = size === 'sm' ? 40 : 52;
+  const height = size === 'sm' ? 44 : 52;
   const padH = size === 'sm' ? 16 : 22;
-  const fontSize = size === 'sm' ? 14 : 15.5;
+  const fontSize = size === 'sm' ? 15 : 15;
   const r = size === 'sm' ? 10 : 16;
 
   const bg =
@@ -83,27 +85,31 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const handlePressIn = () => {
-    Animated.timing(scale, { toValue: 0.985, duration: 100, useNativeDriver: Platform.OS !== 'web' }).start();
+    if (reduceMotion) return;
+    Animated.timing(scale, { toValue: 0.985, duration: duration.fast, useNativeDriver: Platform.OS !== 'web' }).start();
   };
   const handlePressOut = () => {
-    Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: Platform.OS !== 'web' }).start();
+    if (reduceMotion) return;
+    Animated.timing(scale, { toValue: 1, duration: duration.fast, useNativeDriver: Platform.OS !== 'web' }).start();
   };
 
   const control = (
     <Pressable
+      accessibilityRole="button"
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onPress={onPress}
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.btnBase,
+        block && styles.btnBlock,
         {
-          height,
+          minHeight: height,
           paddingHorizontal: padH,
           backgroundColor: bg,
           borderColor: border,
           borderRadius: r,
-          opacity: isDisabled ? 0.4 : 1,
+          opacity: isDisabled ? 0.4 : reduceMotion && pressed ? 0.7 : 1,
         },
         style,
       ]}
@@ -111,7 +117,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator size="small" color={fg} />
       ) : (
-        <View style={[styles.btnInner, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+        <View style={[styles.btnInner, { flexDirection: isRtl ? 'row-reverse' : 'row' }, block && { alignSelf: 'stretch' }]}>
           {icon && <Icon name={icon} size={size === 'sm' ? 16 : 19} color={fg} />}
           <Text
             style={[
@@ -123,6 +129,8 @@ export function Button({
                 color: fg,
                 marginLeft: icon && !isRtl ? 9 : 0,
                 marginRight: icon && isRtl ? 9 : 0,
+                flexShrink: 1,
+                textAlign: 'center',
                 writingDirection: isRtl ? 'rtl' : 'ltr',
               },
               textStyle,
@@ -174,12 +182,12 @@ export function TextButton({
   const { darkMode } = useApp();
   const c = useColors(darkMode);
   return (
-    <Pressable onPress={onPress} hitSlop={8}>
+    <Pressable accessibilityRole="button" onPress={onPress} hitSlop={8}>
       {({ pressed }) => (
         <Text
           style={{
             fontFamily: typography.fontFamily,
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: '600',
             letterSpacing: tracking.ui,
             color: quiet ? c.ink2 : (color ?? c.accent),

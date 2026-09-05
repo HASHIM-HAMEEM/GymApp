@@ -5,8 +5,9 @@ import { Icon, type IconName } from './Icon';
 import { Switch, Sheet } from './Overlays';
 import { Banner } from './Surfaces';
 import { Button } from './Button';
-import { radius, typography, useColors } from '@/theme/tokens';
+import { radius, typography, useColors, tracking } from '@/theme/tokens';
 import { useApp } from '@/providers/AppProvider';
+import { notificationStateLabel } from '@/lib/notifications';
 import type { Language } from '@/data/types';
 
 export function SettingsGroup({ children }: { children: React.ReactNode }) {
@@ -46,12 +47,12 @@ export function SettingsRow({
       <Text
         style={[
           styles.label,
-          { color: danger ? c.bad : c.ink2, textAlign: isRtl ? 'right' : 'left' },
+          { color: danger ? c.bad : c.ink2, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' },
         ]}
       >
         {label}
       </Text>
-      {value ? <Text style={[styles.value, { color: c.ink }]}>{value}</Text> : null}
+      {value ? <Text style={[styles.value, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{value}</Text> : null}
       {right}
       {!right && !danger ? <Icon name="chev" size={17} color={c.ink3} /> : null}
     </View>
@@ -111,13 +112,7 @@ export function PreferencesGroup({
         <SettingsRow
           icon="bell"
           label={t('notifications.title')}
-          value={
-            notificationState === 'registered' || notificationState === 'granted'
-              ? t('notifications.enabled')
-              : notificationState === 'expo-go'
-                ? 'Expo Go'
-                : t('notifications.disabled')
-          }
+          value={t(notificationStateLabel(notificationState))}
           onPress={() => void requestNotifications()}
         />
         <SettingsRow
@@ -178,7 +173,7 @@ function LanguageOption({
   disabled: boolean;
   onPress: () => void;
 }) {
-  const { darkMode } = useApp();
+  const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
   return (
     <Pressable
@@ -190,8 +185,8 @@ function LanguageOption({
       ]}
     >
       <View style={{ flex: 1 }}>
-        <Text style={[styles.languageLabel, { color: c.ink }]}>{label}</Text>
-        <Text style={[styles.languageNative, { color: c.ink3 }]}>{nativeLabel}</Text>
+        <Text style={[styles.languageLabel, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{label}</Text>
+        <Text style={[styles.languageNative, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{nativeLabel}</Text>
       </View>
       {selected ? <Icon name="check" size={19} color={c.accentHi} /> : null}
     </Pressable>
@@ -199,7 +194,7 @@ function LanguageOption({
 }
 
 export function DeveloperCredit() {
-  const { darkMode, t } = useApp();
+  const { darkMode, t, isRtl } = useApp();
   const c = useColors(darkMode);
   return (
     <Pressable
@@ -207,7 +202,7 @@ export function DeveloperCredit() {
       onPress={() => void Linking.openURL('https://hashimhameem.site')}
       style={styles.credit}
     >
-      <Text style={[styles.creditText, { color: c.ink3 }]}>{t('settings.developedBy')}</Text>
+      <Text style={[styles.creditText, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('settings.developedBy')}</Text>
     </Pressable>
   );
 }
@@ -257,6 +252,7 @@ const styles = StyleSheet.create({
   languageNative: {
     fontFamily: typography.arabic,
     fontSize: 13,
+    letterSpacing: tracking.small,
     marginTop: 2,
   },
   credit: {
@@ -267,7 +263,8 @@ const styles = StyleSheet.create({
   },
   creditText: {
     fontFamily: typography.fontFamily,
-    fontSize: 12,
+    fontSize: 13,
+    letterSpacing: tracking.small,
     textDecorationLine: 'underline',
   },
 });

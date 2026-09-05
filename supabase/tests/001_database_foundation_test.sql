@@ -19,10 +19,10 @@ insert into auth.users (
   updated_at
 )
 values
-  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@test.meridian.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{}', pg_catalog.now(), pg_catalog.now()),
-  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'member.one@test.meridian.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{}', pg_catalog.now(), pg_catalog.now()),
-  ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'member.two@test.meridian.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{}', pg_catalog.now(), pg_catalog.now()),
-  ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'spoofed.admin@test.meridian.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{"role":"admin"}', pg_catalog.now(), pg_catalog.now());
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin@test.apex.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{}', pg_catalog.now(), pg_catalog.now()),
+  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'member.one@test.apex.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{}', pg_catalog.now(), pg_catalog.now()),
+  ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'member.two@test.apex.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{}', pg_catalog.now(), pg_catalog.now()),
+  ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'spoofed.admin@test.apex.local', '', pg_catalog.now(), '{"provider":"email","providers":["email"]}', '{"role":"admin"}', pg_catalog.now(), pg_catalog.now());
 
 insert into public.profiles (id, role, account_state, must_set_password, display_name)
 values
@@ -40,8 +40,8 @@ insert into public.members (
   created_by
 )
 values
-  ('20000000-0000-0000-0000-000000000001', 'MRD-9001', 'Member', 'One', 'member.one@test.meridian.local', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000002', 'MRD-9002', 'Member', 'Two', 'member.two@test.meridian.local', '10000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001');
+  ('20000000-0000-0000-0000-000000000001', 'MRD-9001', 'Member', 'One', 'member.one@test.apex.local', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001'),
+  ('20000000-0000-0000-0000-000000000002', 'MRD-9002', 'Member', 'Two', 'member.two@test.apex.local', '10000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001');
 
 insert into public.memberships (
   id,
@@ -53,7 +53,7 @@ insert into public.memberships (
   amount_due,
   plan_name_snapshot,
   duration_months_snapshot,
-  price_egp_snapshot,
+  price_snapshot,
   created_by
 )
 values
@@ -84,16 +84,16 @@ values
     '10000000-0000-0000-0000-000000000001'
   );
 
-insert into public.payments (membership_id, amount_egp, method, kind, recorded_by)
+insert into public.payments (membership_id, amount, method, kind, recorded_by)
 values ('30000000-0000-0000-0000-000000000001', 1500, 'cash', 'initial', '10000000-0000-0000-0000-000000000001');
 
-create temporary table meridian_test_capture (
+create temporary table apex_test_capture (
   key text primary key,
   object_id uuid,
   token text,
   count_value integer
 );
-grant select, insert, update on table pg_temp.meridian_test_capture to authenticated;
+grant select, insert, update on table pg_temp.apex_test_capture to authenticated;
 
 select is(
   (
@@ -185,7 +185,7 @@ set local request.jwt.claims = '{"sub":"10000000-0000-0000-0000-000000000004","r
 select is(public.current_user_is_admin(), false, 'user metadata cannot grant the admin role');
 
 select throws_ok(
-  $$select * from public.create_member_invitation('No', 'Access', 'no.access@test.meridian.local')$$,
+  $$select * from public.create_member_invitation('No', 'Access', 'no.access@test.apex.local')$$,
   '42501',
   'An active administrator is required',
   'an unprovisioned signup cannot use an admin RPC'
@@ -266,7 +266,7 @@ select throws_ok(
     from public.create_member_invitation(
       'Bad',
       'Payment',
-      'bad.payment@test.meridian.local',
+      'bad.payment@test.apex.local',
       p_plan_id => (select id from public.plans where slug = 'premium-monthly'),
       p_amount_paid => 9000,
       p_payment_method => 'cash'
@@ -278,7 +278,7 @@ select throws_ok(
 );
 
 select is(
-  (select pg_catalog.count(m.email)::integer from public.members as m where m.email = 'bad.payment@test.meridian.local'),
+  (select pg_catalog.count(m.email)::integer from public.members as m where m.email = 'bad.payment@test.apex.local'),
   0,
   'a failed transactional invitation leaves no partial member'
 );
@@ -289,18 +289,17 @@ select lives_ok(
     from public.create_member_invitation(
       'Pending',
       'Member',
-      'pending.member@test.meridian.local',
+      'pending.member@test.apex.local',
       p_plan_id => (select id from public.plans where slug = 'premium-monthly'),
-      p_membership_start_date => current_date,
       p_amount_paid => 1500,
-      p_payment_method => 'instapay'
+      p_payment_method => 'upi'
     )
   $$,
   'a valid member invitation creates its transaction'
 );
 
 select is(
-  (select pg_catalog.count(m.email)::integer from public.members as m where m.email = 'pending.member@test.meridian.local'),
+  (select pg_catalog.count(m.email)::integer from public.members as m where m.email = 'pending.member@test.apex.local'),
   1,
   'valid invitation creates one pending member'
 );
@@ -310,7 +309,7 @@ select is(
     select pg_catalog.count(ms.id)::integer
     from public.memberships as ms
     inner join public.members as m on m.id = ms.member_id
-    where m.email = 'pending.member@test.meridian.local'
+    where m.email = 'pending.member@test.apex.local'
   ),
   1,
   'valid invitation creates the optional initial membership'
@@ -322,7 +321,7 @@ select matches(
     from public.payments as pay
     inner join public.memberships as ms on ms.id = pay.membership_id
     inner join public.members as m on m.id = ms.member_id
-    where m.email = 'pending.member@test.meridian.local'
+    where m.email = 'pending.member@test.apex.local'
   ),
   '^MRD-R-[0-9]{4}-[0-9]{6}$',
   'initial payment receives a server-generated receipt number'
@@ -353,7 +352,7 @@ select is(
 
 select lives_ok(
   $$
-    insert into pg_temp.meridian_test_capture (key, object_id, count_value)
+    insert into pg_temp.apex_test_capture (key, object_id, count_value)
     select 'notice', n.notice_id, n.recipient_count
     from public.publish_notice('schedule', 'Test notice', 'Snapshot this audience.', 'active_only', false) as n
   $$,
@@ -361,7 +360,7 @@ select lives_ok(
 );
 
 select is(
-  (select count_value from pg_temp.meridian_test_capture where key = 'notice'),
+  (select count_value from pg_temp.apex_test_capture where key = 'notice'),
   1,
   'active-only notice snapshots one eligible recipient'
 );
@@ -370,7 +369,7 @@ select is(
   (
     select pg_catalog.count(nd.id)::integer
     from public.notice_deliveries as nd
-    where nd.notice_id = (select object_id from pg_temp.meridian_test_capture where key = 'notice')
+    where nd.notice_id = (select object_id from pg_temp.apex_test_capture where key = 'notice')
       and nd.member_id = '20000000-0000-0000-0000-000000000001'
   ),
   1,
@@ -381,7 +380,7 @@ select is(
   (
     select pg_catalog.count(nd.id)::integer
     from public.notice_deliveries as nd
-    where nd.notice_id = (select object_id from pg_temp.meridian_test_capture where key = 'notice')
+    where nd.notice_id = (select object_id from pg_temp.apex_test_capture where key = 'notice')
       and nd.member_id = '20000000-0000-0000-0000-000000000002'
   ),
   0,
@@ -394,7 +393,7 @@ select lives_ok(
     from public.renew_membership(
       '20000000-0000-0000-0000-000000000002',
       (select id from public.plans where slug = 'premium-monthly'),
-      current_date,
+      null,
       1500,
       'card'
     )
@@ -406,7 +405,7 @@ select is(
   (
     select pg_catalog.count(nd.id)::integer
     from public.notice_deliveries as nd
-    where nd.notice_id = (select object_id from pg_temp.meridian_test_capture where key = 'notice')
+    where nd.notice_id = (select object_id from pg_temp.apex_test_capture where key = 'notice')
       and nd.member_id = '20000000-0000-0000-0000-000000000002'
   ),
   0,
@@ -421,14 +420,14 @@ select is(
   (
     select pg_catalog.count(n.id)::integer
     from public.notices as n
-    where n.id = (select object_id from pg_temp.meridian_test_capture where key = 'notice')
+    where n.id = (select object_id from pg_temp.apex_test_capture where key = 'notice')
   ),
   1,
   'a snapshotted member can read the delivered notice'
 );
 
 select ok(
-  public.mark_notice_read((select object_id from pg_temp.meridian_test_capture where key = 'notice')) is not null,
+  public.mark_notice_read((select object_id from pg_temp.apex_test_capture where key = 'notice')) is not null,
   'a member can mark their delivered notice read'
 );
 
@@ -440,14 +439,14 @@ select is(
   (
     select pg_catalog.count(n.id)::integer
     from public.notices as n
-    where n.id = (select object_id from pg_temp.meridian_test_capture where key = 'notice')
+    where n.id = (select object_id from pg_temp.apex_test_capture where key = 'notice')
   ),
   0,
   'a member outside the snapshot cannot read the notice'
 );
 
 select throws_ok(
-  $$select public.mark_notice_read((select object_id from pg_temp.meridian_test_capture where key = 'notice'))$$,
+  $$select public.mark_notice_read((select object_id from pg_temp.apex_test_capture where key = 'notice'))$$,
   'P0002',
   'Notice delivery not found',
   'a member outside the snapshot cannot mark the notice read'
@@ -455,7 +454,7 @@ select throws_ok(
 
 select lives_ok(
   $$
-    insert into pg_temp.meridian_test_capture (key, object_id, token)
+    insert into pg_temp.apex_test_capture (key, object_id, token)
     select 'qr-live', q.qr_pass_id, q.token
     from public.issue_qr_pass() as q
   $$,
@@ -463,7 +462,7 @@ select lives_ok(
 );
 
 select is(
-  (select pg_catalog.char_length(token) from pg_temp.meridian_test_capture where key = 'qr-live'),
+  (select pg_catalog.char_length(token) from pg_temp.apex_test_capture where key = 'qr-live'),
   64,
   'issued QR value is a 256-bit opaque token'
 );
@@ -476,7 +475,7 @@ select is(
   (
     select q.admitted
     from public.check_in_by_qr(
-      (select token from pg_temp.meridian_test_capture where key = 'qr-live'),
+      (select token from pg_temp.apex_test_capture where key = 'qr-live'),
       'B'
     ) as q
   ),
@@ -488,7 +487,7 @@ select is(
   (
     select q.verdict
     from public.check_in_by_qr(
-      (select token from pg_temp.meridian_test_capture where key = 'qr-live'),
+      (select token from pg_temp.apex_test_capture where key = 'qr-live'),
       'B'
     ) as q
   ),
@@ -512,7 +511,7 @@ set local request.jwt.claims = '{"sub":"10000000-0000-0000-0000-000000000002","r
 
 select lives_ok(
   $$
-    insert into pg_temp.meridian_test_capture (key, object_id, token)
+    insert into pg_temp.apex_test_capture (key, object_id, token)
     select 'qr-expired', q.qr_pass_id, q.token
     from public.issue_qr_pass() as q
   $$,
@@ -523,7 +522,7 @@ reset role;
 
 update public.qr_passes
 set created_at = pg_catalog.now() - interval '2 minutes', expires_at = pg_catalog.now() - interval '1 minute'
-where id = (select object_id from pg_temp.meridian_test_capture where key = 'qr-expired');
+where id = (select object_id from pg_temp.apex_test_capture where key = 'qr-expired');
 
 select is(
   (
@@ -542,7 +541,7 @@ select is(
   (
     select q.verdict
     from public.check_in_by_qr(
-      (select token from pg_temp.meridian_test_capture where key = 'qr-expired'),
+      (select token from pg_temp.apex_test_capture where key = 'qr-expired'),
       'A'
     ) as q
   ),
@@ -553,12 +552,12 @@ select is(
 reset role;
 
 select ok(
-  (select qp.used_at is null from public.qr_passes as qp where qp.id = (select object_id from pg_temp.meridian_test_capture where key = 'qr-expired')),
+  (select qp.used_at is null from public.qr_passes as qp where qp.id = (select object_id from pg_temp.apex_test_capture where key = 'qr-expired')),
   'an expired QR pass is not consumed as a valid pass'
 );
 
 select throws_ok(
-  $$update public.payments set amount_egp = amount_egp where membership_id = '30000000-0000-0000-0000-000000000001'$$,
+  $$update public.payments set amount = amount where membership_id = '30000000-0000-0000-0000-000000000001'$$,
   '55000',
   'payments is append-only',
   'payment rows are append-only even for privileged sessions'
