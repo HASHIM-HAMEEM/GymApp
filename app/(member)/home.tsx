@@ -6,7 +6,6 @@ import { AppBar, Body } from '@/components/Chrome';
 import { MembershipCard } from '@/components/MembershipCard';
 import { RingCard } from '@/components/RingCard';
 import { IconButton, Button } from '@/components/Button';
-import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Overlays';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useNotices, usePlans, useQrPass, useMarkAllNoticesRead } from '@/data/api/queries';
@@ -106,25 +105,13 @@ export default function MemberHome() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         right={
-          <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 2 }}>
             {hasUnread ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t('notices.clearAll')}
+              <IconButton
+                name="close"
                 onPress={() => setClearOpen(true)}
-                hitSlop={12}
-                style={({ pressed }) => ({
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: c.ink3,
-                  opacity: pressed ? 0.7 : 1,
-                })}
-              >
-                <Icon name="close" size={16} color={c.bg} />
-              </Pressable>
+                accessibilityLabel={t('notices.clearAll')}
+              />
             ) : null}
             <View>
               <IconButton name="bell" onPress={() => router.push('/(member)/notices')} accessibilityLabel={t('common.notifications')} />

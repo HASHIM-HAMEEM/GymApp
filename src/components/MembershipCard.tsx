@@ -103,10 +103,10 @@ export function MembershipCard({
           <View style={styles.qrPlate}>
             <QRCode
               value={qrPayload}
-              size={96}
+              size={58}
               color="#10131A"
               backgroundColor={colors.plate}
-              quietZone={6}
+              quietZone={4}
               ecl="M"
             />
           </View>
@@ -141,12 +141,12 @@ export function MembershipCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
-    padding: 24,
-    paddingBottom: 22,
+    borderRadius: 22,
+    padding: 22,
+    paddingBottom: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    minHeight: 220,
+    minHeight: 188,
     justifyContent: 'space-between',
     backgroundColor: '#161616',
   },
@@ -158,13 +158,13 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 9,
   },
   wordmark: {
     fontFamily: typography.display,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 2.8,
+    letterSpacing: 2.6,
     color: 'rgba(242,244,248,0.92)',
     textTransform: 'uppercase',
   },
@@ -172,51 +172,49 @@ const styles = StyleSheet.create({
     fontFamily: typography.display,
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     color: '#EDEDED',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    paddingHorizontal: 12,
+    borderColor: 'rgba(255,255,255,0.28)',
+    paddingHorizontal: 11,
     paddingVertical: 6,
     borderRadius: 999,
     textTransform: 'uppercase',
   },
   holder: {
-    marginTop: 26,
+    marginTop: 22,
   },
   holderName: {
     fontFamily: typography.display,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     color: '#F2F4F8',
-    lineHeight: 28,
+    lineHeight: 26,
   },
   holderId: {
     fontFamily: typography.mono,
     fontSize: 13,
     letterSpacing: 1.0,
-    color: 'rgba(242,244,248,0.5)',
-    marginTop: 6,
+    color: 'rgba(242,244,248,0.55)',
+    marginTop: 5,
   },
   footRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    marginTop: 22,
+    marginTop: 20,
   },
   stat: {
-    gap: 5,
-    flex: 1,
-    minWidth: 0,
+    gap: 4,
   },
   statCap: {
     fontFamily: typography.fontFamily,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 1.6,
-    color: 'rgba(242,244,248,0.4)',
+    letterSpacing: 1.5,
+    color: 'rgba(242,244,248,0.45)',
     textTransform: 'uppercase',
   },
   statVal: {
@@ -226,13 +224,12 @@ const styles = StyleSheet.create({
     color: '#F2F4F8',
   },
   qrPlate: {
-    width: 108,
-    height: 108,
-    borderRadius: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 14,
     backgroundColor: colors.plate,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 4px 14px rgba(0,0,0,0.3)' }
       : {
