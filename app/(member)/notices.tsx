@@ -80,6 +80,8 @@ export default function NoticesScreen() {
               const color = catColor(c, n.category);
               return (
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={n.title}
                   key={n.id}
                   onPress={() => router.push(`/notice?id=${n.id}`)}
                   style={({ pressed }) => [
@@ -89,8 +91,8 @@ export default function NoticesScreen() {
                     pressed && { opacity: 0.6 },
                   ]}
                 >
-                  <Text style={[styles.cat, { color, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(noticeCategoryKey(n.category))}</Text>
                   <View style={styles.grow}>
+                    <Text style={[styles.cat, { color, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(noticeCategoryKey(n.category))}</Text>
                     <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={2}>
                       {n.title}
                     </Text>
@@ -135,7 +137,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   cat: {
-    width: 78,
+    marginBottom: 6,
     flexShrink: 0,
     fontFamily: typography.mono,
     fontSize: 11,

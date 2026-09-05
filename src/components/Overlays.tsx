@@ -146,6 +146,7 @@ const sheetStyles = StyleSheet.create({
 /* ------------------------------------------------------------------ */
 
 export interface ConfirmModalProps {
+  pending?: boolean;
   visible: boolean;
   title: string;
   children: React.ReactNode;
@@ -157,6 +158,7 @@ export interface ConfirmModalProps {
 }
 
 export function ConfirmModal({
+  pending = false,
   visible,
   title,
   children,
@@ -196,7 +198,7 @@ export function ConfirmModal({
   const scale = transition.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
 
   return (
-    <Modal visible={mounted} transparent animationType="none" onRequestClose={onCancel}>
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={pending ? undefined : onCancel}>
       <Animated.View style={[modalStyles.scrimColor, { opacity: transition, pointerEvents: 'none' }]} />
       <View style={modalStyles.center}>
         <Animated.View
@@ -212,10 +214,10 @@ export function ConfirmModal({
           <Text style={[modalStyles.title, { color: c.ink, writingDirection: textDir }]}>{title}</Text>
           <Text style={[modalStyles.body, { color: c.ink2, writingDirection: textDir }]}>{children}</Text>
           <View style={modalStyles.acts}>
-            <Button variant="secondary" block onPress={onCancel} style={{ flex: 1 }}>
+            <Button variant="secondary" block disabled={pending} onPress={onCancel} containerStyle={{ flex: 1, width: 'auto' }}>
               {resolvedCancel}
             </Button>
-            <Button variant={confirmVariant} block onPress={onConfirm} style={{ flex: 1.3 }}>
+            <Button variant={confirmVariant} block loading={pending} onPress={onConfirm} containerStyle={{ flex: 1, width: 'auto' }}>
               {resolvedConfirm}
             </Button>
           </View>
@@ -332,11 +334,13 @@ export function Segmented({
 
 export function Chip({
   children,
+  leading,
   on,
   onPress,
   count,
 }: {
   children: React.ReactNode;
+  leading?: React.ReactNode;
   on?: boolean;
   onPress?: () => void;
   count?: React.ReactNode;
@@ -345,12 +349,16 @@ export function Chip({
   const c = useColors(darkMode);
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: Boolean(on) }}
       onPress={onPress}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        height: 34,
+        gap: 8,
+        minHeight: 44,
+        paddingVertical: 10,
+        flexShrink: 0,
         paddingHorizontal: 14,
         borderRadius: 99,
         backgroundColor: on ? c.ink : c.surface,
@@ -358,6 +366,7 @@ export function Chip({
         borderColor: on ? c.ink : c.lineStrong,
       }}
     >
+      {leading ? <View style={{ flexShrink: 0, alignItems: 'center', justifyContent: 'center' }}>{leading}</View> : null}
       <Text
         style={{
           fontFamily: typography.fontFamily,

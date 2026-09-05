@@ -2,6 +2,7 @@ import * as React from 'react';
 import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Stack, SplashScreen, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '@/providers/AppProvider';
 import { colors, useColors } from '@/theme/tokens';
 import { StatusBar as FauxStatusBar } from '@/components/Chrome';
@@ -47,7 +48,7 @@ function RootNav() {
       if (pathname !== '/set-password') router.replace('/set-password');
       return;
     }
-    const adminOnly = ['/today', '/members', '/scanner', '/member-new', '/member-detail', '/renew', '/notice-compose'];
+    const adminOnly = ['/today', '/members', '/scanner', '/member-new', '/member-detail', '/renew', '/notice-compose', '/exports', '/plans'];
     const memberOnly = ['/home', '/visits', '/membership', '/qr', '/edit-profile'];
     if (role === 'member' && adminOnly.includes(pathname)) router.replace('/(member)/home');
     if (role === 'admin' && memberOnly.includes(pathname)) router.replace('/(admin)/today');
@@ -90,6 +91,8 @@ function RootNav() {
           <Stack.Screen name="member-detail" />
           <Stack.Screen name="renew" />
           <Stack.Screen name="notice-compose" />
+          <Stack.Screen name="exports" />
+          <Stack.Screen name="plans" />
         </Stack.Protected>
       </Stack.Protected>
 
@@ -111,7 +114,12 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   const { width, height } = useWindowDimensions();
 
   if (Platform.OS !== 'web') {
-    return <View style={{ flex: 1, direction: isRtl ? 'rtl' : 'ltr' }}>{children}</View>;
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg, direction: isRtl ? 'rtl' : 'ltr' }}>
+        <StatusBar style={darkMode ? 'light' : 'dark'} />
+        {children}
+      </SafeAreaView>
+    );
   }
 
   const mobile = width < 600;
@@ -142,6 +150,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
+    <SafeAreaProvider>
     <AppProvider>
       {Platform.OS === 'web' ? (
         <style>{`
@@ -155,6 +164,7 @@ export default function RootLayout() {
         <RootNav />
       </PhoneFrame>
     </AppProvider>
+    </SafeAreaProvider>
   );
 }
 

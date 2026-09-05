@@ -7,6 +7,7 @@ import { TextButton } from '@/components/Button';
 import { ConfirmModal } from '@/components/Overlays';
 import { Banner } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
+import { SwipeNoticeRow } from '@/components/SwipeNoticeRow';
 import { useDeleteNotice, useNotices } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
 import { fmtShort } from '@/data/format';
@@ -50,7 +51,7 @@ export default function AdminNotices() {
   const [deleteError, setDeleteError] = React.useState<string | null>(null);
 
   const removeNotice = async () => {
-    if (!selectedNotice) return;
+    if (!selectedNotice || deleteNotice.isPending) return;
     setDeleteError(null);
     try {
       await deleteNotice.mutateAsync(selectedNotice.id);
@@ -78,6 +79,7 @@ export default function AdminNotices() {
               {notices.map((n, i) => {
                 const color = catColor(c, n.category);
                 return (
+                  <SwipeNoticeRow key={n.id} label={t('common.delete')} onDelete={() => setSelectedNotice(n)}>
                   <View
                     key={n.id}
                     style={[
@@ -87,19 +89,25 @@ export default function AdminNotices() {
                     ]}
                   >
                     <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={n.title}
+                      accessibilityHint="Swipe either direction or hold to remove this notice."
+                      onLongPress={() => setSelectedNotice(n)}
+                      accessibilityActions={[{ name: 'delete', label: t('common.delete') }]}
+                      onAccessibilityAction={(event) => { if (event.nativeEvent.actionName === 'delete') setSelectedNotice(n); }}
                       onPress={() => router.push({ pathname: '/notice', params: { id: n.id } })}
                       style={({ pressed }) => [styles.noticeLink, { flexDirection: isRtl ? 'row-reverse' : 'row' }, pressed && { opacity: 0.6 }]}
                     >
-                      <Text style={[styles.cat, { color, textAlign: isRtl ? 'right' : 'left', writingDirection: textDir }]}>{t(categoryKey[n.category])}</Text>
                       <View style={styles.grow}>
+                        <Text style={[styles.cat, { color, writingDirection: textDir }]}>{t(categoryKey[n.category])}</Text>
                         <Text style={[styles.title, { color: c.ink, writingDirection: textDir }]} numberOfLines={2}>{n.title}</Text>
-                        <LtrText style={[styles.dt, { color: c.ink3 }]} numberOfLines={1}>
+                        <LtrText style={[styles.dt, { color: c.ink3 }]}>
                           {fmtShort(n.date, language)} · {t(audienceKey[n.audience])} · {t('notices.delivered', { count: n.delivered.toLocaleString() })}
                         </LtrText>
                       </View>
                     </Pressable>
-                    <TextButton color={c.bad} onPress={() => setSelectedNotice(n)}><Text style={{ writingDirection: textDir }}>{t('common.delete')}</Text></TextButton>
                   </View>
+                  </SwipeNoticeRow>
                 );
               })}
             </View>
@@ -107,6 +115,7 @@ export default function AdminNotices() {
         </Body>
       </ScrollView>
       <ConfirmModal
+        pending={deleteNotice.isPending}
         visible={Boolean(selectedNotice)}
         title={t('notices.deleteTitle')}
         confirmLabel={t('notices.deleteConfirm')}
@@ -143,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   cat: {
-    width: 62,
+    marginBottom: 6,
     flexShrink: 0,
     fontFamily: typography.mono,
     fontSize: 11,
@@ -160,6 +169,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   dt: {
+    lineHeight: 19,
     fontFamily: typography.fontFamily,
     fontSize: 13,
     letterSpacing: tracking.small,

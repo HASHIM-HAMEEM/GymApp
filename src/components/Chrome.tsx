@@ -145,6 +145,7 @@ export function AppBar({ title, onBack, onClose, right, sub, dark, children }: A
 /* ------------------------------------------------------------------ */
 
 export interface TabDef {
+  badge?: number;
   key: string;
   label: string;
   icon: IconName;
@@ -176,6 +177,7 @@ export function TabBar({ tabs, active, fab, dark = false }: TabBarProps) {
           style={{ flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', gap: 4 }}
         >
           <Icon name={t.icon} size={22} color={on ? c.accentHi : c.ink3} stroke={on ? 2 : 1.7} />
+          {Boolean(t.badge) ? <View accessibilityLabel={`${t.badge} unread`} style={{ position: 'absolute', top: 1, left: '58%', width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent }} /> : null}
           <Text
             numberOfLines={1}
             style={{

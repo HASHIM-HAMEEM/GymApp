@@ -3,6 +3,7 @@ import { Tabs, Redirect } from 'expo-router';
 import { useColors } from '@/theme/tokens';
 import { TabBar, TabDef } from '@/components/Chrome';
 import { useApp } from '@/data/store';
+import { useNotices } from '@/data/api/queries';
 
 const TAB_ICONS: Record<string, Omit<TabDef, 'label'>> = {
   home: { key: 'home', icon: 'home', href: '/(member)/home' },
@@ -17,6 +18,8 @@ interface TabBarProps {
 
 function MemberTabBar({ state }: TabBarProps) {
   const { t } = useApp();
+  const notices = useNotices();
+  const unread = (notices.data ?? []).filter((notice) => !notice.read).length;
   const active = state.routes[state.index].name;
   const labels = {
     home: t('tabs.home'),
@@ -26,7 +29,7 @@ function MemberTabBar({ state }: TabBarProps) {
   };
   const tabs = state.routes
     .filter((route: { name: string }) => TAB_ICONS[route.name])
-    .map((route: { name: string }) => ({ ...TAB_ICONS[route.name], label: labels[route.name as keyof typeof labels] }));
+    .map((route: { name: string }) => ({ ...TAB_ICONS[route.name], label: labels[route.name as keyof typeof labels], badge: route.name === 'notices' ? unread : 0 }));
 
   return (
     <TabBar

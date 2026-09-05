@@ -35,6 +35,7 @@ export interface ButtonProps {
   onPress?: () => void;
   href?: Href;
   style?: ViewStyle;
+  containerStyle?: ViewStyle;
   textStyle?: TextStyle;
 }
 
@@ -49,6 +50,7 @@ export function Button({
   onPress,
   href,
   style,
+  containerStyle,
   textStyle,
 }: ButtonProps) {
   const { darkMode, isRtl } = useApp();
@@ -144,7 +146,7 @@ export function Button({
   );
 
   return (
-    <Animated.View style={{ transform: [{ scale }], ...(block ? { alignSelf: 'stretch', width: '100%' } as any : {}) }}>
+    <Animated.View style={[{ minWidth: 0, maxWidth: '100%', flexShrink: 1, transform: [{ scale }], ...(block ? { alignSelf: 'stretch' as const, width: '100%' as const } : {}) }, containerStyle]}>
       {href ? <Link href={href} asChild>{control}</Link> : control}
     </Animated.View>
   );

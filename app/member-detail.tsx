@@ -1,3 +1,4 @@
+import { PaymentMethods } from '@/components/PaymentMethods';
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -36,6 +37,7 @@ export default function MemberDetail() {
   const [waiveReason, setWaiveReason] = React.useState('');
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionNote, setActionNote] = React.useState<string | null>(null);
+  const [activityExpanded, setActivityExpanded] = React.useState(false);
 
   const m = member.data;
 
@@ -352,27 +354,32 @@ export default function MemberDetail() {
             )}
           </View>
 
-          <View style={{ gap: 0 }}>
-            <SectionLabel>{t('memberDetail.activityLog')}</SectionLabel>
+          <View style={{ borderWidth: 1, borderColor: c.line, borderRadius: radius.lg, padding: 16, backgroundColor: c.bg1 }}>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: activityExpanded }} onPress={() => setActivityExpanded((value) => !value)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <Text style={{ color: c.ink, fontSize: 15, fontWeight: '600', flex: 1 }}>{t('memberDetail.activityLog')} · {m.activity.length}</Text>
+              <Text style={{ color: c.ink2, fontSize: 13 }}>{activityExpanded ? (isRtl ? 'کم کریں' : 'Minimize −') : (isRtl ? 'دکھائیں' : 'Show +')}</Text>
+            </Pressable>
+            {activityExpanded ? <>
             {m.activity.length === 0 ? (
               <View style={{ paddingVertical: 18, alignItems: 'center' }}>
                 <Text style={{ color: c.ink4, writingDirection: textDir }}>{t('memberDetail.noActivity')}</Text>
               </View>
             ) : (
               m.activity.slice(0, 20).map((a, idx) => (
-                <View key={idx} style={[styles.logRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <View key={idx} style={[styles.logRow, { paddingVertical: 12, borderTopWidth: 1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                   <View style={styles.dotCol}>
                     <View style={[styles.logDot, { backgroundColor: c.line2 }]} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.logText, { color: c.ink, writingDirection: textDir }]}>{a.text}</Text>
-                    <Text style={[styles.logTime, { color: c.ink4, writingDirection: textDir }]}>
+                    <Text style={[styles.logTime, { color: c.ink3, lineHeight: 19, marginTop: 6, writingDirection: textDir }]}>
                       {a.author ? t('memberDetail.activityBy', { date: `\u200E${fmtDateTime(a.at, language)}\u200E`, author: a.author }) : fmtDateTime(a.at, language)}
                     </Text>
                   </View>
                 </View>
               ))
             )}
+            </> : null}
           </View>
 
           <View style={{ gap: 10 }}>
@@ -462,22 +469,7 @@ export default function MemberDetail() {
         </Field>
         <View style={{ gap: 10, marginTop: 14 }}>
           <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('renew.paymentMethod')}</Text>
-          <View style={[styles.methodRow, { borderColor: c.line }]}>
-            {(['cash', 'card', 'upi', 'wallet'] as DeskPaymentMethod[]).map((method) => {
-              const on = settleMethod === method;
-              return (
-                <Pressable
-                  key={method}
-                  onPress={() => setSettleMethod(method)}
-                  style={[styles.methodBtn, on && { backgroundColor: c.accent }]}
-                >
-                  <Text style={{ fontSize: 13, letterSpacing: tracking.small, fontWeight: '600', color: on ? c.accentInk : c.ink3, writingDirection: textDir }}>
-                    {settleMethodLabels[method]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <PaymentMethods value={settleMethod} onChange={setSettleMethod} methods={["cash", "card", "upi", "wallet"] as const} disabled={settle.isPending} />
         </View>
         <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
           <Button variant="secondary" onPress={() => setShowingSettle(false)}>{t('common.cancel')}</Button>

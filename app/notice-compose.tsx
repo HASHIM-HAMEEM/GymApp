@@ -55,6 +55,7 @@ function NoticeComposeInner() {
   })();
 
   const publish = async () => {
+    if (publishNotice.isPending) return;
     setError(null);
     try {
       const result = await publishNotice.mutateAsync({
@@ -207,6 +208,7 @@ function NoticeComposeInner() {
       </View>
 
       <ConfirmModal
+        pending={publishNotice.isPending}
         visible={step === 'confirm'}
         title={t('noticeCompose.publishTo', { audience: audienceLabels[audience] })}
         confirmLabel={t('common.publish')}

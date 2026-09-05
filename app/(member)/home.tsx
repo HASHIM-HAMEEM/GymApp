@@ -82,7 +82,10 @@ export default function MemberHome() {
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         right={
-          <IconButton name="bell" onPress={() => router.push('/(member)/notices')} accessibilityLabel={t('common.notifications')} />
+          <View>
+            <IconButton name="bell" onPress={() => router.push('/(member)/notices')} accessibilityLabel={t('common.notifications')} />
+            {(noticesQuery.data ?? []).some((notice) => !notice.read) ? <View style={{ pointerEvents: 'none', position: 'absolute', right: 7, top: 5, width: 7, height: 7, borderRadius: 4, backgroundColor: c.accent }} /> : null}
+          </View>
         }
       >
         <View>

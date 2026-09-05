@@ -1,3 +1,5 @@
+import { PaymentMethods } from '@/components/PaymentMethods';
+import { AgreedPrice, pricingError } from '@/components/AgreedPrice';
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
@@ -34,11 +36,14 @@ function RenewFlowInner() {
   const textDir = isRtl ? 'rtl' : 'ltr';
 
   const m = memberQuery.data ?? null;
-  const plans = (plansQuery.data ?? []).filter((p) => p.name !== 'Premium Quarterly');
+  const plans = plansQuery.data ?? [];
 
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
   const [selectedPlanId, setSelectedPlanId] = React.useState('');
   const [payMethod, setPayMethod] = React.useState<PayMethod>('cash');
+  const [customPrice, setCustomPrice] = React.useState('');
+  const [priceNote, setPriceNote] = React.useState('');
+  React.useEffect(() => { setCustomPrice(''); setPriceNote(''); }, [selectedPlanId]);
   const [result, setResult] = React.useState<{
     receiptNumber: string | null;
     startDate: string;
@@ -59,6 +64,9 @@ function RenewFlowInner() {
     wallet: t('payment.wallet'),
     upi: t('payment.upi'),
   };
+  const plan = plans.find((p) => p.id === selectedPlanId) ?? plans[0];
+  const agreedPrice = customPrice.trim() ? Number(customPrice) : plan?.price ?? 0;
+  const quoteQuery = useRenewalQuote(m?.databaseId, plan?.id, Boolean(m && plan));
 
   if (!m) {
     return (
@@ -71,29 +79,31 @@ function RenewFlowInner() {
     );
   }
 
-  const plan = plans.find((p) => p.id === selectedPlanId) ?? plans[0];
   const today = m.asOf ?? todayIso();
   const currentExpiry = m.membership?.expiryDate ?? today;
   const hasActiveTerm = Boolean(m.membership && m.membership.expiryDate >= today);
   // Server quote: the exact term the server will sell for this member.
-  const quoteQuery = useRenewalQuote(m.databaseId, plan?.id);
   const quote = quoteQuery.data ?? null;
 
   const confirmRenewal = async () => {
-    if (!plan || !m.databaseId) return;
+    if (!plan || !m.databaseId || renewMembership.isPending) return;
     setError(null);
+    const invalid = pricingError(customPrice, priceNote);
+    if (invalid) { setError(invalid); return; }
     try {
       const renewal = await renewMembership.mutateAsync({
         memberId: m.databaseId,
         planId: plan.id,
-        amountPaid: plan.price,
-        paymentMethod: payMethod,
+        amountPaid: agreedPrice,
+        paymentMethod: agreedPrice === 0 ? 'complimentary' : payMethod,
+        agreedPrice: customPrice.trim() ? agreedPrice : undefined,
+        priceNote: customPrice.trim() ? priceNote.trim() : undefined,
       });
       setResult({
         receiptNumber: renewal.receipt_number,
         startDate: renewal.start_date,
         endDate: renewal.end_date,
-        amountPaid: plan.price,
+        amountPaid: agreedPrice,
         amountDue: Number(renewal.amount_due ?? 0),
         currency: plan.currency,
       });
@@ -191,12 +201,12 @@ function RenewFlowInner() {
               />
               <ReceiptRow
                 label={t('renew.payment')}
-                value={t('renew.paymentSummary', { method: paymentMethodLabels[payMethod], amount: formatMoney(plan?.price, plan?.currency, language) })}
+                value={t('renew.paymentSummary', { method: paymentMethodLabels[payMethod], amount: formatMoney(agreedPrice, plan?.currency, language) })}
               />
               <View style={[styles.totalRow, { backgroundColor: c.accentSoft, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                 <Text style={[styles.totalLabel, { color: c.ink, writingDirection: textDir }]}>{t('renew.totalDue')}</Text>
                 <Text style={[styles.totalVal, { color: c.accentHi, writingDirection: textDir }]}>
-                  {formatMoney(plan?.price, plan?.currency, language)}
+                  {formatMoney(agreedPrice, plan?.currency, language)}
                 </Text>
               </View>
             </View>
@@ -273,25 +283,12 @@ function RenewFlowInner() {
 
           <View style={{ gap: 8 }}>
             <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('renew.paymentMethod')}</Text>
-            <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-              {(['cash', 'card', 'upi', 'wallet'] as PayMethod[]).map((method) => {
-                const on = payMethod === method;
-                return (
-                  <Pressable
-                    key={method}
-                    onPress={() => setPayMethod(method)}
-                    style={[styles.segBtn, on && { backgroundColor: c.accent }]}
-                  >
-                    <Text style={[styles.segText, { color: on ? c.accentInk : c.ink3, writingDirection: textDir }]}>
-                      {paymentMethodLabels[method]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <PaymentMethods value={payMethod} onChange={setPayMethod} methods={["cash", "card", "upi", "wallet"] as const} />
           </View>
 
-          <Button block style={{ marginTop: 8 }} onPress={() => setStep(2)}>
+          <AgreedPrice value={customPrice} reason={priceNote} onValue={setCustomPrice} onReason={setPriceNote} />
+          {pricingError(customPrice, priceNote) ? <Text style={{color:c.bad,fontSize:13,lineHeight:19}}>{pricingError(customPrice, priceNote)}</Text> : null}
+          <Button block disabled={!plan || quoteQuery.isPending || quoteQuery.isError || Boolean(pricingError(customPrice,priceNote))} style={{ marginTop: 8 }} onPress={() => setStep(2)}>
             {t('renew.continue')}
           </Button>
         </Body>

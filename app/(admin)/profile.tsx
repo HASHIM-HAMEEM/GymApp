@@ -107,7 +107,7 @@ export default function AdminProfile() {
 
           <View>
             <SectionLabel>{t('settings.preferences')}</SectionLabel>
-            <PreferencesGroup onSignOut={() => void handleSignOut()} signingOut={signingOut} />
+            <PreferencesGroup onPlans={() => router.push('/plans')} onExport={() => router.push('/exports')} onSignOut={() => void handleSignOut()} signingOut={signingOut} />
           </View>
 
           <DeveloperCredit />

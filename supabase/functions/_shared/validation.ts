@@ -17,6 +17,8 @@ export interface MemberInvitationInput {
   address: string | null;
   planId: string | null;
   amountPaid: number | null;
+  agreedPrice: number | null;
+  priceNote: string | null;
   paymentMethod: "upi" | "cash" | "card" | "wallet" | "complimentary" | null;
 }
 
@@ -167,6 +169,8 @@ export function parseMemberInvitationInput(body: Record<string, unknown>): Membe
     "membershipStartDate",
     "amountPaid",
     "paymentMethod",
+    "agreedPrice",
+    "priceNote",
   ]);
   // Start dates are server-controlled; reject clients that still send one.
   if (body.membershipStartDate !== undefined && body.membershipStartDate !== null && body.membershipStartDate !== "") {
@@ -186,6 +190,8 @@ export function parseMemberInvitationInput(body: Record<string, unknown>): Membe
       ? null
       : (isUuid(body.planId) ? body.planId : throwInvalidPlanId()),
     amountPaid: normalizeAmountPaid(body.amountPaid),
+    agreedPrice: body.agreedPrice == null ? null : normalizeAmountPaid(body.agreedPrice),
+    priceNote: normalizeOptionalText(body.priceNote, 'priceNote', 240),
     paymentMethod: normalizePaymentMethod(body.paymentMethod),
   };
 }

@@ -3,6 +3,7 @@ import { requireSupabase } from '@/lib/supabase';
 import { useApp } from '@/providers/AppProvider';
 import type { Member, MembershipStatus, Notice, QrPass } from '@/data/types';
 import type {
+  ApiPlanRow,
   ApiCheckInByQrRow,
   ApiCheckInManualRow,
   ApiCreateInvitationResult,
@@ -82,6 +83,28 @@ async function invokeEdge<T>(name: string, body: Record<string, unknown>): Promi
 
 export function usePlans() {
   return useQuery({ queryKey: ['plans'], queryFn: fetchPlans, select: (rows) => rows.map(mapPlan) });
+}
+
+export function useAdminPlans() {
+  const { role } = useApp();
+  return useQuery({
+    queryKey: ['admin-plans'], enabled: role === 'admin',
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().from('plans').select('id,slug,name,duration_months,price,currency,blurb,is_active').order('duration_months');
+      if (error) throw error;
+      return (data ?? []) as ApiPlanRow[];
+    },
+  });
+}
+
+export function useSavePlan() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id?: string; name: string; months: number; price: number; active: boolean }) => callRpc<string>('save_membership_plan', {
+      p_plan_id: input.id ?? null, p_name: input.name, p_months: input.months, p_price: input.price, p_active: input.active,
+    }, 'Plan could not be saved. Check your connection and ensure the pricing database update is installed.'),
+    onSuccess: async () => { await Promise.all([cache.invalidateQueries({queryKey:['plans']}),cache.invalidateQueries({queryKey:['admin-plans']})]); },
+  });
 }
 
 export function useClub() {
@@ -167,8 +190,13 @@ export function useDashboard() {
 export function useNotices(asAdmin = false) {
   return useQuery({
     queryKey: ['notices', asAdmin],
+    staleTime: 0,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
     queryFn: async (): Promise<Notice[]> => {
       const client = requireSupabase();
+      const notices: Notice[] = [];
+      for (let offset = 0; ; offset += 200) {
       if (asAdmin) {
         const { data, error } = await client
           .from('notices')
@@ -177,9 +205,9 @@ export function useNotices(asAdmin = false) {
               'author:profiles!notices_author_id_fkey(display_name), notice_deliveries(count)',
           )
           .order('published_at', { ascending: false })
-          .limit(60);
+          .order('id', { ascending: false }).range(offset, offset + 199);
         if (error) throw error;
-        return (data as unknown as ApiNoticeTableRow[]).map((row) => {
+        notices.push(...(data as unknown as ApiNoticeTableRow[]).map((row) => {
           const raw = row as unknown as {
             author?: { display_name: string | null } | null;
             notice_deliveries?: { count: number | null }[] | null;
@@ -189,17 +217,21 @@ export function useNotices(asAdmin = false) {
             author_name: raw.author?.display_name ?? null,
             delivery_count: raw.notice_deliveries?.[0]?.count ?? 0,
           });
-        });
+        }));
+        if (data.length < 200) return notices;
+        continue;
       }
       const { data, error } = await client
         .from('notice_deliveries')
         .select('read_at, notices!inner(id, category, title, body, audience, urgent, published_at)')
         .order('delivered_at', { ascending: false })
-        .limit(60);
+        .order('id', { ascending: false }).range(offset, offset + 199);
       if (error) throw error;
-      return (data as unknown as { read_at: string | null; notices: ApiNoticeTableRow }[]).map((row) =>
+      notices.push(...(data as unknown as { read_at: string | null; notices: ApiNoticeTableRow }[]).map((row) =>
         mapNoticeRow({ ...row.notices, read_at: row.read_at }),
-      );
+      ));
+      if (data.length < 200) return notices;
+      }
     },
   });
 }
@@ -301,7 +333,9 @@ export function useRenewMembership() {
       memberId: string;
       planId: string;
       amountPaid: number;
-      paymentMethod: DeskPaymentMethod;
+      paymentMethod: DeskPaymentMethod | 'complimentary';
+      agreedPrice?: number;
+      priceNote?: string;
     }) =>
       callRpc<ApiRenewRow>(
         'renew_membership',
@@ -312,6 +346,7 @@ export function useRenewMembership() {
           p_amount_paid: input.amountPaid,
           p_payment_method: input.paymentMethod,
           p_request_id: newRequestId(),
+          ...(input.agreedPrice === undefined ? {} : { p_agreed_price: input.agreedPrice, p_price_note: input.priceNote }),
         },
         'The renewal could not be recorded.',
       ),
@@ -485,7 +520,10 @@ export function useMarkNoticeRead() {
   return useMutation({
     mutationFn: (noticeId: string) =>
       callRpc<string>('mark_notice_read', { p_notice_id: noticeId }, 'The notice could not be marked as read.'),
-    onSuccess: () => {
+    onSuccess: (_result, noticeId) => {
+      cache.setQueryData<Notice[]>(['notices', false], (notices) =>
+        notices?.map((notice) => notice.id === noticeId ? { ...notice, read: true } : notice),
+      );
       void cache.invalidateQueries({ queryKey: ['notices'] });
     },
   });
@@ -550,6 +588,8 @@ export function useCreateMemberInvitation() {
       planId?: string;
       amountPaid?: number;
       paymentMethod?: DeskPaymentMethod | 'complimentary';
+      agreedPrice?: number;
+      priceNote?: string;
     }) =>
       invokeEdge<ApiCreateInvitationResult>('create-member-invitation', {
         email: input.email,
@@ -564,6 +604,7 @@ export function useCreateMemberInvitation() {
         planId: input.planId ?? null,
         amountPaid: input.amountPaid ?? null,
         paymentMethod: input.paymentMethod ?? null,
+        ...(input.agreedPrice === undefined ? {} : { agreedPrice: input.agreedPrice, priceNote: input.priceNote }),
       }),
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['members'] });

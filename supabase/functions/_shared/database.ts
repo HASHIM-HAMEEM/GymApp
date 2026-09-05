@@ -62,6 +62,8 @@ export async function createMemberInvitation(
   if (input.planId !== null) args.p_plan_id = input.planId;
   if (input.amountPaid !== null) args.p_amount_paid = input.amountPaid;
   if (input.paymentMethod !== null) args.p_payment_method = input.paymentMethod;
+  if (input.agreedPrice !== null) args.p_agreed_price = input.agreedPrice;
+  if (input.priceNote !== null) args.p_price_note = input.priceNote;
 
   const { data, error } = await caller.rpc("create_member_invitation", args);
   if (error) {

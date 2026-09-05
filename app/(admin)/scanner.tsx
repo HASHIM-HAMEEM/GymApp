@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { AppState, Linking, Platform, ScrollView, View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, KeyboardAvoidingView } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar } from '@/components/Chrome';
@@ -48,6 +48,31 @@ export default function Scanner() {
   const [scanError, setScanError] = React.useState<string | null>(null);
 
   const lockRef = React.useRef(false);
+  const [focused, setFocused] = React.useState(false);
+  const [foreground, setForeground] = React.useState(AppState.currentState === 'active');
+  const [nativeFallback, setNativeFallback] = React.useState(false);
+  const modernAndroid = Platform.OS === 'android' && CameraView.isModernBarcodeScannerAvailable && !nativeFallback;
+  const barcodeHandler = React.useRef<(event: { data: string }) => void>(() => undefined);
+  useFocusEffect(React.useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
+  React.useEffect(() => {
+    const subscription = AppState.addEventListener('change', (value) => setForeground(value === 'active'));
+    return () => subscription.remove();
+  }, []);
+  React.useEffect(() => {
+    if (!focused || manualOpen || state !== 'ready' || !modernAndroid || scanError) return;
+    let active = true;
+    // Expo delegates this to Google Play Services' GmsBarcodeScanning on Android.
+    const subscription = CameraView.onModernBarcodeScanned((event) => { if (active) barcodeHandler.current(event); });
+    void CameraView.launchScanner({ barcodeTypes: ['qr'] }).catch(() => {
+      // Cancellation or unavailable Play Services falls back to the embedded
+      // camera; never trap the user in a repeatedly reopening system scanner.
+      if (active) setNativeFallback(true);
+    });
+    return () => { active = false; subscription.remove(); };
+  }, [focused, manualOpen, state, modernAndroid, scanError]);
 
   React.useEffect(() => {
     if (state !== 'ready') {
@@ -56,7 +81,7 @@ export default function Scanner() {
   }, [state]);
 
   const handleBarcode = ({ data }: { data: string }) => {
-    if (lockRef.current) return;
+    if (lockRef.current || manualOpen || !focused) return;
     const token = data.trim().toLowerCase();
     if (!TOKEN_PATTERN.test(token)) {
       lockRef.current = true;
@@ -86,6 +111,7 @@ export default function Scanner() {
       },
     );
   };
+  barcodeHandler.current = handleBarcode;
 
   const reset = () => {
     lockRef.current = false;
@@ -131,12 +157,15 @@ export default function Scanner() {
       />
 
       {state === 'ready' ? (
-        <View style={styles.readyBody}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.readyBody}>
           <View style={styles.scanFrame}>
-            {permission?.granted ? (
+            {permission?.granted && focused && foreground && !manualOpen && !modernAndroid ? (
               <CameraView
                 style={StyleSheet.absoluteFill}
                 facing="back"
+                zoom={0}
+                ratio="4:3"
+                onMountError={() => setScanError(t('scanner.cameraOff'))}
                 onBarcodeScanned={scanError ? undefined : handleBarcode}
                 barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
               />
@@ -145,7 +174,7 @@ export default function Scanner() {
             <View style={[styles.corner, styles.c2]} />
             <View style={[styles.corner, styles.c3]} />
             <View style={[styles.corner, styles.c4]} />
-            <View style={styles.scanLine} />
+            {modernAndroid ? <ActivityIndicator style={StyleSheet.absoluteFill} color={c.ink} /> : null}
           </View>
 
           <View style={{ alignItems: 'center', gap: 6 }}>
@@ -159,7 +188,7 @@ export default function Scanner() {
           </View>
 
           {scanError ? (
-            <Banner variant="error"><Text style={{ writingDirection: textDir }}>{scanError}</Text></Banner>
+            <View style={{ gap: 12 }}><Banner variant="error"><Text style={{ writingDirection: textDir }}>{scanError}</Text></Banner><Button onPress={reset}>{t('scanner.retry')}</Button></View>
           ) : !permission ? (
             <Text style={[styles.readySub, { writingDirection: textDir }]}>{t('scanner.cameraPermissionChecking')}</Text>
           ) : !permission.granted ? (
@@ -167,10 +196,10 @@ export default function Scanner() {
               <Text style={[styles.readySub, { writingDirection: textDir }]}>
                 {t('scanner.cameraOff')}
               </Text>
-              <Button size="sm" onPress={requestPermission}>{t('scanner.allowCamera')}</Button>
+              <Button size="sm" onPress={permission.canAskAgain ? requestPermission : () => void Linking.openSettings()}>{t('scanner.allowCamera')}</Button>
             </View>
           ) : null}
-        </View>
+        </ScrollView>
       ) : state === 'verifying' ? (
         <View style={styles.verifyingWrap}>
           <ActivityIndicator size="large" color={colors.ok} />
@@ -499,7 +528,7 @@ function ScanResult({
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.dk },
   readyBody: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 24,
@@ -507,8 +536,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   scanFrame: {
-    width: 220,
-    height: 220,
+    width: '100%',
+    maxWidth: 360,
+    aspectRatio: 4 / 3,
     borderWidth: 1,
     borderColor: 'rgba(236,233,224,0.15)',
     borderRadius: 16,

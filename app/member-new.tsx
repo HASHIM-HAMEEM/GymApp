@@ -1,3 +1,5 @@
+import { PaymentMethods } from '@/components/PaymentMethods';
+import { AgreedPrice, pricingError } from '@/components/AgreedPrice';
 import * as React from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -49,11 +51,15 @@ export default function MemberNew() {
   const [planId, setPlanId] = React.useState<string>('');
   const [payMethod, setPayMethod] = React.useState<PaymentMethod>('cash');
   const [amountPaid, setAmountPaid] = React.useState('');
+  const [customPrice, setCustomPrice] = React.useState('');
+  const [priceNote, setPriceNote] = React.useState('');
+  React.useEffect(() => { setCustomPrice(''); setPriceNote(''); }, [planId]);
   const [formError, setFormError] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<{ memberNumber: string; email: string } | null>(null);
 
   const plans = plansQuery.data ?? [];
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
+  const agreedPrice = customPrice.trim() ? Number(customPrice) : selectedPlan?.price ?? 0;
 
   const paymentLabels: Record<PaymentMethod, string> = {
     cash: t('payment.cash'),
@@ -91,6 +97,9 @@ export default function MemberNew() {
   }
 
   const submit = async () => {
+    if (createInvitation.isPending) return;
+    const invalid = planId ? pricingError(customPrice, priceNote) : null;
+    if (invalid) { setFormError(invalid); return; }
     let bad: string | null = null;
     if (!firstName.trim() || !lastName.trim()) bad = t('memberNew.nameRequired');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) bad = t('memberNew.emailInvalid');
@@ -106,7 +115,7 @@ export default function MemberNew() {
       const centsOk = Math.abs(amount * 100 - Math.round(amount * 100)) <= 1e-6;
       if (!amountPaid.trim() || !Number.isFinite(amount) || amount <= 0) bad = t('memberNew.amountRequired');
       else if (!centsOk) bad = t('memberNew.amountDecimals');
-      else if (amount > (selectedPlan?.price ?? 0)) bad = t('memberNew.amountTooHigh');
+      else if (amount > agreedPrice) bad = 'Amount received cannot exceed the agreed price.';
     }
     if (bad) {
       setFormError(bad);
@@ -128,6 +137,8 @@ export default function MemberNew() {
         planId: planId || undefined,
         amountPaid: planId && payMethod !== 'complimentary' ? Number(amountPaid) : undefined,
         paymentMethod: planId ? payMethod : undefined,
+        agreedPrice: planId && customPrice.trim() ? agreedPrice : undefined,
+        priceNote: planId && customPrice.trim() ? priceNote.trim() : undefined,
       });
       setCreated({ memberNumber: result.memberNumber, email: email.trim() });
     } catch (error) {
@@ -251,27 +262,13 @@ export default function MemberNew() {
 
           {planId ? (
             <View style={{ gap: 10 }}>
+              <AgreedPrice value={customPrice} reason={priceNote} onValue={setCustomPrice} onReason={setPriceNote} />
               <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberNew.paymentAtDesk')}</Text>
-              <View style={[styles.segWrap, { backgroundColor: c.bg1, borderColor: c.line }]}>
-                {(['cash', 'card', 'upi', 'wallet', 'complimentary'] as PaymentMethod[]).map((method) => {
-                  const on = payMethod === method;
-                  return (
-                    <Pressable
-                      key={method}
-                      onPress={() => setPayMethod(method)}
-                      style={[styles.segBtn, on && { backgroundColor: c.accent }]}
-                    >
-                      <Text style={[styles.segText, { color: on ? c.accentInk : c.ink3, writingDirection: textDir }]}>
-                        {paymentLabels[method]}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <PaymentMethods value={payMethod} onChange={setPayMethod} methods={["cash", "card", "upi", "wallet", "complimentary"] as const} />
               {payMethod !== 'complimentary' ? (
                 <Field
                   label={t('memberNew.amountPaid')}
-                  hint={selectedPlan ? t('memberNew.planPriceHint', { amount: formatMoney(selectedPlan.price, selectedPlan.currency, language) }) : undefined}
+                  hint={selectedPlan ? `Agreed price: ${formatMoney(agreedPrice, selectedPlan.currency, language)}` : undefined}
                 >
                   <Control
                     value={amountPaid}

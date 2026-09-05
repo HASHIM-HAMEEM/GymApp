@@ -46,7 +46,8 @@ export default function AdminMembers() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder={t('adminMembers.searchPlaceholder')}
+          accessibilityLabel={t('adminMembers.searchPlaceholder')}
+          placeholder={isRtl ? 'نام یا رکن نمبر تلاش کریں' : 'Search name or member ID'}
           placeholderTextColor={c.ink3}
           autoCapitalize="none"
           autoCorrect={false}
@@ -56,9 +57,8 @@ export default function AdminMembers() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}>
         {filters.map((f) => (
-          <Chip key={f.key} on={filter === f.key} onPress={() => setFilter(f.key)}>
-            {f.dot ? <StatusDot variant={f.dot} size={7} /> : null}
-            <Text style={{ writingDirection: textDir }}>{f.label}</Text>
+          <Chip key={f.key} on={filter === f.key} onPress={() => setFilter(f.key)} leading={f.dot ? <StatusDot variant={f.dot} size={7} /> : undefined}>
+            {f.label}
           </Chip>
         ))}
       </ScrollView>
@@ -85,33 +85,25 @@ export default function AdminMembers() {
             const lastVisit = m.lastVisitAt ? fmtShort(m.lastVisitAt.slice(0, 10), language) : null;
             return (
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`${m.firstName} ${m.lastName}, ${m.id}`}
                 key={m.id}
                 onPress={() => router.push({ pathname: '/member-detail', params: { id: m.id } })}
                 style={({ pressed }) => [styles.mrow, { borderColor: c.line }, pressed && { opacity: 0.6 }]}
               >
-                <View style={[styles.mtop, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                  <View style={[styles.mleft, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                    <Monogram text={`${m.firstName[0]}${m.lastName[0]}`.toUpperCase()} size={36} fontSize={13} />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={[styles.mname, { color: c.ink, writingDirection: textDir }]} numberOfLines={1}>{m.firstName} {m.lastName}</Text>
-                      <Text style={[styles.msub, { color: c.ink3, writingDirection: textDir }]} numberOfLines={1}>{`\u200E${m.id}\u200E`} · {`\u200E${m.email}\u200E`}</Text>
+                <View style={[styles.mleft, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                  <Monogram text={`${m.firstName[0] ?? ''}${m.lastName[0] ?? ''}`.toUpperCase()} size={40} fontSize={13} />
+                  <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+                    <Text style={[styles.mname, { color: c.ink, writingDirection: textDir }]} numberOfLines={2}>{m.firstName} {m.lastName}</Text>
+                    <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                      <Text style={[styles.msub, { color: c.ink3 }]}>{m.id}</Text>
+                      <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 7 }}>
+                        <StatusDot variant={invited ? 'muted' : vis?.dotVariant ?? 'muted'} size={6} />
+                        <Text style={{ color: c.ink2, fontSize: 13, lineHeight: 19 }}>{invited ? t('common.invited') : vis?.tagLabel ?? t('common.noPlan')}</Text>
+                      </View>
                     </View>
                   </View>
-                  {invited ? (
-                    <Tag variant="muted">{t('common.invited')}</Tag>
-                  ) : vis ? (
-                    <Tag variant={vis.tagVariant}>{vis.tagLabel}</Tag>
-                  ) : (
-                    <Tag variant="muted">{t('common.noPlan')}</Tag>
-                  )}
-                </View>
-                <View style={styles.mbottom}>
-                  <Text style={[styles.mplan, { color: c.ink2, writingDirection: textDir }]} numberOfLines={1}>{ms?.planName ?? t('common.noPlan')}</Text>
-                  <View style={styles.mmeta}>
-                    <Text style={[styles.mexp, { color: c.ink, writingDirection: 'ltr' }]}>{ms ? fmtShort(ms.expiryDate, language) : '-'}</Text>
-                    <Text style={[styles.mdot, { color: c.ink3 }]}>·</Text>
-                    <Text style={[styles.mlast, { color: c.ink2, writingDirection: textDir }]}>{lastVisit ? `\u200E${lastVisit}\u200E` : t('adminMembers.noVisits')}</Text>
-                  </View>
+                  <Icon name={isRtl ? 'chevl' : 'chev'} size={16} color={c.ink4} />
                 </View>
               </Pressable>
             );
@@ -142,6 +134,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
+    minWidth: 0,
     fontFamily: typography.fontFamily,
     fontSize: 15,
   },
@@ -151,6 +144,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mrow: {
+    minHeight: 80,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,

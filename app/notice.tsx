@@ -6,6 +6,7 @@ import { AppBar, Body } from '@/components/Chrome';
 import { useApp } from '@/providers/AppProvider';
 import { useMarkNoticeRead, useNotices, useClub } from '@/data/api/queries';
 import { fmtLong } from '@/data/format';
+import { Button } from '@/components/Button';
 import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
 
@@ -46,12 +47,15 @@ export default function NoticeDetail() {
 
   const notices = noticesQuery.data ?? [];
   const n = notices.find((x) => x.id === id);
+  const attemptedId = React.useRef<string | null>(null);
+  const { mutate: markAsRead } = markRead;
 
   React.useEffect(() => {
-    if (role === 'member' && n && !n.read) {
-      markRead.mutate(n.id);
+    if (role === 'member' && n && !n.read && attemptedId.current !== n.id) {
+      attemptedId.current = n.id;
+      markAsRead(n.id);
     }
-  }, [role, n, markRead]);
+  }, [role, n?.id, n?.read, markAsRead]);
 
   if (!n) {
     return (
@@ -75,6 +79,10 @@ export default function NoticeDetail() {
       </AppBar>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 18 }}>
+          {markRead.isError ? <View style={{ gap: 8 }}>
+            <Text accessibilityRole="alert" style={{ color: c.bad }}>Could not save the read status. Check your connection and retry.</Text>
+            <Button variant="secondary" loading={markRead.isPending} onPress={() => markAsRead(n.id)}>Retry read status</Button>
+          </View> : null}
           <View>
             <Text style={[styles.kicker, { color, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(noticeCategoryKey(n.category))}</Text>
             <Text style={[styles.title, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{n.title}</Text>

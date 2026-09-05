@@ -17,7 +17,9 @@
     },
     "android": {
       "package": "com.hashimhameem.apex",
-      "permissions": ["android.permission.POST_NOTIFICATIONS"],
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#F5F3EC",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -60,9 +62,13 @@
         {
           "supportsRTL": true,
           "forcesRTL": false,
-          "supportedLocales": ["en", "ur"]
+          "supportedLocales": [
+            "en",
+            "ur"
+          ]
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

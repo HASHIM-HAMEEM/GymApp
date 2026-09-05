@@ -57,14 +57,18 @@ export function SettingsRow({
       {!right && !danger ? <Icon name="chev" size={17} color={c.ink3} /> : null}
     </View>
   );
-  return onPress ? <Pressable onPress={onPress}>{content}</Pressable> : content;
+  return onPress ? <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress}>{content}</Pressable> : content;
 }
 
 export function PreferencesGroup({
   onSignOut,
+  onExport,
+  onPlans,
   signingOut = false,
 }: {
   onSignOut: () => void;
+  onExport?: () => void;
+  onPlans?: () => void;
   signingOut?: boolean;
 }) {
   const router = useRouter();
@@ -120,6 +124,8 @@ export function PreferencesGroup({
           label={t('settings.privacy')}
           onPress={() => router.push('/privacy')}
         />
+        {onExport ? <SettingsRow icon="download" label={t('settings.exportRecords')} onPress={onExport} /> : null}
+        {onPlans ? <SettingsRow icon="card" label="Membership plans" onPress={onPlans} /> : null}
         <SettingsRow
           icon="logout"
           label={signingOut ? t('common.loading') : t('settings.signOut')}
@@ -215,6 +221,7 @@ const styles = StyleSheet.create({
   },
   row: {
     minHeight: 62,
+    paddingVertical: 12,
     alignItems: 'center',
     gap: 14,
     paddingHorizontal: 16,
@@ -222,11 +229,16 @@ const styles = StyleSheet.create({
   },
   label: {
     flex: 1,
+    minWidth: 0,
+    lineHeight: 22,
     fontFamily: typography.fontFamily,
     fontSize: 15,
     fontWeight: '500',
   },
   value: {
+    flexShrink: 1,
+    maxWidth: '45%',
+    lineHeight: 22,
     fontFamily: typography.fontFamily,
     fontSize: 15,
     fontWeight: '600',

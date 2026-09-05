@@ -589,6 +589,35 @@ select harness.throws('membership_freezes is RPC-only', '42501',
     values ((select val::uuid from ctx where key='asha_membership'), current_date, current_date + 1)$$);
 reset role;
 
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+do $$
+declare p uuid; first_term record; renewed record; replayed record;
+begin
+  p := public.save_membership_plan(null, 'Six-month QA', 6, 1000, true);
+  perform harness.eq('admin creates six-month price', (select price from public.plans where id=p), 1000::numeric);
+  select * into first_term from public.create_member_invitation(
+    p_first_name=>'Pricing',p_last_name=>'Test',p_email=>'pricing@test.apex.local',
+    p_plan_id=>p,p_amount_paid=>800,p_payment_method=>'cash',p_agreed_price=>800,p_price_note=>'Student discount');
+  perform harness.eq('discount stores agreed snapshot', (select price_snapshot from public.memberships where id=first_term.membership_id), 800::numeric);
+  perform harness.eq('discount stores original catalogue price', (select list_price_snapshot from public.memberships where id=first_term.membership_id), 1000::numeric);
+  perform harness.eq('discount is not unpaid debt', (select amount_due from public.memberships where id=first_term.membership_id), 0::numeric);
+  perform public.save_membership_plan(p,'Six-month QA',6,1500,true);
+  perform harness.eq('plan edit preserves historic price', (select price_snapshot from public.memberships where id=first_term.membership_id), 800::numeric);
+  select * into renewed from public.renew_membership(
+    p_member_id=>first_term.member_id,p_plan_id=>p,p_amount_paid=>1000,p_payment_method=>'cash',
+    p_request_id=>'f0000000-0000-0000-0000-000000000001',p_agreed_price=>1200,p_price_note=>'Loyalty price');
+  perform harness.eq('partial payment uses agreed balance',renewed.amount_due,200::numeric);
+  perform harness.eq('custom renewal preserves catalogue price', (select price from public.plans where id=p),1500::numeric);
+  select * into replayed from public.renew_membership(
+    p_member_id=>first_term.member_id,p_plan_id=>p,p_amount_paid=>1000,p_payment_method=>'cash',
+    p_request_id=>'f0000000-0000-0000-0000-000000000001',p_agreed_price=>1200,p_price_note=>'Loyalty price');
+  perform harness.eq('priced renewal retry is idempotent',replayed.membership_id,renewed.membership_id);
+end;
+$$;
+select harness.throws('reject invalid plan price','22023', $$select public.save_membership_plan(null,'Invalid',6,'NaN',true)$$);
+set role authenticated;
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+select harness.throws('member cannot edit prices','42501', $$select public.save_membership_plan(null,'Blocked',6,10,true)$$);
+reset role;
 select harness.set_user(null);
-
 rollback;
