@@ -31,6 +31,7 @@ function runModule(file, resolve, env = {}) {
 
 const i18n = runModule('src/lib/i18n.ts', {});
 const translate = i18n.translate;
+const aadhaar = runModule('src/lib/aadhaar.ts', {});
 
 const tokens = { colors: { accent: '#F5F5F5', ink3: '#7E7E7E', lineStrong: 'x', line: 'y', warnDot: 'w', badDot: 'b' } };
 const format = runModule('src/data/format.ts', {
@@ -98,6 +99,12 @@ eq('formatTime ur passthrough AM/PM', format.formatTime('7:32 PM', 'ur'), '7:32 
 eq('formatTime en passthrough AM/PM', format.formatTime('7:32 PM'), '7:32 PM');
 eq('fmtDateTime with seconds', format.fmtDateTime('2026-09-18T18:41:30'), '18 Sep 2026 · 6:41 PM');
 eq('fmtTime from datetime', format.fmtTime('2026-09-18T18:41:30'), '6:41 PM');
+
+eq('Aadhaar normalizes spaces', aadhaar.normalizeAadhaar('1000 0000 0004'), '100000000004');
+eq('Aadhaar accepts a valid Verhoeff checksum', aadhaar.isValidAadhaar('1000 0000 0004'), true);
+eq('Aadhaar rejects an invalid checksum', aadhaar.isValidAadhaar('1000 0000 0005'), false);
+eq('Aadhaar rejects all zeroes', aadhaar.isValidAadhaar('0000 0000 0000'), false);
+eq('Aadhaar masks routine display', aadhaar.maskAadhaar('100000000004'), '•••• •••• 0004');
 
 {
   const today = new Date(format.todayIso() + 'T00:00:00Z');

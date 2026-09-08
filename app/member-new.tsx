@@ -15,6 +15,8 @@ import { formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 import { formatAadhaar, isValidAadhaar, normalizeAadhaar } from '@/lib/aadhaar';
 import { FormScroll } from '@/components/FormScroll';
+import { DateField } from '@/components/DateField';
+import type { FormScrollRef } from '@/components/FormScroll';
 
 type PaymentMethod = DeskPaymentMethod | 'complimentary';
 
@@ -25,6 +27,16 @@ function indiaPhone(value: string): string | undefined {
   if (digits.startsWith('91')) return `+${digits}`;
   if (digits.startsWith('0')) return `+91${digits.slice(1)}`;
   return `+91${digits}`;
+}
+
+function isValidPastOrTodayIso(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(year, month - 1, day, 12);
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return false;
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return parsed <= today;
 }
 
 /**
@@ -57,7 +69,22 @@ export default function MemberNew() {
   const [priceNote, setPriceNote] = React.useState('');
   React.useEffect(() => { setCustomPrice(''); setPriceNote(''); }, [planId]);
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+  const formRef = React.useRef<FormScrollRef>(null);
+  const fieldRefs = React.useRef<Record<string, React.RefObject<import('react-native').TextInput | null>>>({
+    firstName: React.createRef(), lastName: React.createRef(), email: React.createRef(), phone: React.createRef(), dateOfBirth: React.createRef(), emergencyName: React.createRef(), emergencyPhone: React.createRef(), address: React.createRef(), customPrice: React.createRef(), pricingReason: React.createRef(), amountPaid: React.createRef(),
+  }).current;
+  const aadhaarRef = React.useRef<import('react-native').TextInput>(null);
+  React.useEffect(() => {
+    Object.entries(fieldRefs).forEach(([name, inputRef]) => formRef.current?.registerField(name, inputRef));
+    formRef.current?.registerField('aadhaar', aadhaarRef);
+  }, [fieldRefs]);
   const [created, setCreated] = React.useState<{ memberNumber: string; email: string } | null>(null);
+
+  const showFieldError = React.useCallback((field: string, message: string) => {
+    setFieldErrors({ [field]: message });
+    requestAnimationFrame(() => formRef.current?.focusField(field));
+  }, []);
 
   const plans = plansQuery.data ?? [];
   const selectedPlan = plans.find((p) => p.id === planId) ?? null;
@@ -100,31 +127,39 @@ export default function MemberNew() {
 
   const submit = async () => {
     if (createInvitation.isPending) return;
+    setFormError(null);
     const invalid = planId ? pricingError(customPrice, priceNote) : null;
-    if (invalid) { setFormError(invalid); return; }
+    if (invalid) {
+      const priceIsInvalid = !customPrice.trim() || !/^\d+(\.\d{1,2})?$/.test(customPrice) || Number(customPrice) <= 0 || Number(customPrice) > 9999999999.99;
+      const invalidField = priceIsInvalid ? 'customPrice' : 'pricingReason';
+      showFieldError(invalidField, invalid);
+      return;
+    }
     let bad: string | null = null;
-    if (!firstName.trim() || !lastName.trim()) bad = t('memberNew.nameRequired');
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) bad = t('memberNew.emailInvalid');
-    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = t('memberNew.phoneInvalid');
-    else if (dateOfBirth.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth.trim())) bad = t('memberNew.birthDateInvalid');
-    else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('memberNew.emergencyBoth');
-    else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('memberNew.emergencyPhoneInvalid');
-    else if (!isValidAadhaar(nationalId)) bad = t('memberNew.nationalIdInvalid');
-    else if (!address.trim()) bad = t('memberNew.addressRequired');
+    let invalidField = '';
+    if (!firstName.trim() || !lastName.trim()) { bad = t('memberNew.nameRequired'); invalidField = !firstName.trim() ? 'firstName' : 'lastName'; }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { bad = t('memberNew.emailInvalid'); invalidField = 'email'; }
+    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) { bad = t('memberNew.phoneInvalid'); invalidField = 'phone'; }
+    else if (dateOfBirth.trim() && !isValidPastOrTodayIso(dateOfBirth.trim())) { bad = t('memberNew.birthDateInvalid'); invalidField = 'dateOfBirth'; }
+    else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) { bad = t('memberNew.emergencyBoth'); invalidField = !emName.trim() ? 'emergencyName' : 'emergencyPhone'; }
+    else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) { bad = t('memberNew.emergencyPhoneInvalid'); invalidField = 'emergencyPhone'; }
+    else if (!isValidAadhaar(nationalId)) { bad = t('memberNew.nationalIdInvalid'); invalidField = 'aadhaar'; }
+    else if (!address.trim()) { bad = t('memberNew.addressRequired'); invalidField = 'address'; }
     else if (planId && payMethod !== 'complimentary') {
       const amount = Number(amountPaid);
       // Floating-point-safe two-decimal check (19.99 * 100 is inexact).
       const centsOk = Math.abs(amount * 100 - Math.round(amount * 100)) <= 1e-6;
-      if (!amountPaid.trim() || !Number.isFinite(amount) || amount <= 0) bad = t('memberNew.amountRequired');
-      else if (!centsOk) bad = t('memberNew.amountDecimals');
-      else if (amount > agreedPrice) bad = 'Amount received cannot exceed the agreed price.';
+      if (!amountPaid.trim() || !Number.isFinite(amount) || amount <= 0) { bad = t('memberNew.amountRequired'); invalidField = 'amountPaid'; }
+      else if (!centsOk) { bad = t('memberNew.amountDecimals'); invalidField = 'amountPaid'; }
+      else if (amount > agreedPrice) { bad = 'Amount received cannot exceed the agreed price.'; invalidField = 'amountPaid'; }
     }
     if (bad) {
-      setFormError(bad);
+      showFieldError(invalidField, bad);
       return;
     }
 
     setFormError(null);
+    setFieldErrors({});
     try {
       const result = await createInvitation.mutateAsync({
         email: email.trim(),
@@ -162,31 +197,35 @@ export default function MemberNew() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('memberNew.title')} onBack={() => router.back()} />
-      <FormScroll contentContainerStyle={{ paddingBottom: 40 }}>
+      <FormScroll ref={formRef} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
-          {formError ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{formError}</Text></Banner> : null}
+          <Field label={t('memberNew.firstName')} error={fieldErrors.firstName}><Control ref={fieldRefs.firstName} fieldKey="firstName" value={firstName} onChangeText={(value) => { setFirstName(value); setFieldErrors((current) => ({ ...current, firstName: '' })); }} placeholder={t('memberNew.firstNamePlaceholder')} autoComplete="off" returnKeyType="next" onSubmitEditing={() => formRef.current?.focusField('lastName')} /></Field>
+          <Field label={t('memberNew.lastName')} error={fieldErrors.lastName}><Control ref={fieldRefs.lastName} fieldKey="lastName" value={lastName} onChangeText={(value) => { setLastName(value); setFieldErrors((current) => ({ ...current, lastName: '' })); }} placeholder={t('memberNew.lastNamePlaceholder')} autoComplete="off" returnKeyType="next" onSubmitEditing={() => formRef.current?.focusField('email')} /></Field>
 
-          <Field label={t('memberNew.firstName')}><Control value={firstName} onChangeText={setFirstName} placeholder={t('memberNew.firstNamePlaceholder')} autoComplete="off" /></Field>
-          <Field label={t('memberNew.lastName')}><Control value={lastName} onChangeText={setLastName} placeholder={t('memberNew.lastNamePlaceholder')} autoComplete="off" /></Field>
-
-          <Field label={t('auth.email')} hint={t('memberNew.emailHint')}>
+          <Field label={t('auth.email')} hint={t('memberNew.emailHint')} error={fieldErrors.email}>
             <Control
+              ref={fieldRefs.email}
+              fieldKey="email"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => { setEmail(value); setFieldErrors((current) => ({ ...current, email: '' })); }}
               placeholder={t('auth.emailPlaceholder')}
               inputMode="email"
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="off"
               textContentType="none"
+              returnKeyType="next"
+              onSubmitEditing={() => formRef.current?.focusField('phone')}
             />
           </Field>
 
-          <Field label={t('memberNew.phoneOptional')} hint={t('memberNew.phoneHint')}>
+          <Field label={t('memberNew.phoneOptional')} hint={t('memberNew.phoneHint')} error={fieldErrors.phone}>
             <Control
               value={phone}
-              onChangeText={setPhone}
+              ref={fieldRefs.phone}
+              fieldKey="phone"
+              onChangeText={(value) => { setPhone(value); setFieldErrors((current) => ({ ...current, phone: '' })); }}
               placeholder="98765 43210"
               inputMode="tel"
               leading={
@@ -194,30 +233,28 @@ export default function MemberNew() {
                   <Text style={{ fontSize: 15, fontWeight: '500', color: c.ink2, writingDirection: 'ltr' }}>+91</Text>
                 </View>
               }
+              returnKeyType="next"
+              onSubmitEditing={() => formRef.current?.focusField('dateOfBirth')}
             />
           </Field>
 
-          <Field label={t('memberNew.birthDateOptional')} hint={t('common.dateFormatHint')}>
-            <Control
-              value={dateOfBirth}
-              onChangeText={setDateOfBirth}
-              placeholder="1998-03-15"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="off"
-            />
+          <Field label={t('memberNew.birthDateOptional')} hint={t('common.dateFormatHint')} error={fieldErrors.dateOfBirth}>
+            <DateField fieldKey="dateOfBirth" value={dateOfBirth} onChangeText={(value) => { setDateOfBirth(value); setFieldErrors((current) => ({ ...current, dateOfBirth: '' })); }} maximumDate={new Date()} placeholder="1998-03-15" accessibilityLabel={t('memberNew.birthDateOptional')} inputRef={fieldRefs.dateOfBirth} />
           </Field>
 
-          <Field label={t('memberNew.emergencyOptional')}>
-            <Control value={emName} onChangeText={setEmName} placeholder={t('memberNew.contactName')} autoComplete="off" />
+          <Field label={t('memberNew.emergencyOptional')} error={fieldErrors.emergencyName || fieldErrors.emergencyPhone}>
+            <Control ref={fieldRefs.emergencyName} fieldKey="emergencyName" value={emName} onChangeText={(value) => { setEmName(value); setFieldErrors((current) => ({ ...current, emergencyName: '' })); }} placeholder={t('memberNew.contactName')} autoComplete="off" />
             <View style={{ height: 10 }} />
-            <Control value={emPhone} onChangeText={setEmPhone} placeholder={t('memberNew.contactPhone')} inputMode="tel" />
+            <Control ref={fieldRefs.emergencyPhone} fieldKey="emergencyPhone" value={emPhone} onChangeText={(value) => { setEmPhone(value); setFieldErrors((current) => ({ ...current, emergencyPhone: '' })); }} placeholder={t('memberNew.contactPhone')} inputMode="tel" />
           </Field>
 
-          <Field label={t('memberDetail.nationalId')} hint={t('memberNew.nationalIdHint')}>
+          <Field label={t('memberDetail.nationalId')} hint={t('memberNew.nationalIdHint')} error={fieldErrors.aadhaar} okMsg={nationalId && isValidAadhaar(nationalId) ? 'Aadhaar format looks valid.' : undefined}>
             <Control
+              ref={aadhaarRef}
+              fieldKey="aadhaar"
               value={nationalId}
-              onChangeText={(value) => setNationalId(formatAadhaar(value))}
+              onChangeText={(value) => { setNationalId(formatAadhaar(value)); setFieldErrors((current) => ({ ...current, aadhaar: '' })); }}
+              onBlur={() => { if (nationalId && !isValidAadhaar(nationalId)) setFieldErrors((current) => ({ ...current, aadhaar: t('memberNew.nationalIdInvalid') })); }}
               placeholder="1234 5678 9012"
               inputMode="numeric"
               maxLength={14}
@@ -225,8 +262,8 @@ export default function MemberNew() {
             />
           </Field>
 
-          <Field label={t('profile.address')}>
-            <Control value={address} onChangeText={setAddress} placeholder={t('memberNew.addressPlaceholder')} multiline />
+          <Field label={t('profile.address')} error={fieldErrors.address}>
+            <Control ref={fieldRefs.address} fieldKey="address" value={address} onChangeText={(value) => { setAddress(value); setFieldErrors((current) => ({ ...current, address: '' })); }} placeholder={t('memberNew.addressPlaceholder')} multiline />
           </Field>
 
           <View style={{ gap: 10 }}>
@@ -264,17 +301,31 @@ export default function MemberNew() {
 
           {planId ? (
             <View style={{ gap: 10 }}>
-              <AgreedPrice value={customPrice} reason={priceNote} onValue={setCustomPrice} onReason={setPriceNote} />
+              <AgreedPrice
+                value={customPrice}
+                reason={priceNote}
+                valueRef={fieldRefs.customPrice}
+                reasonRef={fieldRefs.pricingReason}
+                valueFieldKey="customPrice"
+                reasonFieldKey="pricingReason"
+                error={fieldErrors.customPrice}
+                onValue={(value) => { setCustomPrice(value); setFieldErrors((current) => ({ ...current, customPrice: '' })); }}
+                onReason={(value) => { setPriceNote(value); setFieldErrors((current) => ({ ...current, customPrice: '' })); }}
+              />
               <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('memberNew.paymentAtDesk')}</Text>
               <PaymentMethods value={payMethod} onChange={setPayMethod} methods={["cash", "card", "upi", "wallet", "complimentary"] as const} />
+              {payMethod === 'upi' ? <Banner variant="info"><Text style={{ writingDirection: textDir }}>Admin-confirmed UPI payment. Selecting UPI records that the admin has verified receipt.</Text></Banner> : null}
               {payMethod !== 'complimentary' ? (
                 <Field
                   label={t('memberNew.amountPaid')}
                   hint={selectedPlan ? `Agreed price: ${formatMoney(agreedPrice, selectedPlan.currency, language)}` : undefined}
+                  error={fieldErrors.amountPaid}
                 >
                   <Control
+                    ref={fieldRefs.amountPaid}
+                    fieldKey="amountPaid"
                     value={amountPaid}
-                    onChangeText={setAmountPaid}
+                    onChangeText={(value) => { setAmountPaid(value); setFieldErrors((current) => ({ ...current, amountPaid: '' })); }}
                     placeholder={String(selectedPlan?.price ?? '')}
                     inputMode="decimal"
                     autoComplete="off"
@@ -289,6 +340,8 @@ export default function MemberNew() {
               <Text style={{ writingDirection: textDir }}>{t('memberNew.skipPlanHint')}</Text>
             </Banner>
           )}
+
+          {formError ? <Banner variant="error"><Text accessibilityRole="alert" style={{ writingDirection: textDir }}>{formError}</Text></Banner> : null}
 
           <Button
             block

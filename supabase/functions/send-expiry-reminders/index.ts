@@ -37,7 +37,7 @@ Deno.serve((request) => handlePost(request, async () => {
   });
   const resendKey = required("RESEND_API_KEY");
   const from = Deno.env.get("REMINDER_FROM_EMAIL")?.trim() || "Apex <auth@scnz.site>";
-  const appUrl = Deno.env.get("APP_URL")?.trim() || "https://firdous-gym-app.vercel.app";
+  const appUrl = Deno.env.get("APP_URL")?.trim() || "https://apexgc.vercel.app";
   const { data, error } = await supabase.rpc("claim_expiry_reminders");
   if (error) throw new ApiError(500, "REMINDER_CLAIM_FAILED", "Expiry reminders could not be claimed.");
 

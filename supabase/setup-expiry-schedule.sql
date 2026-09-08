@@ -4,7 +4,7 @@
 -- apex_cron_secret = the same strong random value as Edge Function CRON_SECRET.
 -- Never put the Resend API key or service role key in this schedule.
 create extension if not exists pg_cron;
-create extension if not exists pg_net with schema extensions;
+create extension if not exists pg_net;
 
 do $$
 declare existing_job bigint;

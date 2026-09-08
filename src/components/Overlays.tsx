@@ -15,6 +15,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useApp } from '@/data/store';
 import { Icon } from './Icon';
 import { Button } from './Button';
+import { useKeepFocusedFieldVisible } from './FormScroll';
 
 /* ------------------------------------------------------------------ */
 /* Bottom sheet — short contextual actions                             */
@@ -35,6 +36,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
   const reduceMotion = useReducedMotion();
   const transition = React.useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [mounted, setMounted] = React.useState(visible);
+  useKeepFocusedFieldVisible(mounted && visible);
 
   React.useEffect(() => {
     if (visible) setMounted(true);
@@ -73,7 +75,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
             },
           ]}
         >
-          <ScrollView bounces={false} keyboardShouldPersistTaps="handled" style={{ flexGrow: 0 }}>
+          <ScrollView bounces={false} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} automaticallyAdjustKeyboardInsets style={{ flexGrow: 0 }}>
           <Pressable style={[sheetStyles.sheet, { backgroundColor: c.surface }]} onPress={(e) => e.stopPropagation()}>
             <View style={[sheetStyles.grip, { backgroundColor: c.lineStrong }]} />
             {title ? (

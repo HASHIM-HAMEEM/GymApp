@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import { Platform, View, Text, TextInput, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { useApp } from '@/data/store';
 import { Icon, IconName } from './Icon';
@@ -42,9 +42,9 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
       ) : null}
       {children}
       {hasError ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 3 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 7, paddingLeft: 3 }}>
           <Icon name="alertc" size={13} color={c.bad} />
-          <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, letterSpacing: tracking.small, fontWeight: '500', color: c.bad, writingDirection: textDir }}>
+          <Text style={{ flex: 1, fontFamily: typography.fontFamily, fontSize: 13, lineHeight: 18, letterSpacing: tracking.small, fontWeight: '500', color: c.bad, writingDirection: textDir }}>
             {error}
           </Text>
         </View>
@@ -62,12 +62,17 @@ export function Field({ label, hint, error, okMsg, children, style }: FieldProps
 }
 
 export interface ControlProps {
+  inputRef?: React.Ref<TextInput>;
+  fieldKey?: string;
   accessibilityLabel?: string;
   value?: string;
   defaultValue?: string;
   placeholder?: string;
   onChangeText?: (t: string) => void;
   inputMode?: 'text' | 'tel' | 'email' | 'numeric' | 'decimal';
+  webType?: 'date';
+  webMin?: string;
+  webMax?: string;
   secure?: boolean;
   leading?: React.ReactNode; // e.g. country code prefix
   trailing?: React.ReactNode; // e.g. ✓ found
@@ -82,15 +87,23 @@ export interface ControlProps {
   textContentType?: React.ComponentProps<typeof TextInput>['textContentType'];
   returnKeyType?: React.ComponentProps<typeof TextInput>['returnKeyType'];
   onSubmitEditing?: React.ComponentProps<typeof TextInput>['onSubmitEditing'];
+  onFocus?: React.ComponentProps<typeof TextInput>['onFocus'];
+  onBlur?: React.ComponentProps<typeof TextInput>['onBlur'];
+  editable?: boolean;
 }
 
-export function Control({
+export const Control = React.forwardRef<TextInput, ControlProps>(function Control({
+  inputRef,
+  fieldKey,
   accessibilityLabel,
   value,
   defaultValue,
   placeholder,
   onChangeText,
   inputMode = 'text',
+  webType,
+  webMin,
+  webMax,
   secure = false,
   leading,
   trailing,
@@ -105,9 +118,22 @@ export function Control({
   textContentType,
   returnKeyType,
   onSubmitEditing,
-}: ControlProps) {
+  onFocus,
+  onBlur,
+  editable = true,
+}: ControlProps, ref) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const controlRef = inputRef ?? ref;
+  const inputStyle: TextStyle = {
+    flex: 1,
+    fontFamily: typography.fontFamily,
+    fontSize: 15,
+    color: c.ink,
+    paddingLeft: leading ? 11 : 0,
+    minHeight: multiline ? 80 : undefined,
+    textAlign: isRtl ? 'right' : 'left',
+  };
   return (
     <View
       style={[
@@ -118,7 +144,42 @@ export function Control({
       ]}
     >
       {leading}
-      <TextInput
+      {Platform.OS === 'web' && webType ? (
+        <input
+          data-form-field={fieldKey}
+          ref={controlRef as React.Ref<HTMLInputElement>}
+          aria-label={accessibilityLabel}
+          value={value}
+          defaultValue={defaultValue}
+          placeholder={placeholder}
+          onChange={(event) => onChangeText?.(event.currentTarget.value)}
+          type={webType}
+          min={webMin}
+          max={webMax}
+          maxLength={maxLength}
+          autoComplete={autoComplete === 'off' ? 'off' : undefined}
+          autoFocus={autoFocus}
+          disabled={!editable}
+          onFocus={onFocus as never}
+          onBlur={onBlur as never}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && onSubmitEditing) onSubmitEditing({ nativeEvent: { text: value ?? '' } } as never);
+          }}
+          inputMode={inputMode}
+          enterKeyHint={returnKeyType === 'next' ? 'next' : returnKeyType === 'done' ? 'done' : undefined}
+          style={{
+            ...(inputStyle as React.CSSProperties),
+            minWidth: 0,
+            width: '100%',
+            border: 0,
+            outline: 'none',
+            background: 'transparent',
+            direction: isRtl ? 'rtl' : 'ltr',
+          }}
+        />
+      ) : <TextInput
+        {...(Platform.OS === 'web' && fieldKey ? ({ dataSet: { formField: fieldKey } } as object) : {})}
+        ref={controlRef}
         accessibilityLabel={accessibilityLabel}
         value={value}
         defaultValue={defaultValue}
@@ -136,22 +197,19 @@ export function Control({
         textContentType={textContentType}
         returnKeyType={returnKeyType}
         onSubmitEditing={onSubmitEditing}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        editable={editable}
         style={{
-          flex: 1,
-          fontFamily: typography.fontFamily,
-          fontSize: 15,
-          color: c.ink,
-          paddingLeft: leading ? 11 : 0,
-          minHeight: multiline ? 80 : undefined,
+          ...inputStyle,
           textAlignVertical: multiline ? 'top' : 'auto',
-          textAlign: isRtl ? 'right' : 'left',
           writingDirection: isRtl ? 'rtl' : 'ltr',
         }}
-      />
+      />}
       {trailing}
     </View>
   );
-}
+});
 
 const ctrlStyles = StyleSheet.create({
   base: {

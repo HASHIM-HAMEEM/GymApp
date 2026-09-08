@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, ScrollView, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Link, type Href } from 'expo-router';
 import { colors, useColors, spacing, typography, tracking } from '@/theme/tokens';
@@ -14,10 +14,12 @@ import { useApp } from '@/data/store';
 
 export function StatusBar({ dark = false }: { dark?: boolean }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   if (Platform.OS !== 'web') {
     return <View style={{ height: insets.top }} />;
   }
-  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 52, flexShrink: 0 }} />;
+  const height = width < 600 ? Math.max(insets.top, 16) : 52;
+  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height, flexShrink: 0 }} />;
 }
 
 /* ------------------------------------------------------------------ */

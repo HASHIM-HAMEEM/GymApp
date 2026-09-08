@@ -285,6 +285,7 @@ function RenewFlowInner() {
           <View style={{ gap: 8 }}>
             <Text style={[styles.fieldLabel, { color: c.ink3, writingDirection: textDir }]}>{t('renew.paymentMethod')}</Text>
             <PaymentMethods value={payMethod} onChange={setPayMethod} methods={["cash", "card", "upi", "wallet"] as const} />
+            {payMethod === 'upi' ? <Banner variant="info"><Text style={{ writingDirection: textDir }}>Admin-confirmed UPI payment. The admin confirms receipt at the desk.</Text></Banner> : null}
           </View>
 
           <AgreedPrice value={customPrice} reason={priceNote} onValue={setCustomPrice} onReason={setPriceNote} />
