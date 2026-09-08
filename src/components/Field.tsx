@@ -70,7 +70,7 @@ export interface ControlProps {
   placeholder?: string;
   onChangeText?: (t: string) => void;
   inputMode?: 'text' | 'tel' | 'email' | 'numeric' | 'decimal';
-  webType?: 'date';
+  webType?: 'date' | 'password';
   webMin?: string;
   webMax?: string;
   secure?: boolean;
@@ -144,7 +144,7 @@ export const Control = React.forwardRef<TextInput, ControlProps>(function Contro
       ]}
     >
       {leading}
-      {Platform.OS === 'web' && webType ? (
+      {Platform.OS === 'web' && (webType || secure) ? (
         <input
           data-form-field={fieldKey}
           ref={controlRef as React.Ref<HTMLInputElement>}
@@ -153,11 +153,11 @@ export const Control = React.forwardRef<TextInput, ControlProps>(function Contro
           defaultValue={defaultValue}
           placeholder={placeholder}
           onChange={(event) => onChangeText?.(event.currentTarget.value)}
-          type={webType}
+          type={webType ?? 'password'}
           min={webMin}
           max={webMax}
           maxLength={maxLength}
-          autoComplete={autoComplete === 'off' ? 'off' : undefined}
+          autoComplete={autoComplete === 'off' ? 'off' : autoComplete}
           autoFocus={autoFocus}
           disabled={!editable}
           onFocus={onFocus as never}

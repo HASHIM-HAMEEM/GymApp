@@ -12,6 +12,7 @@ export interface DeliveryRequest {
   expectedAuthUserId: string | null;
   invitationId: string;
   newAuthUserExpected: boolean;
+  sendAttempt?: number;
 }
 
 export interface DeliveryResult {
@@ -61,6 +62,52 @@ async function failInvitation(
   throw error;
 }
 
+async function resendKey(context: AdminRequestContext): Promise<string> {
+  const { data, error } = await context.service.rpc("get_expiry_resend_key");
+  if (error || typeof data !== "string" || !data) {
+    throw new ApiError(500, "SERVER_MISCONFIGURED", "Invitation email is not configured.");
+  }
+  return data;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] ?? character);
+}
+
+async function sendInviteWithResend(
+  context: AdminRequestContext,
+  request: DeliveryRequest,
+  tokenHash: string,
+  verificationType: "invite" | "recovery",
+): Promise<void> {
+  const redirectUrl = "https://apexgc.vercel.app/confirm";
+  const link = `${redirectUrl}?token_hash=${encodeURIComponent(tokenHash)}&type=${verificationType}`;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${await resendKey(context)}`,
+      "Content-Type": "application/json",
+      "Idempotency-Key": `member-invite-${request.invitationId}-${request.sendAttempt ?? 1}`,
+    },
+    body: JSON.stringify({
+      from: "Apex <auth@scnz.site>",
+      to: [request.email],
+      subject: "Your Apex membership invitation",
+      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#141414"><h1 style="font-size:24px">Welcome to Apex Athletic Club</h1><p>Your membership account is ready. Use this one-time link to accept your invitation and choose a password.</p><p><a href="${escapeHtml(link)}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none">Accept invitation</a></p><p style="color:#666;font-size:13px">If you were not expecting this invitation, you can ignore this email.</p></div>`,
+    }),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) {
+    throw new ApiError(502, "INVITATION_SEND_FAILED", "The invitation email could not be sent. Try again later.");
+  }
+}
+
 async function getExpectedAuthUser(
   context: AdminRequestContext,
   request: DeliveryRequest,
@@ -91,10 +138,10 @@ export async function deliverMemberInvitation(
   request: DeliveryRequest,
 ): Promise<DeliveryResult> {
   const expectedUser = await getExpectedAuthUser(context, request);
+  const verificationType: "invite" | "recovery" = expectedUser && isConfirmed(expectedUser)
+    ? "recovery"
+    : "invite";
   if (expectedUser) {
-    if (isConfirmed(expectedUser)) {
-      throw new ApiError(409, "INVITATION_ALREADY_ACCEPTED", "This invitation has already been accepted.");
-    }
     if (normalizedEmail(expectedUser.email) !== request.email) {
       return failInvitation(
         context,
@@ -114,21 +161,27 @@ export async function deliverMemberInvitation(
   }
 
   let invitedUser: User | null = null;
+  let tokenHash = "";
   const inviteStartedAt = Date.now();
   try {
-    const { data, error } = await context.service.auth.admin.inviteUserByEmail(request.email, {
-      redirectTo: context.config.redirectUrl,
+    const { data, error } = await context.service.auth.admin.generateLink({
+      type: verificationType,
+      email: request.email,
+      options: { redirectTo: "https://apexgc.vercel.app/confirm" },
     });
-    if (!error) invitedUser = data.user;
+    if (!error) {
+      invitedUser = data.user;
+      tokenHash = data.properties.hashed_token;
+    }
   } catch {
     invitedUser = null;
   }
 
-  if (!invitedUser) {
+  if (!invitedUser || !tokenHash) {
     return failInvitation(
       context,
       request,
-      new ApiError(502, "INVITATION_SEND_FAILED", "The invitation email could not be sent. Try again later."),
+      new ApiError(502, "INVITATION_SEND_FAILED", "A fresh invitation link could not be created. Try again later."),
     );
   }
 
@@ -149,7 +202,7 @@ export async function deliverMemberInvitation(
     );
   }
 
-  if (isConfirmed(invitedUser)) {
+  if (verificationType === "invite" && isConfirmed(invitedUser)) {
     throw new ApiError(409, "INVITATION_ALREADY_ACCEPTED", "This invitation has already been accepted.");
   }
 
@@ -181,6 +234,20 @@ export async function deliverMemberInvitation(
       context,
       request,
       new ApiError(502, "INVITATION_SEND_FAILED", "The invitation account could not be prepared. Try again later."),
+      authUserId,
+      canDeleteAuthUser,
+    );
+  }
+
+  try {
+    await sendInviteWithResend(context, request, tokenHash, verificationType);
+  } catch (error) {
+    return failInvitation(
+      context,
+      request,
+      error instanceof ApiError
+        ? error
+        : new ApiError(502, "INVITATION_SEND_FAILED", "The invitation email could not be sent. Try again later."),
       authUserId,
       canDeleteAuthUser,
     );

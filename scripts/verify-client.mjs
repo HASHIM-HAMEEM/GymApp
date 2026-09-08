@@ -175,5 +175,15 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('secureStorage remove cleans chunks marker', !secureStore._store.has('sb-project-auth-token.chunks'));
 }
 
+{
+  const fieldSource = fs.readFileSync(path.join(root, 'src/components/Field.tsx'), 'utf8');
+  const passwordSource = fs.readFileSync(path.join(root, 'app/set-password.tsx'), 'utf8');
+  const invitationsSource = fs.readFileSync(path.join(root, 'supabase/functions/_shared/invitations.ts'), 'utf8');
+  check('web secure controls use native password inputs', fieldSource.includes("Platform.OS === 'web' && (webType || secure)") && fieldSource.includes("type={webType ?? 'password'}"));
+  eq('both password fields opt into native web password input', [...passwordSource.matchAll(/webType="password"/g)].length, 2);
+  check('invitation resend supports confirmed unfinished onboarding', invitationsSource.includes('verificationType: "invite" | "recovery"') && invitationsSource.includes('type: verificationType'));
+  check('invitation emails use attempt-specific idempotency', invitationsSource.includes('request.sendAttempt ?? 1'));
+}
+
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nall client verification checks passed');

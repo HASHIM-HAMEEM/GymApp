@@ -15,6 +15,7 @@ Deno.serve((request) =>
       expectedAuthUserId: null,
       invitationId: invitation.invitationId,
       newAuthUserExpected: true,
+      sendAttempt: 1,
     });
 
     return successResponse(

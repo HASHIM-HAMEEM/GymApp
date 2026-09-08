@@ -11,7 +11,7 @@ import { KVRow, SectionBlock } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
-import { useMemberDetail, useRemoveMember, useResendMemberInvitation, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
+import { ApiCallError, useMemberDetail, useRemoveMember, useResendMemberInvitation, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
 import { fmtLong, fmtShort, fmtDateTime, statusVisual, formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 import { Language, type TranslationKey } from '@/lib/i18n';
@@ -107,10 +107,22 @@ export default function MemberDetail() {
 
   const handleResend = async () => {
     if (!m.invitationId) return;
+    setActionError(null);
+    setActionNote(null);
     try {
-      await resend.mutateAsync(m.invitationId);
+      const result = await resend.mutateAsync(m.invitationId);
+      setActionNote(t('memberDetail.resendSuccess', { count: result.sendAttempts }));
     } catch (err) {
-      setActionError(t('memberDetail.resendFailed'));
+      const code = err instanceof ApiCallError ? err.code : '';
+      setActionError(
+        code === 'INVITATION_RETRY_TOO_SOON'
+          ? t('memberDetail.resendTooSoon')
+          : code === 'INVITATION_ATTEMPT_LIMIT'
+            ? t('memberDetail.resendLimit')
+            : code === 'INVITATION_NOT_ELIGIBLE' || code === 'INVITATION_ALREADY_ACCEPTED'
+              ? t('memberDetail.resendNotEligible')
+              : t('memberDetail.resendFailed'),
+      );
     }
   };
 

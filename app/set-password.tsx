@@ -137,6 +137,9 @@ export default function SetPassword() {
             }}
             placeholder={t('setPassword.newPlaceholder')}
             secure
+            webType="password"
+            autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="new-password"
             textContentType="newPassword"
             returnKeyType="next"
@@ -156,6 +159,9 @@ export default function SetPassword() {
             }}
             placeholder={t('setPassword.repeatPlaceholder')}
             secure
+            webType="password"
+            autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="new-password"
             textContentType="newPassword"
             returnKeyType="done"
