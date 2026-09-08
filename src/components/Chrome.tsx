@@ -8,68 +8,16 @@ import { IconButton } from './Button';
 import { useApp } from '@/data/store';
 
 /* ------------------------------------------------------------------ */
-/* iOS status bar — time + signal/wifi/battery                         */
-/* On native, SafeAreaInsets handles the top padding. On web preview,  */
-/* we render a faux status bar so the app looks like a real phone.     */
+/* Native safe-area spacer. Web keeps the same top rhythm without      */
+/* rendering mock time, signal, Wi-Fi, or battery indicators.          */
 /* ------------------------------------------------------------------ */
 
 export function StatusBar({ dark = false }: { dark?: boolean }) {
   const insets = useSafeAreaInsets();
-  const ink = useColors(dark).ink;
-
   if (Platform.OS !== 'web') {
     return <View style={{ height: insets.top }} />;
   }
-
-  const time = '9:41';
-  return (
-    <View
-      style={{
-        height: 52,
-        flexShrink: 0,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        paddingHorizontal: 30,
-        paddingBottom: 6,
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: typography.display,
-          fontSize: 15,
-          fontWeight: '600',
-          letterSpacing: 0.01,
-          color: ink,
-          fontVariant: ['tabular-nums'],
-        }}
-      >
-        {time}
-      </Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 12 }}>
-          <View style={{ width: 3, height: 4, borderRadius: 1, backgroundColor: ink }} />
-          <View style={{ width: 3, height: 6, borderRadius: 1, backgroundColor: ink }} />
-          <View style={{ width: 3, height: 9, borderRadius: 1, backgroundColor: ink }} />
-          <View style={{ width: 3, height: 12, borderRadius: 1, backgroundColor: ink }} />
-        </View>
-        <Icon name="wifi" size={16} color={ink} />
-        <View
-          style={{
-            width: 25,
-            height: 12,
-            borderRadius: 3,
-            borderWidth: 1.5,
-            borderColor: ink,
-            padding: 1.5,
-            flexDirection: 'row',
-          }}
-        >
-          <View style={{ flex: 1, backgroundColor: ink, borderRadius: 1 }} />
-        </View>
-      </View>
-    </View>
-  );
+  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 52, flexShrink: 0 }} />;
 }
 
 /* ------------------------------------------------------------------ */

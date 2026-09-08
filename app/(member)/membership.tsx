@@ -178,6 +178,7 @@ export default function MembershipScreen() {
             {ms.status === 'active' || ms.status === 'expiring' || ms.status === 'due' ? (
               <>
                 <Button block href="/qr">{t('membership.showQr')}</Button>
+                <Button variant="secondary" block href="/pay">{ms.status === 'due' ? 'Pay balance with UPI' : 'Renew with UPI'}</Button>
                 <Button variant="quiet" block href="/(member)/profile">
                   {t('membership.askRenew')}
                 </Button>

@@ -227,6 +227,25 @@ export type ApiPublishNoticeRow = {
   recipient_count: number;
 };
 
+export type ApiUpiConfigRow = { upi_id: string | null; payee_name: string | null; club_name: string };
+export type ApiUpiPaymentRequestRow = {
+  id: string;
+  reference: string;
+  member_id: string;
+  membership_id: string | null;
+  plan_id: string | null;
+  kind: 'balance' | 'renewal';
+  amount: number | string;
+  currency: string;
+  status: 'created' | 'submitted' | 'confirmed' | 'rejected';
+  utr: string | null;
+  member_note: string | null;
+  review_note: string | null;
+  created_at: string;
+  members?: { first_name: string; last_name: string; member_number: string } | null;
+  plans?: { name: string } | null;
+};
+
 export type ApiNoticeTableRow = {
   id: string;
   category: string;

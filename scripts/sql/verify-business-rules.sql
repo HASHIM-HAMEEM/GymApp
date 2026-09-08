@@ -61,6 +61,8 @@ select harness.eq('club currency is INR',
   (select currency from public.club_config where id = 1), 'INR');
 select harness.eq('club country is IN',
   (select country_code from public.club_config where id = 1), 'IN');
+select harness.eq('Aadhaar checksum accepts valid number', public.valid_aadhaar('100000000004'), true);
+select harness.eq('Aadhaar checksum rejects invalid number', public.valid_aadhaar('100000000005'), false);
 
 -- ---------------------------------------------------- M3: calendar terms
 select harness.eq('term Sep 5 + 1 month', public.term_end_date('2026-09-05'::date, 1), '2026-10-04'::date);
@@ -90,7 +92,7 @@ insert into ctx (key, val)
 select t.k, t.v
 from public.create_member_invitation(
   'Asha', 'Kumar', 'asha@test.apex.local',
-  null, null, null, null, null, null,
+  null, null, null, null, '100000000004', null,
   (select id from public.plans where slug = 'premium-monthly'),
   null, 999.99, 'upi'
 ) r,
@@ -106,6 +108,21 @@ set auth_user_id = 'a0000000-0000-0000-0000-000000000002'
 where id = (select val::uuid from ctx where key = 'asha_member');
 insert into public.profiles (id, role, account_state, must_set_password, display_name)
 values ('a0000000-0000-0000-0000-000000000002', 'member', 'active', false, 'Asha Kumar');
+
+select public.update_upi_config('apex@bank', 'Apex Athletic Club');
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+insert into ctx(key,val)
+select 'asha_upi_request', r.id::text from public.create_upi_payment_request(
+  (select val::uuid from ctx where key='asha_membership'), null) r;
+select harness.eq('member submits UPI reference',
+  (select r.status from public.submit_upi_payment((select val::uuid from ctx where key='asha_upi_request'),'UTR123456',null) r), 'submitted');
+select harness.throws('member cannot confirm UPI payment','42501',
+  $$select public.review_upi_payment_request((select val::uuid from ctx where key='asha_upi_request'),true,null)$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.eq('admin rejects unverified UPI payment',
+  (select r.status from public.review_upi_payment_request((select val::uuid from ctx where key='asha_upi_request'),false,'Not found') r), 'rejected');
+select harness.eq('UPI review replay is idempotent',
+  (select r.status from public.review_upi_payment_request((select val::uuid from ctx where key='asha_upi_request'),false,'Repeated') r), 'rejected');
 
 select harness.eq('membership starts on club-local purchase date',
   (select start_date from public.memberships where id = (select val::uuid from ctx where key = 'asha_membership')),
@@ -140,7 +157,7 @@ select harness.eq('admission admitted is strictly false (M1)',
 
 -- Manual start dates are rejected (M6).
 select harness.throws('create rejects manual start date', '22023',
-  $$select public.create_member_invitation('X','Y','x1@test.apex.local',null,null,null,null,null,null,
+  $$select public.create_member_invitation('X','Y','x1@test.apex.local',null,null,null,null,'100000000015',null,
     (select id from public.plans where slug='premium-monthly'), '2026-01-01'::date, null, null)$$);
 
 -- Settlement: exact remaining balance via UPI (M5/M8).
@@ -198,7 +215,7 @@ insert into ctx (key, val)
 select t.k, t.v
 from public.create_member_invitation(
   'Riya', 'Sharma', 'riya@test.apex.local',
-  null, null, null, null, null, null,
+  null, null, null, null, '100000000027', null,
   (select id from public.plans where slug = 'three-month'),
   null, 100.00, 'cash'
 ) r,
@@ -246,7 +263,7 @@ insert into ctx (key, val)
 select t.k, t.v
 from public.create_member_invitation(
   'Arjun', 'Patel', 'arjun@test.apex.local',
-  null, null, null, null, null, null,
+  null, null, null, null, '100000000036', null,
   (select id from public.plans where slug = 'premium-monthly'),
   null, 2499.00, 'upi'
 ) r,
@@ -596,7 +613,7 @@ begin
   p := public.save_membership_plan(null, 'Six-month QA', 6, 1000, true);
   perform harness.eq('admin creates six-month price', (select price from public.plans where id=p), 1000::numeric);
   select * into first_term from public.create_member_invitation(
-    p_first_name=>'Pricing',p_last_name=>'Test',p_email=>'pricing@test.apex.local',
+    p_first_name=>'Pricing',p_last_name=>'Test',p_email=>'pricing@test.apex.local',p_national_id=>'100000000043',
     p_plan_id=>p,p_amount_paid=>800,p_payment_method=>'cash',p_agreed_price=>800,p_price_note=>'Student discount');
   perform harness.eq('discount stores agreed snapshot', (select price_snapshot from public.memberships where id=first_term.membership_id), 800::numeric);
   perform harness.eq('discount stores original catalogue price', (select list_price_snapshot from public.memberships where id=first_term.membership_id), 1000::numeric);
@@ -619,5 +636,40 @@ set role authenticated;
 select harness.set_user('a0000000-0000-0000-0000-000000000002');
 select harness.throws('member cannot edit prices','42501', $$select public.save_membership_plan(null,'Blocked',6,10,true)$$);
 reset role;
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+update public.memberships set end_date=public.club_today()+5 where id=(select val::uuid from ctx where key='riya_membership');
+insert into ctx(key,val) select 'riya_reminder', reminder_id::text from public.claim_expiry_reminders();
+select harness.eq('expiry reminder is claimed once',
+  (select attempts from public.expiry_reminders where id=(select val::uuid from ctx where key='riya_reminder')), 1);
+select public.record_expiry_reminder((select val::uuid from ctx where key='riya_reminder'),false,'temporary');
+select harness.eq('failed expiry reminder is retried',
+  (select count(*) from public.claim_expiry_reminders() where reminder_id=(select val::uuid from ctx where key='riya_reminder')), 1::bigint);
+select harness.eq('expiry retry increments attempt count',
+  (select attempts from public.expiry_reminders where id=(select val::uuid from ctx where key='riya_reminder')), 2);
+select public.record_expiry_reminder((select val::uuid from ctx where key='riya_reminder'),true,null);
+select harness.eq('sent expiry reminder is not reclaimed',
+  (select count(*) from public.claim_expiry_reminders() where reminder_id=(select val::uuid from ctx where key='riya_reminder')), 0::bigint);
+select public.remove_member((select val::uuid from ctx where key='riya_member'),'QA removal');
+select harness.eq('member removal revokes account access',
+  (select account_state from public.profiles where id='a0000000-0000-0000-0000-000000000003'), 'removed');
+select harness.eq('member removal preserves payments',
+  (select count(*) > 0 from public.payments p join public.memberships ms on ms.id=p.membership_id where ms.member_id=(select val::uuid from ctx where key='riya_member')), true);
+select harness.eq('removed member excluded from server search',
+  (select count(*) from public.search_members('Riya',100,0,null)),0::bigint);
+select harness.set_user('a0000000-0000-0000-0000-000000000003');
+select harness.eq('removed account has no current member id', public.current_member_id(), null::uuid);
+select harness.throws('removed member cannot issue QR','42501', $$select public.issue_qr_pass(false)$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+insert into ctx(key,val) select 'renewal_upi',r.id::text from public.create_upi_payment_request(null,(select id from public.plans where slug='premium-monthly')) r;
+select public.submit_upi_payment((select val::uuid from ctx where key='renewal_upi'),'UTR999999',null);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+update public.plans set price=price+100 where slug='premium-monthly';
+select harness.eq('UPI renewal confirmation succeeds after catalogue price changes',
+  (select r.status from public.review_upi_payment_request((select val::uuid from ctx where key='renewal_upi'),true,null) r),'confirmed');
+select harness.eq('UPI renewal confirmation retry returns same payment',
+  (select r.confirmed_payment_id from public.review_upi_payment_request((select val::uuid from ctx where key='renewal_upi'),true,null) r),
+  (select confirmed_payment_id from public.upi_payment_requests where id=(select val::uuid from ctx where key='renewal_upi')));
+select harness.eq('UPI renewal keeps request price',
+  (select ms.price_snapshot from public.memberships ms join public.upi_payment_requests r on r.confirmed_membership_id=ms.id where r.id=(select val::uuid from ctx where key='renewal_upi')),2499::numeric);
 select harness.set_user(null);
 rollback;

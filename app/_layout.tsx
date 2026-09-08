@@ -1,25 +1,26 @@
 import * as React from 'react';
-import { View, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { Stack, SplashScreen, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '@/providers/AppProvider';
 import { colors, useColors } from '@/theme/tokens';
-import { StatusBar as FauxStatusBar } from '@/components/Chrome';
 import { subscribeToNotificationResponses } from '@/lib/notifications';
+import { StartupState } from '@/components/StartupState';
+import { Banner } from '@/components/Surfaces';
+import { Button } from '@/components/Button';
+import { StatusBar as WebSafeAreaSpacer } from '@/components/Chrome';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootNav() {
-  const { role, session, profile, authLoading, darkMode } = useApp();
+  const { role, session, profile, authLoading, startupError, darkMode, isOnline, connectivityKnown, refreshConnectivity } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const c = useColors(darkMode);
   const handledResponses = React.useRef(new Set<string>());
 
-  React.useEffect(() => {
-    if (!authLoading) SplashScreen.hide();
-  }, [authLoading]);
+  const hideSplash = React.useCallback(() => { void SplashScreen.hideAsync(); }, []);
 
   React.useEffect(() => {
     if (authLoading || !session) return;
@@ -33,9 +34,9 @@ function RootNav() {
   }, [authLoading, router, session]);
 
   React.useEffect(() => {
-    if (authLoading || pathname === '/confirm') return;
+    if (authLoading || startupError || pathname === '/confirm') return;
     if (!session) {
-      if (!['/welcome', '/signin', '/forgot-password', '/splash'].includes(pathname)) {
+      if (!['/welcome', '/signin', '/forgot-password', '/splash', '/download'].includes(pathname)) {
         router.replace('/welcome');
       }
       return;
@@ -48,13 +49,17 @@ function RootNav() {
       if (pathname !== '/set-password') router.replace('/set-password');
       return;
     }
-    const adminOnly = ['/today', '/members', '/scanner', '/member-new', '/member-detail', '/renew', '/notice-compose', '/exports', '/plans'];
-    const memberOnly = ['/home', '/visits', '/membership', '/qr', '/edit-profile'];
+    const adminOnly = ['/today', '/members', '/scanner', '/member-new', '/member-detail', '/renew', '/notice-compose', '/exports', '/plans', '/payment-settings'];
+    const memberOnly = ['/home', '/visits', '/membership', '/qr', '/edit-profile', '/pay'];
+    if (pathname === '/' || ['/welcome', '/signin', '/splash'].includes(pathname)) {
+      router.replace(role === 'admin' ? '/(admin)/today' : '/(member)/home');
+      return;
+    }
     if (role === 'member' && adminOnly.includes(pathname)) router.replace('/(member)/home');
     if (role === 'admin' && memberOnly.includes(pathname)) router.replace('/(admin)/today');
-  }, [authLoading, pathname, profile, role, router, session]);
+  }, [authLoading, startupError, pathname, profile, role, router, session]);
 
-  if (authLoading) return null;
+  if (authLoading || startupError) return <StartupState onReady={hideSplash} />;
 
   const hasSession = Boolean(session);
   const authed = Boolean(session && profile);
@@ -65,9 +70,11 @@ function RootNav() {
   const isMember = active && role === 'member';
 
   return (
+    <View style={{ flex: 1 }} onLayout={hideSplash}>
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
       <Stack.Screen name="index" options={{ animation: 'fade' }} />
       <Stack.Screen name="confirm" />
+      <Stack.Screen name="download" />
 
       <Stack.Protected guard={!hasSession}>
         <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
@@ -80,11 +87,14 @@ function RootNav() {
       <Stack.Protected guard={active && !needsPassword}>
         <Stack.Screen name="notice" />
         <Stack.Screen name="privacy" />
+        <Stack.Screen name="change-password" />
+        <Stack.Screen name="notification-settings" />
         <Stack.Protected guard={isMember}>
           <Stack.Screen name="(member)" />
           <Stack.Screen name="qr" />
           <Stack.Screen name="member-overview" />
           <Stack.Screen name="edit-profile" />
+          <Stack.Screen name="pay" />
         </Stack.Protected>
         <Stack.Protected guard={isAdmin}>
           <Stack.Screen name="(admin)" />
@@ -94,6 +104,7 @@ function RootNav() {
           <Stack.Screen name="notice-compose" />
           <Stack.Screen name="exports" />
           <Stack.Screen name="plans" />
+          <Stack.Screen name="payment-settings" />
         </Stack.Protected>
       </Stack.Protected>
 
@@ -101,6 +112,13 @@ function RootNav() {
         <Stack.Screen name="set-password" />
       </Stack.Protected>
     </Stack>
+    {connectivityKnown && !isOnline ? (
+      <View accessibilityViewIsModal style={{ position: 'absolute', inset: 0, backgroundColor: c.bg, justifyContent: 'center', padding: 24, gap: 16 }}>
+        <Banner variant="offline">No internet connection. Reconnect to use Apex.</Banner>
+        <Button block onPress={() => void refreshConnectivity().catch(() => undefined)}>Retry connection</Button>
+      </View>
+    ) : null}
+    </View>
   );
 }
 
@@ -142,7 +160,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
           },
         ]}
       >
-        <FauxStatusBar dark={darkMode} />
+        <WebSafeAreaSpacer dark={darkMode} />
         <View style={{ flex: 1, direction: isRtl ? 'rtl' : 'ltr' }}>{children}</View>
       </View>
     </View>
@@ -159,6 +177,8 @@ export default function RootLayout() {
           @keyframes sh { to { background-position: -200% 0; } }
           @keyframes mpress { 0% { transform: scale(1); } 50% { transform: scale(.985); } 100% { transform: scale(1); } }
           * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+          html, body, #root { height: 100%; min-height: 100dvh; overflow: hidden; }
+          input, textarea { scroll-margin-block: 160px; }
         `}</style>
       ) : null}
       <PhoneFrame>

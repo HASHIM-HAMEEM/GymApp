@@ -90,6 +90,16 @@ export function notificationStateLabel(state: NotificationState): NotificationSt
   }
 }
 
+export async function getNotificationState(): Promise<NotificationState> {
+  if (Platform.OS === 'web') return 'unsupported';
+  if (isExpoGo()) return 'expo-go';
+  const mod = await loadNotifications();
+  if (!mod) return 'unconfigured';
+  const permission = await mod.getPermissionsAsync();
+  if (permission.status === 'granted') return 'granted';
+  return permission.canAskAgain ? 'prompt' : 'denied';
+}
+
 export async function requestNotificationPermission(): Promise<NotificationState> {
   if (Platform.OS === 'web') return 'unsupported';
   if (isExpoGo()) return 'expo-go';
@@ -155,10 +165,11 @@ export function subscribeToNotificationResponses(
 ) {
   if (Platform.OS === 'web') return () => undefined;
   let subscription: { remove: () => void } | null = null;
+  let disposed = false;
   void loadNotifications().then((mod) => {
-    if (!mod) return;
+    if (!mod || disposed) return;
     const redirect = (response: NotificationResponse | null) => {
-      if (!response) return;
+      if (!response || disposed) return;
       const url = response.notification.request.content.data?.url;
       if (typeof url === 'string' && url.startsWith('/')) {
         onUrl(url, response.notification.request.identifier);
@@ -167,5 +178,5 @@ export function subscribeToNotificationResponses(
     void mod.getLastNotificationResponseAsync().then(redirect);
     subscription = mod.addNotificationResponseReceivedListener(redirect);
   });
-  return () => subscription?.remove();
+  return () => { disposed = true; subscription?.remove(); };
 }

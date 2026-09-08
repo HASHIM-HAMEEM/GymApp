@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
+import { FormScroll } from '@/components/FormScroll';
 
 /**
  * M-03 & M-04 Sign in — email & password with inline error state.
@@ -45,7 +46,7 @@ export default function SignIn() {
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
       <AppBar onBack={() => router.back()} />
-      <View style={styles.body}>
+      <FormScroll contentContainerStyle={styles.body}>
         <View>
           <Text style={[styles.slabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.signIn')}</Text>
           <Text style={[styles.h1, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.yourAccount')}</Text>
@@ -112,7 +113,7 @@ export default function SignIn() {
             {t('auth.forgotPassword')}
           </Button>
         </View>
-      </View>
+      </FormScroll>
     </View>
   );
 }
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   body: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 8,
     paddingBottom: 24,

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
@@ -11,6 +11,7 @@ import { Icon } from '@/components/Icon';
 import { useDashboard, usePublishNotice } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
+import { FormScroll } from '@/components/FormScroll';
 
 type Audience = 'all_members' | 'active_only' | 'expiring_soon';
 
@@ -150,9 +151,9 @@ function NoticeComposeInner() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('noticeCompose.newNotice')} onBack={() => router.back()} />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+      <FormScroll contentContainerStyle={{ paddingBottom: 24 }}>
         <Body style={{ gap: 18 }}>
 
           {error ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{error}</Text></Banner> : null}
@@ -201,7 +202,7 @@ function NoticeComposeInner() {
             </View>
           </Field>
         </Body>
-      </ScrollView>
+      </FormScroll>
 
       <View style={[styles.bottomBar, { backgroundColor: c.bg, borderTopColor: c.line }]}>
         <Button block disabled={!title.trim() || !body.trim()} onPress={() => setStep('confirm')}>{t('noticeCompose.reviewPublish')}</Button>
@@ -220,16 +221,13 @@ function NoticeComposeInner() {
           {t('noticeCompose.confirmBody', { title, count: audienceCount ?? t('noticeCompose.selectedMembers') })}
         </Text>
       </ConfirmModal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   bottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flexShrink: 0,
     paddingHorizontal: spacing.screen,
     paddingBottom: 34,
     paddingTop: 12,

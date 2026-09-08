@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
   Animated,
+  KeyboardAvoidingView,
   Platform,
   View,
   Text,
@@ -58,6 +59,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Animated.View
         style={[sheetStyles.scrimColor, { opacity: transition, pointerEvents: 'none' }]}
       />
@@ -85,6 +87,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
           </ScrollView>
         </Animated.View>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

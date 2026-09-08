@@ -5,7 +5,7 @@ import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
 import { Monogram } from '@/components/Tag';
-import { DeveloperCredit, PreferencesGroup } from '@/components/SettingsSection';
+import { DeveloperCredit, PreferencesGroup, SettingsRow } from '@/components/SettingsSection';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember } from '@/data/api/queries';
 
@@ -69,7 +69,11 @@ export default function ProfileScreen() {
             <ProfileRow label={t('profile.address')} value={m?.address || '—'} last />
           </View>
 
-          <PreferencesGroup onSignOut={() => void handleSignOut()} signingOut={signingOut} />
+          <PreferencesGroup
+            accountRows={<SettingsRow icon="user" label={t('settings.personalDetails')} value={m ? `${m.firstName} ${m.lastName}` : ''} onPress={() => router.push('/edit-profile')} />}
+            onSignOut={() => void handleSignOut()}
+            signingOut={signingOut}
+          />
           <DeveloperCredit />
         </Body>
       </ScrollView>
@@ -88,7 +92,7 @@ function ProfileRow({ label, value, last }: { label: string; value: string; last
       ]}
     >
       <Text style={[styles.key, { color: c.ink3, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{label}</Text>
-      <Text style={[styles.value, { color: c.ink, textAlign: isRtl ? 'left' : 'right', writingDirection: isRtl ? 'rtl' : 'ltr' }]} numberOfLines={1}>
+      <Text style={[styles.value, { color: c.ink, textAlign: isRtl ? 'left' : 'right', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
         {value}
       </Text>
     </View>

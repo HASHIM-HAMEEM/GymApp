@@ -23,8 +23,19 @@ export interface MemberInvitationInput {
 }
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const NATIONAL_ID_PATTERN = /^[0-9][0-9 ]{2,62}[0-9]$/;
 const PAYMENT_METHODS = ["upi", "cash", "card", "wallet", "complimentary"] as const;
+
+const VERHOEFF_D = [[0,1,2,3,4,5,6,7,8,9],[1,2,3,4,0,6,7,8,9,5],[2,3,4,0,1,7,8,9,5,6],[3,4,0,1,2,8,9,5,6,7],[4,0,1,2,3,9,5,6,7,8],[5,9,8,7,6,0,4,3,2,1],[6,5,9,8,7,1,0,4,3,2],[7,6,5,9,8,2,1,0,4,3],[8,7,6,5,9,3,2,1,0,4],[9,8,7,6,5,4,3,2,1,0]] as const;
+const VERHOEFF_P = [[0,1,2,3,4,5,6,7,8,9],[1,5,7,6,2,8,3,0,9,4],[5,8,0,3,7,9,6,1,4,2],[8,9,1,6,0,4,3,5,2,7],[9,4,5,3,1,2,6,8,7,0],[4,2,8,6,5,7,3,9,0,1],[2,7,9,3,8,0,6,4,1,5],[7,0,4,6,9,1,3,2,5,8]] as const;
+
+function validAadhaar(value: string): boolean {
+  if (!/^\d{12}$/.test(value) || /^0{12}$/.test(value)) return false;
+  let checksum = 0;
+  [...value].reverse().forEach((digit, index) => {
+    checksum = VERHOEFF_D[checksum][VERHOEFF_P[index % 8][Number(digit)]];
+  });
+  return checksum === 0;
+}
 
 function normalizedText(value: unknown, fieldName: string, maxLength: number): string {
   if (typeof value !== "string") {
@@ -120,13 +131,15 @@ function normalizeOptionalIsoDate(value: unknown, fieldName: string, allowFuture
 }
 
 function normalizeNationalId(value: unknown): string | null {
-  if (value === undefined || value === null || value === "") return null;
+  if (value === undefined || value === null || value === "") {
+    throw new ApiError(400, "VALIDATION_ERROR", "Aadhaar number is required.");
+  }
   if (typeof value !== "string") {
     throw new ApiError(400, "VALIDATION_ERROR", "nationalId must be a string or null.");
   }
-  const normalized = value.normalize("NFKC").trim().replace(/\s+/g, " ");
-  if (!NATIONAL_ID_PATTERN.test(normalized) || normalized.replace(/\D/g, "").length < 4) {
-    throw new ApiError(400, "VALIDATION_ERROR", "nationalId must be 4 to 64 digits.");
+  const normalized = value.normalize("NFKC").replace(/\D/g, "");
+  if (!validAadhaar(normalized)) {
+    throw new ApiError(400, "VALIDATION_ERROR", "Aadhaar number must be 12 digits with a valid checksum.");
   }
   return normalized;
 }

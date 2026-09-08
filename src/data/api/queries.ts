@@ -19,6 +19,8 @@ import type {
   ApiMembershipStateRow,
   ApiSettleRow,
   ApiWaiveRow,
+  ApiUpiConfigRow,
+  ApiUpiPaymentRequestRow,
 } from './api';
 import { fetchClub, fetchPlans, todayIso } from './api';
 import { mapMemberDetail, mapNoticeRow, mapPlan, mapSearchRow } from './mapper';
@@ -120,6 +122,68 @@ export function useClub() {
   });
 }
 
+export function useUpiConfig() {
+  const { session } = useApp();
+  return useQuery({
+    queryKey: ['upi-config'],
+    queryFn: () => callRpc<ApiUpiConfigRow>('get_upi_config', {}, 'UPI payment details could not be loaded.'),
+    enabled: Boolean(session),
+  });
+}
+
+export function useUpdateUpiConfig() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { upiId: string; payeeName: string }) => callRpc<void>('update_upi_config', { p_upi_id: input.upiId, p_payee_name: input.payeeName }, 'UPI payment details could not be saved.'),
+    onSuccess: () => cache.invalidateQueries({ queryKey: ['upi-config'] }),
+  });
+}
+
+export function useUpiPaymentRequests(asAdmin = false) {
+  const { session } = useApp();
+  return useQuery({
+    queryKey: ['upi-payment-requests', asAdmin],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const selection = asAdmin
+        ? 'id,reference,member_id,membership_id,plan_id,kind,amount,currency,status,utr,member_note,review_note,created_at,members(first_name,last_name,member_number),plans(name)'
+        : 'id,reference,member_id,membership_id,plan_id,kind,amount,currency,status,utr,member_note,review_note,created_at';
+      const { data, error } = await requireSupabase().from('upi_payment_requests').select(selection).order('created_at', { ascending: false }).limit(100);
+      if (error) throw rpcError(error.code, error.message, 'UPI payment requests could not be loaded.');
+      return (data ?? []) as unknown as ApiUpiPaymentRequestRow[];
+    },
+  });
+}
+
+export function useCreateUpiPaymentRequest() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { membershipId?: string; planId?: string }) => callRpc<ApiUpiPaymentRequestRow>('create_upi_payment_request', { p_membership_id: input.membershipId ?? null, p_plan_id: input.planId ?? null }, 'The UPI payment request could not be created.'),
+    onSuccess: () => cache.invalidateQueries({ queryKey: ['upi-payment-requests'] }),
+  });
+}
+
+export function useSubmitUpiPayment() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { requestId: string; utr: string; note?: string }) => callRpc<ApiUpiPaymentRequestRow>('submit_upi_payment', { p_request_id: input.requestId, p_utr: input.utr, p_note: input.note?.trim() || null }, 'The payment reference could not be submitted.'),
+    onSuccess: () => cache.invalidateQueries({ queryKey: ['upi-payment-requests'] }),
+  });
+}
+
+export function useReviewUpiPayment() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { requestId: string; approve: boolean; note?: string }) => callRpc<ApiUpiPaymentRequestRow>('review_upi_payment_request', { p_request_id: input.requestId, p_approve: input.approve, p_note: input.note?.trim() || null }, 'The payment review could not be saved.'),
+    onSuccess: async () => Promise.all([
+      cache.invalidateQueries({ queryKey: ['upi-payment-requests'] }),
+      cache.invalidateQueries({ queryKey: ['current-member'] }),
+      cache.invalidateQueries({ queryKey: ['members'] }),
+      cache.invalidateQueries({ queryKey: ['dashboard'] }),
+    ]),
+  });
+}
+
 export function useCurrentMember() {
   const { session } = useApp();
   return useQuery({
@@ -172,7 +236,7 @@ export function useMembers(
         p_status: status === 'all' ? null : status,
       });
       if (error) throw rpcError(error.code, error.message, 'The member list could not be loaded.');
-      return ((data as ApiSearchRow[] | null) ?? []).map(mapSearchRow);
+      return ((data as ApiSearchRow[] | null) ?? []).filter((row) => row.account_state !== 'removed').map(mapSearchRow);
     },
     enabled,
   });
@@ -440,6 +504,21 @@ export function useSetMembershipState() {
       void cache.invalidateQueries({ queryKey: ['member'] });
       void cache.invalidateQueries({ queryKey: ['current-member'] });
       void cache.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { memberId: string; reason?: string }) =>
+      callRpc<void>('remove_member', { p_member_id: input.memberId, p_reason: input.reason?.trim() || null }, 'The member could not be removed.'),
+    onSuccess: async () => {
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: ['members'] }),
+        cache.invalidateQueries({ queryKey: ['member'] }),
+        cache.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
     },
   });
 }

@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
+import { FormScroll } from '@/components/FormScroll';
 
 const MIN_LENGTH = 10;
 
@@ -113,7 +114,7 @@ export default function SetPassword() {
       <AppBar>
         <Text style={titleStyle}>{t('setPassword.title')}</Text>
       </AppBar>
-      <View style={styles.body}>
+      <FormScroll contentContainerStyle={styles.body}>
         <View>
           <Text style={[styles.h1, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {isInviteFlow ? t('setPassword.choose') : t('setPassword.chooseNew')}
@@ -174,7 +175,7 @@ export default function SetPassword() {
             {isInviteFlow ? t('setPassword.activate') : t('setPassword.save')}
           </Button>
         </View>
-      </View>
+      </FormScroll>
     </View>
   );
 }
@@ -182,7 +183,7 @@ export default function SetPassword() {
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
   body: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 8,
     paddingBottom: 24,

@@ -4,6 +4,19 @@ import { colors, useColors, radius, spacing, typography, tracking } from '@/them
 import { useApp } from '@/data/store';
 import { Icon, IconName } from './Icon';
 
+export function SectionBlock({ title, action, children }: { title: React.ReactNode; action?: React.ReactNode; children: React.ReactNode }) {
+  const { isRtl } = useApp();
+  return (
+    <View style={{ gap: 12, marginBottom: 12 }}>
+      <View style={{ minHeight: 16, flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 2 }}>
+        {title}
+        {action}
+      </View>
+      {children}
+    </View>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Banner — info / warn / error / offline                              */
 /* ------------------------------------------------------------------ */
@@ -265,7 +278,7 @@ export function KVRow({
       }}
     >
       <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 10, minWidth: 0, flexShrink: 1 }}>
-        {icon ? <Icon name={icon} size={18} color={c.ink3} /> : null}
+        {icon ? <View style={{ width: 18, flexShrink: 0 }}><Icon name={icon} size={18} color={c.ink3} /></View> : null}
         <Text
           style={{
             fontFamily: typography.fontFamily,

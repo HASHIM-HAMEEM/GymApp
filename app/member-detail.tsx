@@ -7,14 +7,15 @@ import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Tag, SectionLabel } from '@/components/Tag';
 import { Sheet } from '@/components/Overlays';
-import { KVRow } from '@/components/Surfaces';
+import { KVRow, SectionBlock } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
-import { useMemberDetail, useResendMemberInvitation, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
+import { useMemberDetail, useRemoveMember, useResendMemberInvitation, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
 import { fmtLong, fmtShort, fmtDateTime, statusVisual, formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 import { Language, type TranslationKey } from '@/lib/i18n';
+import { maskAadhaar } from '@/lib/aadhaar';
 
 export default function MemberDetail() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function MemberDetail() {
   const setState = useSetMembershipState();
   const settle = useSettleBalance();
   const waive = useWaiveBalance();
+  const removeMember = useRemoveMember();
   const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
@@ -38,6 +40,8 @@ export default function MemberDetail() {
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionNote, setActionNote] = React.useState<string | null>(null);
   const [activityExpanded, setActivityExpanded] = React.useState(false);
+  const [removeOpen, setRemoveOpen] = React.useState(false);
+  const [removeReason, setRemoveReason] = React.useState('');
 
   const m = member.data;
 
@@ -242,10 +246,9 @@ export default function MemberDetail() {
           ) : null}
 
           {ms ? (
-            <View style={{ gap: 8 }}>
-              <SectionLabel>{t('memberDetail.currentMembership')}</SectionLabel>
+            <SectionBlock title={<SectionLabel>{t('memberDetail.currentMembership')}</SectionLabel>}>
               <View style={[styles.membershipCard, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                <View style={{ flex: 1, gap: 6 }}>
+                <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
                   <Text style={[styles.planName, { color: c.ink, writingDirection: textDir }]}>{ms.planName}</Text>
                   <LtrText style={[styles.dateLine, { color: c.ink3 }]}>
                     {fmtLong(ms.startDate, language)} — {fmtLong(ms.expiryDate, language)}
@@ -257,7 +260,7 @@ export default function MemberDetail() {
                   ) : null}
                 </View>
                 {tag ? (
-                  <Tag variant={tag.variant} style={{ alignSelf: 'center' }}>
+                  <Tag variant={tag.variant} style={{ alignSelf: 'center', flexShrink: 0 }}>
                     {tag.label}
                   </Tag>
                 ) : null}
@@ -286,11 +289,10 @@ export default function MemberDetail() {
                   </Text>
                 </KVRow>
               ) : null}
-            </View>
+            </SectionBlock>
           ) : null}
 
-          <View style={{ gap: 0 }}>
-            <SectionLabel>{t('memberDetail.profileEmergency')}</SectionLabel>
+          <SectionBlock title={<SectionLabel>{t('memberDetail.profileEmergency')}</SectionLabel>}>
             <KVRow label={t('common.member')}>
               <Text style={{ writingDirection: textDir }}>{m.firstName} {m.lastName}</Text>
             </KVRow>
@@ -309,7 +311,7 @@ export default function MemberDetail() {
             ) : null}
             {m.nationalId ? (
               <KVRow label={t('memberDetail.nationalId')}>
-                <LtrText>{m.nationalId}</LtrText>
+                <LtrText>{maskAadhaar(m.nationalId)}</LtrText>
               </KVRow>
             ) : null}
             <KVRow label={t('memberDetail.address')}>
@@ -322,10 +324,9 @@ export default function MemberDetail() {
                 </Text>
               </KVRow>
             ) : null}
-          </View>
+          </SectionBlock>
 
-          <View style={{ gap: 0 }}>
-            <SectionLabel>{t('memberDetail.visitHistory')}</SectionLabel>
+          <SectionBlock title={<SectionLabel>{t('memberDetail.visitHistory')}</SectionLabel>}>
             {m.visits.length === 0 ? (
               <View style={{ paddingVertical: 18, alignItems: 'center' }}>
                 <Text style={{ color: c.ink4, writingDirection: textDir }}>{t('memberDetail.noVisits')}</Text>
@@ -352,7 +353,7 @@ export default function MemberDetail() {
                 ) : null}
               </>
             )}
-          </View>
+          </SectionBlock>
 
           <View style={{ borderWidth: 1, borderColor: c.line, borderRadius: radius.lg, padding: 16, backgroundColor: c.bg1 }}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: activityExpanded }} onPress={() => setActivityExpanded((value) => !value)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -417,6 +418,9 @@ export default function MemberDetail() {
                   {t('memberDetail.waive')}
                 </Button>
               ) : null}
+              <Button variant="danger" size="sm" onPress={() => setRemoveOpen(true)}>
+                Remove member
+              </Button>
             </View>
           </View>
 
@@ -504,6 +508,27 @@ export default function MemberDetail() {
           </Button>
         </View>
         </KeyboardAvoidingView>
+      </Sheet>
+
+      <Sheet visible={removeOpen} onClose={() => setRemoveOpen(false)}>
+        <Text style={[styles.sheetTitle, { color: c.ink, writingDirection: textDir }]}>Remove {m.firstName} {m.lastName}?</Text>
+        <Text style={[styles.sheetBody, { color: c.ink3, writingDirection: textDir }]}>Their sign-in, QR access, reminders, and active membership will stop. Payment and membership records stay in admin exports.</Text>
+        <Field label="Reason" hint="Optional. Saved in the member audit trail.">
+          <Control value={removeReason} onChangeText={setRemoveReason} multiline placeholder="Reason for removal" />
+        </Field>
+        <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}> 
+          <Button variant="secondary" onPress={() => setRemoveOpen(false)}>Cancel</Button>
+          <Button
+            variant="danger"
+            loading={removeMember.isPending}
+            onPress={() => {
+              if (!m.databaseId) return;
+              void removeMember.mutateAsync({ memberId: m.databaseId, reason: removeReason })
+                .then(() => router.replace('/(admin)/members'))
+                .catch(() => setActionError('The member could not be removed. Check your connection and try again.'));
+            }}
+          >Remove member</Button>
+        </View>
       </Sheet>
     </View>
   );

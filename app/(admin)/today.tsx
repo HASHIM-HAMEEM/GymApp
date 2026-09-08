@@ -109,7 +109,7 @@ export default function AdminToday() {
         </Pressable>
       ) : null}
 
-      <View>
+      <View style={styles.section}>
         <View style={styles.sectionHead}>
           <SectionLabel>{t('adminToday.attention')}</SectionLabel>
           {expiring.length > 0 ? (
@@ -151,7 +151,7 @@ export default function AdminToday() {
         )}
       </View>
 
-      <View>
+      <View style={styles.section}>
         <SectionLabel>{t('adminToday.recentCheckIns')}</SectionLabel>
         {recent.length === 0 ? (
           <View style={[styles.empty, { backgroundColor: c.bg1, borderColor: c.line }]}>
@@ -288,8 +288,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 0,
   },
+  section: { gap: 12 },
   tbl: {
     borderRadius: radius.lg,
     borderWidth: 1,

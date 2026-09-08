@@ -8,6 +8,7 @@ import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
+import { FormScroll } from '@/components/FormScroll';
 
 /**
  * Password recovery request. Sends a one-time reset link to the verified
@@ -78,7 +79,7 @@ export default function ForgotPassword() {
       <AppBar onBack={() => router.back()}>
         <Text style={titleStyle}>{t('auth.resetTitle')}</Text>
       </AppBar>
-      <View style={styles.body}>
+      <FormScroll contentContainerStyle={styles.body}>
         <View>
           <Text style={[styles.h1, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('auth.resetHeading')}</Text>
           <Text style={[styles.lede, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
@@ -115,7 +116,7 @@ export default function ForgotPassword() {
             {t('auth.sendResetLink')}
           </Button>
         </View>
-      </View>
+      </FormScroll>
     </View>
   );
 }
@@ -123,7 +124,7 @@ export default function ForgotPassword() {
 const styles = StyleSheet.create({
   wrap: { flex: 1 },
   body: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.screen,
     paddingTop: 8,
     paddingBottom: 24,

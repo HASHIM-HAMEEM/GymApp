@@ -9,6 +9,7 @@ import { KVRow, KVList, Banner } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
 import { useCurrentMember, usePlans } from '@/data/api/queries';
 import { useApp } from '@/providers/AppProvider';
+import { maskAadhaar } from '@/lib/aadhaar';
 import { statusVisual, fmtLong, fmtShort, fmtDateTime, daysBetween, todayIso, formatMoney } from '@/data/format';
 import type { TranslationKey } from '@/lib/i18n';
 
@@ -105,7 +106,7 @@ export default function MemberOverview() {
               ) : null}
               {m.nationalId ? (
                 <KVRow icon="card" label={t('memberDetail.nationalId')} stacked>
-                  <LtrText>{m.nationalId}</LtrText>
+                  <LtrText>{maskAadhaar(m.nationalId)}</LtrText>
                 </KVRow>
               ) : null}
               {m.address ? (

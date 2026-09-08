@@ -1,7 +1,7 @@
 import { PaymentMethods } from '@/components/PaymentMethods';
 import { AgreedPrice, pricingError } from '@/components/AgreedPrice';
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useColors, radius, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
@@ -9,6 +9,7 @@ import { Button } from '@/components/Button';
 import { Tag } from '@/components/Tag';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
+import { FormScroll } from '@/components/FormScroll';
 import { useMemberDetail, usePlans, useRenewMembership, useRenewalQuote, type DeskPaymentMethod } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
 import { fmtLong, fmtShort, todayIso, formatMoney } from '@/data/format';
@@ -129,7 +130,7 @@ function RenewFlowInner() {
     return (
       <View style={[styles.wrap, { backgroundColor: c.bg }]}>
         <AppBar title={t('renew.renewal')} onClose={() => router.replace({ pathname: '/member-detail', params: { id: m.id } })} />
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <FormScroll contentContainerStyle={{ paddingBottom: 40 }}>
           <Body style={{ gap: 20 }}>
             {renderStepPills(3)}
 
@@ -165,7 +166,7 @@ function RenewFlowInner() {
               </Button>
             </View>
           </Body>
-        </ScrollView>
+        </FormScroll>
       </View>
     );
   }
@@ -174,7 +175,7 @@ function RenewFlowInner() {
     return (
       <View style={[styles.wrap, { backgroundColor: c.bg }]}>
         <AppBar title={t('renew.title')} onBack={() => setStep(1)} />
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <FormScroll contentContainerStyle={{ paddingBottom: 40 }}>
           <Body style={{ gap: 20 }}>
             {renderStepPills(2)}
 
@@ -222,7 +223,7 @@ function RenewFlowInner() {
               </Button>
             </View>
           </Body>
-        </ScrollView>
+        </FormScroll>
       </View>
     );
   }
@@ -230,7 +231,7 @@ function RenewFlowInner() {
   return (
     <View style={[styles.wrap, { backgroundColor: c.bg }]}>
       <AppBar title={t('renew.title')} onBack={() => router.back()} />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <FormScroll contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 22 }}>
           {renderStepPills(1)}
 
@@ -292,7 +293,7 @@ function RenewFlowInner() {
             {t('renew.continue')}
           </Button>
         </Body>
-      </ScrollView>
+      </FormScroll>
     </View>
   );
 }

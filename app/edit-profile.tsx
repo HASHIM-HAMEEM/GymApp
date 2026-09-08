@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
@@ -9,6 +9,8 @@ import { Banner } from '@/components/Surfaces';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useUpdateMemberProfile } from '@/data/api/queries';
+import { formatAadhaar, isValidAadhaar, normalizeAadhaar } from '@/lib/aadhaar';
+import { FormScroll } from '@/components/FormScroll';
 
 function indiaPhone(value: string): string {
   const digits = value.replace(/\D/g, '');
@@ -61,7 +63,7 @@ export default function EditProfile() {
     else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = t('profile.phoneInvalid');
     else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('profile.emergencyBoth');
     else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('profile.emergencyPhoneInvalid');
-    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length < 4) bad = t('profile.nationalIdInvalid');
+    else if (!isValidAadhaar(nationalId)) bad = t('profile.nationalIdInvalid');
     else if (!address.trim()) bad = t('profile.addressRequired');
     if (bad) {
       setFormError(bad);
@@ -76,7 +78,7 @@ export default function EditProfile() {
         phone: indiaPhone(phone),
         emergencyName: emName.trim(),
         emergencyPhone: indiaPhone(emPhone),
-        nationalId: nationalId.trim(),
+        nationalId: normalizeAadhaar(nationalId),
         address: address.trim(),
       });
 
@@ -92,8 +94,7 @@ export default function EditProfile() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('profile.editTitle')} onBack={() => router.back()} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <FormScroll contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
           {formError ? <Banner variant="error">{formError}</Banner> : null}
@@ -142,8 +143,9 @@ export default function EditProfile() {
           <Field label={t('profile.nationalId')} hint={t('profile.nationalIdHint')}>
             <Control
               value={nationalId}
-              onChangeText={setNationalId}
+              onChangeText={(value) => setNationalId(formatAadhaar(value))}
               inputMode="numeric"
+              maxLength={14}
               placeholder={t('profile.nationalIdPlaceholder')}
             />
           </Field>
@@ -157,8 +159,7 @@ export default function EditProfile() {
             <Button block style={{ flex: 1 }} loading={saving} onPress={save}>{t('profile.save')}</Button>
           </View>
         </Body>
-      </ScrollView>
-      </KeyboardAvoidingView>
+      </FormScroll>
     </View>
   );
 }

@@ -31,15 +31,24 @@ PG=( "$PSQL" -h "$SCRATCH" -p "$PORT" -U postgres )
 "${PG[@]}" -d meridian_test -v ON_ERROR_STOP=1 -q -f "$ROOT/scripts/sql/stub.sql"
 
 for f in "$ROOT"/supabase/migrations/*.sql; do
-  if ! "${PG[@]}" -d meridian_test -v ON_ERROR_STOP=1 -q -f "$f" >/dev/null 2>&1; then
+  if ! "${PG[@]}" -d meridian_test -v ON_ERROR_STOP=1 -q -f "$f" >"$SCRATCH/migration.out" 2>&1; then
     echo "MIGRATION FAILED: $(basename "$f")" >&2
+    cat "$SCRATCH/migration.out" >&2
     exit 1
   fi
 done
 
+set +e
 OUT="$("${PG[@]}" -d meridian_test -v ON_ERROR_STOP=1 -f "$ROOT/scripts/sql/verify-business-rules.sql" 2>&1)"
+TEST_RC=$?
+set -e
+if [[ "$TEST_RC" -ne 0 ]]; then
+  echo "$OUT" >&2
+  exit "$TEST_RC"
+fi
 if echo "$OUT" | grep -qE "FAIL|ERROR"; then
   echo "$OUT" | grep -E "FAIL|ERROR" >&2
   exit 1
 fi
-echo "$OUT" | grep -cE "ok -" | xargs -I{} echo "sql verification: {} checks passed"
+COUNT="$(echo "$OUT" | grep -cE "ok -" || true)"
+echo "sql verification: $COUNT checks passed"

@@ -155,6 +155,7 @@ export function Overline({ children, color }: { children: React.ReactNode; color
       style={{
         fontFamily: typography.fontFamily,
         fontSize: 11,
+        lineHeight: 14,
         fontWeight: '700',
         letterSpacing: tracking.caps,
         color: color ?? c.ink3,
@@ -174,6 +175,7 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
       style={{
         fontFamily: typography.fontFamily,
         fontSize: 11,
+        lineHeight: 14,
         fontWeight: '700',
         letterSpacing: tracking.caps,
         color: c.ink3,

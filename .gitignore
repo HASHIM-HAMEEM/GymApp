@@ -49,3 +49,6 @@ supabase/.env.*
 
 # supabase cli artifacts
 supabase/.temp/
+
+# oversized local build artifacts (GitHub 100MB limit) — public/apex.apk is the served copy
+/apex-android-release.apk

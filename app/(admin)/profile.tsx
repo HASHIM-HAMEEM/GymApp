@@ -8,7 +8,7 @@ import { Button, TextButton } from '@/components/Button';
 import { Monogram, SectionLabel, Tag } from '@/components/Tag';
 import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Overlays';
-import { DeveloperCredit, PreferencesGroup } from '@/components/SettingsSection';
+import { DeveloperCredit, PreferencesGroup, SettingsRow } from '@/components/SettingsSection';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
@@ -63,52 +63,20 @@ export default function AdminProfile() {
             <Tag variant="accent">Admin</Tag>
           </View>
 
-          <View>
-            <SectionLabel>{t('settings.yourAccount')}</SectionLabel>
-            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              <Row icon="user" title={t('settings.displayName')} sub={adminName || t('settings.frontDesk')} onPress={() => setAccountOpen(true)} c={c} />
-              <Row icon="pin" title={t('settings.reception')} sub={t('settings.desk', { desk: profile?.reception ?? 'A' })} onPress={() => setAccountOpen(true)} c={c} last />
-            </View>
-            <Text style={[styles.hint, { color: c.ink4 }]}>
-              {t('admin.accountHint')}
-            </Text>
-          </View>
-
-          <View>
-            <View style={styles.sectionHead}>
-              <SectionLabel>{t('settings.clubDetails')}</SectionLabel>
-              <TextButton onPress={() => setClubOpen(true)}>{t('settings.edit')}</TextButton>
-            </View>
-            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              <Row icon="pin" title={club.name} sub={`${club.address}, ${club.city}`} c={c} />
-              <Row
-                icon="clock"
-                title={`Mon–Thu ${club.hours[0]?.value ?? ''}`}
-                sub={`Fri ${club.hours[1]?.value ?? ''} · Sat ${club.hours[2]?.value ?? ''}`}
-                c={c}
-              />
-              <Row
-                icon="phone"
-                title={club.phone}
-                sub="Front desk"
-                right={
-                  <Button size="sm" variant="secondary" onPress={() => void Linking.openURL(`tel:${club.phone}`)}>
-                    {t('settings.call')}
-                  </Button>
-                }
-                c={c}
-                last
-              />
-            </View>
-            <Text style={[styles.hint, { color: c.ink4 }]}>
-              {t('admin.clubHint')}
-            </Text>
-          </View>
-
-          <View>
-            <SectionLabel>{t('settings.preferences')}</SectionLabel>
-            <PreferencesGroup onPlans={() => router.push('/plans')} onExport={() => router.push('/exports')} onSignOut={() => void handleSignOut()} signingOut={signingOut} />
-          </View>
+          <PreferencesGroup
+            accountRows={(
+              <>
+                <SettingsRow icon="user" label={t('settings.personalDetails')} value={adminName || t('settings.frontDesk')} onPress={() => setAccountOpen(true)} />
+                <SettingsRow icon="pin" label={t('settings.reception')} value={t('settings.desk', { desk: profile?.reception ?? 'A' })} onPress={() => setAccountOpen(true)} />
+              </>
+            )}
+            clubRows={<SettingsRow icon="pin" label={t('settings.clubDetails')} value={club.name} onPress={() => setClubOpen(true)} />}
+            onPlans={() => router.push('/plans')}
+            onPaymentSetup={() => router.push('/payment-settings')}
+            onExport={() => router.push('/exports')}
+            onSignOut={() => void handleSignOut()}
+            signingOut={signingOut}
+          />
 
           <DeveloperCredit />
         </Body>

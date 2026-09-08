@@ -1,7 +1,7 @@
 import { PaymentMethods } from '@/components/PaymentMethods';
 import { AgreedPrice, pricingError } from '@/components/AgreedPrice';
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
@@ -13,6 +13,8 @@ import { useCreateMemberInvitation, usePlans, useClub, type DeskPaymentMethod } 
 import { ApiCallError } from '@/data/api/queries';
 import { formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
+import { formatAadhaar, isValidAadhaar, normalizeAadhaar } from '@/lib/aadhaar';
+import { FormScroll } from '@/components/FormScroll';
 
 type PaymentMethod = DeskPaymentMethod | 'complimentary';
 
@@ -107,7 +109,7 @@ export default function MemberNew() {
     else if (dateOfBirth.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth.trim())) bad = t('memberNew.birthDateInvalid');
     else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('memberNew.emergencyBoth');
     else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('memberNew.emergencyPhoneInvalid');
-    else if (nationalId.trim() && nationalId.replace(/\D/g, '').length < 4) bad = t('memberNew.nationalIdInvalid');
+    else if (!isValidAadhaar(nationalId)) bad = t('memberNew.nationalIdInvalid');
     else if (!address.trim()) bad = t('memberNew.addressRequired');
     else if (planId && payMethod !== 'complimentary') {
       const amount = Number(amountPaid);
@@ -132,7 +134,7 @@ export default function MemberNew() {
         dateOfBirth: dateOfBirth.trim() || undefined,
         emergencyName: emName.trim() || undefined,
         emergencyPhone: indiaPhone(emPhone),
-        nationalId: nationalId.trim() || undefined,
+        nationalId: normalizeAadhaar(nationalId),
         address: address.trim(),
         planId: planId || undefined,
         amountPaid: planId && payMethod !== 'complimentary' ? Number(amountPaid) : undefined,
@@ -160,8 +162,7 @@ export default function MemberNew() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('memberNew.title')} onBack={() => router.back()} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <FormScroll contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 16 }}>
 
           {formError ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{formError}</Text></Banner> : null}
@@ -216,9 +217,10 @@ export default function MemberNew() {
           <Field label={t('memberDetail.nationalId')} hint={t('memberNew.nationalIdHint')}>
             <Control
               value={nationalId}
-              onChangeText={setNationalId}
+              onChangeText={(value) => setNationalId(formatAadhaar(value))}
               placeholder="1234 5678 9012"
               inputMode="numeric"
+              maxLength={14}
               autoComplete="off"
             />
           </Field>
@@ -300,8 +302,7 @@ export default function MemberNew() {
             {t('memberNew.footer', { club: clubQuery.data?.name ?? '' })}
           </Text>
         </Body>
-      </ScrollView>
-      </KeyboardAvoidingView>
+      </FormScroll>
     </View>
   );
 }
