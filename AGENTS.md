@@ -85,6 +85,14 @@ Copy `.env.example` → `.env.local`. App needs `EXPO_PUBLIC_SUPABASE_URL` + `EX
 - Money and dates come from the server (receipt numbers, expiry dates, member numbers `MRD-0000`). Never generate IDs client-side.
 - `search_members` supports `p_status` filter; membership lists/admin dashboard use RPCs, not client-side filters over full tables.
 
+- Status colors are reserved for status only (ok/warn/bad). One accent: muted forest green.
+- Money and dates come from the server (receipt numbers, expiry dates, member numbers `MRD-0000`). Never generate IDs client-side.
+- `search_members` supports `p_status` filter; membership lists/admin dashboard use RPCs, not client-side filters over full tables.
+
+## Git commits
+
+- Commit as `117511352+HASHIM-HAMEEM@users.noreply.github.com` (set repo-locally). Vercel blocks git deployments when the author email is not associated with the pushing GitHub account.
+
 ## Design Craft (Refero Skill)
 
 Apex follows the `refero-design` skill recorded in `skills-lock.json`. Apply these conventions to UI work.
