@@ -5,3 +5,8 @@ node_modules
 artifacts
 design-reference
 supabase
+android
+ios
+.expo
+apex-android-release.apk
+web-build
