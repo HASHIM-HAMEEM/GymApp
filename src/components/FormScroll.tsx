@@ -9,11 +9,22 @@ export type FormScrollRef = {
 export function useKeepFocusedFieldVisible(enabled = true) {
   React.useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof window === 'undefined' || !window.visualViewport) return;
+    // iOS Safari scrolls the focused field into view natively when the
+    // keyboard opens; calling scrollIntoView there (especially smooth)
+    // fights the keyboard and can dismiss it. Skip iOS entirely.
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isIOS) return;
     const viewport = window.visualViewport;
     const keepFocusVisible = () => {
       const active = document.activeElement as HTMLElement | null;
       if (!active || !['INPUT', 'TEXTAREA'].includes(active.tagName)) return;
-      requestAnimationFrame(() => active.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+      const rect = active.getBoundingClientRect();
+      // Only react when the field is genuinely clipped by the keyboard;
+      // never scroll when it is already visible.
+      if (rect.top < 0 || rect.bottom > viewport.height - 8) {
+        requestAnimationFrame(() => active.scrollIntoView({ block: 'center', behavior: 'auto' }));
+      }
     };
     viewport.addEventListener('resize', keepFocusVisible);
     viewport.addEventListener('scroll', keepFocusVisible);

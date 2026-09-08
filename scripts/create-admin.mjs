@@ -4,12 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.SUPABASE_URL?.trim();
 const serviceKey = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
-const email = "test@gmail.com";
-const password = "test";
-const displayName = "Apex Admin";
+const email = process.env.ADMIN_EMAIL?.trim() ?? "";
+const password = process.env.ADMIN_PASSWORD ?? "";
+const displayName = process.env.ADMIN_NAME?.trim() || "Apex Admin";
 
-if (!supabaseUrl || !serviceKey) {
-  console.error("Set SUPABASE_URL and SUPABASE_SECRET_KEY in .env.local");
+if (!supabaseUrl || !serviceKey || !email || !password) {
+  console.error("Set SUPABASE_URL, SUPABASE_SECRET_KEY, ADMIN_EMAIL and ADMIN_PASSWORD in .env.local");
   process.exit(1);
 }
 
