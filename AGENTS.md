@@ -91,7 +91,7 @@ Copy `.env.example` → `.env.local`. App needs `EXPO_PUBLIC_SUPABASE_URL` + `EX
 
 ## Git commits
 
-- Commit as `117511352+HASHIM-HAMEEM@users.noreply.github.com` (set repo-locally). Vercel blocks git deployments when the author email is not associated with the pushing GitHub account.
+- Commit as `trashbin2605@gmail.com` (set repo-locally) — the email of the Vercel account that owns the project. On the Hobby plan with a private repo, Vercel blocks any deployment whose commit author is not the account owner.
 
 ## Design Craft (Refero Skill)
 
