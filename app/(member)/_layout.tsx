@@ -1,9 +1,11 @@
 import * as React from 'react';
+import { Platform } from 'react-native';
 import { Tabs, Redirect } from 'expo-router';
 import { useColors } from '@/theme/tokens';
 import { TabBar, TabDef } from '@/components/Chrome';
 import { useApp } from '@/data/store';
 import { useNotices } from '@/data/api/queries';
+import { processNoticesForNotification, registerNoticeBackgroundTask } from '@/lib/notifications';
 
 const TAB_ICONS: Record<string, Omit<TabDef, 'label'>> = {
   home: { key: 'home', icon: 'home', href: '/(member)/home' },
@@ -20,6 +22,16 @@ function MemberTabBar({ state }: TabBarProps) {
   const { t } = useApp();
   const notices = useNotices();
   const unread = (notices.data ?? []).filter((notice) => !notice.read).length;
+  const noticeRows = notices.data;
+
+  // New unread notices raise a local device notification (works without
+  // any remote push service). Reuses the notices poll (30s) already running.
+  React.useEffect(() => {
+    if (!noticeRows || noticeRows.length === 0) return;
+    void processNoticesForNotification(
+      noticeRows.map((n) => ({ id: n.id, title: n.title, body: n.body, read: Boolean(n.read) })),
+    );
+  }, [noticeRows]);
   const active = state.routes[state.index].name;
   const labels = {
     home: t('tabs.home'),
@@ -43,6 +55,13 @@ function MemberTabBar({ state }: TabBarProps) {
 export default function MemberLayout() {
   const { role, darkMode } = useApp();
   const c = useColors(darkMode);
+
+  // Periodic background notice check (~every 15 min) so notifications
+  // arrive even when the app is closed. No-op on web and Expo Go.
+  React.useEffect(() => {
+    if (Platform.OS === 'web') return;
+    void registerNoticeBackgroundTask();
+  }, []);
 
   if (role !== 'member') {
     return <Redirect href={role === 'admin' ? '/(admin)/today' : '/welcome'} />;

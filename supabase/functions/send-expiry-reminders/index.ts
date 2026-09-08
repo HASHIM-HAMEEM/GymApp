@@ -29,13 +29,18 @@ function escapeHtml(value: string): string {
 }
 
 Deno.serve((request) => handlePost(request, async () => {
-  const secret = required("CRON_SECRET");
-  if (request.headers.get("x-cron-secret") !== secret) throw new ApiError(401, "AUTH_REQUIRED", "Cron authorization is invalid.");
-
   const supabase = createClient(required("SUPABASE_URL"), requiredOne(["SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"]), {
     auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
   });
-  const resendKey = required("RESEND_API_KEY");
+  const { data: cronAuthorized, error: cronError } = await supabase.rpc("verify_cron_secret", {
+    p_secret: request.headers.get("x-cron-secret"),
+  });
+  if (cronError || cronAuthorized !== true) throw new ApiError(401, "AUTH_REQUIRED", "Cron authorization is invalid.");
+
+  const { data: resendKey, error: resendKeyError } = await supabase.rpc("get_expiry_resend_key");
+  if (resendKeyError || typeof resendKey !== "string" || !resendKey) {
+    throw new ApiError(500, "SERVER_MISCONFIGURED", "Expiry reminder email is not configured.");
+  }
   const from = Deno.env.get("REMINDER_FROM_EMAIL")?.trim() || "Apex <auth@scnz.site>";
   const appUrl = Deno.env.get("APP_URL")?.trim() || "https://apexgc.vercel.app";
   const { data, error } = await supabase.rpc("claim_expiry_reminders");

@@ -18,12 +18,21 @@
       "bundleIdentifier": "com.hashimhameem.apex",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "ExpoLocalization_supportsRTL": true,
+        "ExpoLocalization_forcesRTL": false,
+        "CFBundleLocalizations": [
+          "en",
+          "ur"
+        ]
       }
     },
     "android": {
       "package": "com.hashimhameem.apex",
       "permissions": [
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.CAMERA"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#050708",
@@ -79,6 +88,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6b5d5a06-d024-4e46-9aa7-c9371a8ff9ab"
+      }
+    },
+    "owner": "scnz"
   }
 }

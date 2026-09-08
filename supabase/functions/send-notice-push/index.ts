@@ -139,10 +139,13 @@ Deno.serve((request) =>
     }
 
     if (receipts.length > 0) {
-      await context.service.rpc("record_push_receipts", {
+      const { error: receiptError } = await context.service.rpc("record_push_receipts", {
         p_notice_id: body.noticeId,
         p_receipts: receipts,
       });
+      if (receiptError) {
+        throw new ApiError(500, "PUSH_RECEIPTS_FAILED", "Push delivery could not be tracked.");
+      }
     }
 
     if (invalidTokens.length > 0) {

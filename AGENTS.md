@@ -66,7 +66,9 @@ Copy `.env.example` → `.env.local`. App needs `EXPO_PUBLIC_SUPABASE_URL` + `EX
 ## Deployment
 
 - Web production is hosted on Vercel (project `firdous-gym-app`, team `fins-projects-5c53b9dd`, URL https://firdous-gym-app.vercel.app). `vercel.json` builds with `npm run build:web`, outputs `dist/`, and rewrites all paths to `/index.html` (SPA fallback). Only the three `EXPO_PUBLIC_*` variables are set in Vercel — never put Supabase secret/service-role or Resend keys there.
-- Supabase hosted project: `fpgkhhudgiaogxkpafsx` (org Firdous GYM APP). Auth configured in-dashboard: signup off, email confirmation on, password policy 10+ with mixed case + digits, Resend SMTP (`auth@scnz.site`), invite/recovery templates with `{{ .RedirectTo }}?token_hash={{ .TokenHash }}` links.
+- Supabase hosted project: `fpgkhhudgiaogxkpafsx` (org Firdous GYM APP). Auth configured in-dashboard (editable via Management API `PATCH /v1/projects/{ref}/config/auth`): signup off, email confirmation on, password policy 10+ with mixed case + digits, Resend SMTP (`auth@scnz.site`), Apex-branded invite/recovery subjects + templates with `{{ .RedirectTo }}?token_hash={{ .TokenHash }}` links, `site_url` https://apexgc.vercel.app, sender name "Apex", redirect allow-list includes `apex://**`.
+- Android remote push is intentionally NOT configured (owner decision: no Firebase/FCM). Notices rely on in-app delivery with 30s auto-refresh; local (in-app) notifications work, including the "Send test notification" diagnostic in notification settings. The Expo project `@scnz/apex` (ID `6b5d5a06-d024-4e46-9aa7-c9371a8ff9ab`) is linked for future use. Do not add Firebase/google-services.json unless the owner asks.
+- Push receipt reconciliation cron: `apex-push-receipts` every 5 min; expiry reminders cron: `apex-expiry-reminders` at 09:00/09:15 IST. Both call Edge Functions with `x-cron-secret` verified against the `apex_cron_secret` Vault secret via the service-role-only `verify_cron_secret()` RPC. Resend key for expiry reminders is stored in Vault (`apex_resend_api_key`, set via `set_expiry_resend_key()`), never in Edge Function env.
 
 ## Verification
 

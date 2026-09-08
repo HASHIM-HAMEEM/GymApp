@@ -157,8 +157,19 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const refreshNotifications = React.useCallback(async () => {
     const state = await getNotificationState().catch(() => 'unconfigured' as const);
-    setNotificationState(state === 'granted' && pushToken.current ? 'registered' : state);
-  }, []);
+    if (state === 'granted' && session) {
+      try {
+        const result = await registerPushDevice();
+        pushToken.current = result.token ?? null;
+        setNotificationState(result.state);
+      } catch {
+        pushToken.current = null;
+        setNotificationState('unconfigured');
+      }
+      return;
+    }
+    setNotificationState(state);
+  }, [session]);
 
   React.useEffect(() => {
     const subscription = NativeAppState.addEventListener('change', (state) => {

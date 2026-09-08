@@ -6,6 +6,7 @@ interface PendingReceipt {
   expo_ticket_id: string;
   expo_push_token: string;
   notice_id: string;
+  attempts: number;
 }
 
 interface ExpoReceiptResult {
@@ -37,6 +38,20 @@ function serviceClient(key: string, url: string): SupabaseClient {
   return createClient(url, key, {
     auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
   });
+}
+
+async function retryOrExpire(service: SupabaseClient, receipt: PendingReceipt): Promise<boolean> {
+  if (receipt.attempts >= 5) {
+    const { error } = await service.rpc("update_push_receipt_status", {
+      p_receipt_id: receipt.id,
+      p_status: "unknown",
+      p_error_code: "RECEIPT_NOT_AVAILABLE",
+      p_error_message: "Expo did not return a final receipt after repeated checks.",
+    });
+    return !error;
+  }
+  await service.rpc("bump_push_receipt_attempt", { p_receipt_id: receipt.id });
+  return false;
 }
 
 async function fetchWithRetry(
@@ -81,18 +96,18 @@ async function fetchWithRetry(
 Deno.serve((request) =>
   handlePost(request, async () => {
     const serviceKey = loadServiceKey();
-    const authHeader = request.headers.get("authorization") ?? "";
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!token || token !== serviceKey) {
-      throw new ApiError(401, "AUTH_REQUIRED", "A valid service key is required.");
-    }
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
     if (!supabaseUrl) {
       throw new ApiError(500, "SERVER_MISCONFIGURED", "The service is not configured correctly.");
     }
 
     const service = serviceClient(serviceKey, supabaseUrl);
+    const { data: cronAuthorized, error: cronError } = await service.rpc("verify_cron_secret", {
+      p_secret: request.headers.get("x-cron-secret"),
+    });
+    if (cronError || cronAuthorized !== true) {
+      throw new ApiError(401, "AUTH_REQUIRED", "Cron authorization is invalid.");
+    }
     const url = new URL(request.url);
     const limitParam = url.searchParams.get("limit");
     const limit = limitParam ? Math.min(Math.max(Number(limitParam) || 100, 1), 1000) : 100;
@@ -106,21 +121,23 @@ Deno.serve((request) =>
 
     const receipts = (Array.isArray(pending) ? pending : []) as PendingReceipt[];
     if (receipts.length === 0) {
-      return successResponse({ processed: 0, delivered: 0, failed: 0, retried: 0 });
+      return successResponse({ processed: 0, delivered: 0, failed: 0, unknown: 0, retried: 0 });
     }
 
     const ticketIds = receipts.map((r) => r.expo_ticket_id).filter(Boolean) as string[];
     const result = await fetchWithRetry(ticketIds, 1);
 
     if (!result.ok) {
+      let unknown = 0;
       for (const receipt of receipts) {
-        await service.rpc("bump_push_receipt_attempt", { p_receipt_id: receipt.id });
+        if (await retryOrExpire(service, receipt)) unknown += 1;
       }
       return successResponse({
-        processed: 0,
+        processed: unknown,
         delivered: 0,
         failed: 0,
-        retried: receipts.length,
+        unknown,
+        retried: receipts.length - unknown,
         error: `Expo receipt service returned ${result.status}`,
       });
     }
@@ -128,12 +145,13 @@ Deno.serve((request) =>
     const receiptResults = result.data ?? {};
     let delivered = 0;
     let failed = 0;
+    let unknown = 0;
     const invalidTokens: string[] = [];
 
     for (const receipt of receipts) {
       const expoReceipt = receiptResults[receipt.expo_ticket_id];
       if (!expoReceipt) {
-        await service.rpc("bump_push_receipt_attempt", { p_receipt_id: receipt.id });
+        if (await retryOrExpire(service, receipt)) unknown += 1;
         continue;
       }
 
@@ -157,8 +175,8 @@ Deno.serve((request) =>
           if (errorCode === "DeviceNotRegistered") {
             invalidTokens.push(receipt.expo_push_token);
           }
-        } else {
-          await service.rpc("bump_push_receipt_attempt", { p_receipt_id: receipt.id });
+        } else if (await retryOrExpire(service, receipt)) {
+          unknown += 1;
         }
       }
     }
@@ -170,10 +188,11 @@ Deno.serve((request) =>
     }
 
     return successResponse({
-      processed: delivered + failed,
+      processed: delivered + failed + unknown,
       delivered,
       failed,
-      retried: receipts.length - delivered - failed,
+      unknown,
+      retried: receipts.length - delivered - failed - unknown,
     });
   }),
 );
