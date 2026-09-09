@@ -50,6 +50,18 @@ export default function PaymentSettings() {
     try { await update.mutateAsync({ upiId: id, payeeName: payee.trim() }); setUpiId(id); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'UPI details could not be saved.'); }
   };
+  const reviewPayment = async (requestId: string, approve: boolean) => {
+    setError(null);
+    try {
+      await review.mutateAsync({
+        requestId,
+        approve,
+        note: approve ? undefined : 'Payment could not be verified',
+      });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The payment review could not be saved. Try again.');
+    }
+  };
   const pending = (requests.data ?? []).filter((request) => request.status === 'submitted');
 
   return (
@@ -79,8 +91,8 @@ export default function PaymentSettings() {
                   <Text selectable style={[styles.meta, { color: c.ink3 }]}>{request.reference}</Text>
                 </View>
                 <View style={styles.reviewActions}>
-                  <Button size="sm" loading={review.isPending} disabled={!isOnline} onPress={() => void review.mutateAsync({ requestId: request.id, approve: true })}>Confirm</Button>
-                  <Button size="sm" variant="danger" disabled={review.isPending || !isOnline} onPress={() => void review.mutateAsync({ requestId: request.id, approve: false, note: 'Payment could not be verified' })}>Reject</Button>
+                  <Button size="sm" loading={review.isPending} disabled={!isOnline} onPress={() => void reviewPayment(request.id, true)}>Confirm</Button>
+                  <Button size="sm" variant="danger" disabled={review.isPending || !isOnline} onPress={() => void reviewPayment(request.id, false)}>Reject</Button>
                 </View>
               </View>
             ))}

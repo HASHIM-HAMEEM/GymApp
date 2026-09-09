@@ -39,10 +39,18 @@ function chunkByBytes(value: string, maxBytes: number): string[] {
   return chunks;
 }
 
-export function parseManifestCount(raw: string | null): number | null {
+type SecureManifest = { bank: 'a' | 'b' | null; count: number };
+
+function parseSecureManifest(raw: string | null): SecureManifest | null {
   if (raw === null) return null;
+  const versioned = /^v2:([ab]):([1-9][0-9]*)$/.exec(raw);
+  if (versioned) return { bank: versioned[1] as 'a' | 'b', count: Number(versioned[2]) };
   const count = Number.parseInt(raw, 10);
-  return Number.isFinite(count) && count >= 1 ? count : null;
+  return Number.isFinite(count) && count >= 1 ? { bank: null, count } : null;
+}
+
+export function parseManifestCount(raw: string | null): number | null {
+  return parseSecureManifest(raw)?.count ?? null;
 }
 
 const webStorage = {
@@ -57,10 +65,14 @@ const webStorage = {
   },
 };
 
-async function repairOrphans(key: string, count: number) {
+function chunkKey(key: string, bank: SecureManifest['bank'], index: number): string {
+  return secureKey(key, bank ? `${bank}.${index}` : String(index));
+}
+
+async function repairOrphans(key: string, manifest: SecureManifest) {
   await Promise.all(
-    Array.from({ length: count }, (_, index) =>
-      SecureStore.deleteItemAsync(secureKey(key, String(index))).catch(() => undefined),
+    Array.from({ length: manifest.count }, (_, index) =>
+      SecureStore.deleteItemAsync(chunkKey(key, manifest.bank, index)).catch(() => undefined),
     ),
   );
   await SecureStore.deleteItemAsync(secureKey(key, 'chunks')).catch(() => undefined);
@@ -68,41 +80,46 @@ async function repairOrphans(key: string, count: number) {
 
 const secureStorage = {
   async getItem(key: string) {
-    const count = parseManifestCount(await SecureStore.getItemAsync(secureKey(key, 'chunks')));
-    if (count === null) return SecureStore.getItemAsync(secureKey(key));
+    const manifest = parseSecureManifest(await SecureStore.getItemAsync(secureKey(key, 'chunks')));
+    if (manifest === null) return SecureStore.getItemAsync(secureKey(key));
     const values = await Promise.all(
-      Array.from({ length: count }, (_, index) => SecureStore.getItemAsync(secureKey(key, String(index)))),
+      Array.from({ length: manifest.count }, (_, index) => SecureStore.getItemAsync(chunkKey(key, manifest.bank, index))),
     );
     if (values.some((value) => value === null)) {
-      await repairOrphans(key, count);
+      await repairOrphans(key, manifest);
       return null;
     }
     return values.join('');
   },
   async setItem(key: string, value: string) {
-    const previousCount = parseManifestCount(await SecureStore.getItemAsync(secureKey(key, 'chunks'))) ?? 0;
+    const previous = parseSecureManifest(await SecureStore.getItemAsync(secureKey(key, 'chunks')));
+    const nextBank: 'a' | 'b' = previous?.bank === 'a' ? 'b' : 'a';
     const chunks = chunkByBytes(value, chunkSize);
+    if (chunks.length === 0) chunks.push('');
     try {
       await Promise.all(
-        chunks.map((chunk, index) => SecureStore.setItemAsync(secureKey(key, String(index)), chunk)),
+        chunks.map((chunk, index) => SecureStore.setItemAsync(chunkKey(key, nextBank, index), chunk)),
       );
-    } catch {
-      return;
-    }
-    await SecureStore.setItemAsync(secureKey(key, 'chunks'), String(chunks.length));
-    if (previousCount > chunks.length) {
+      await SecureStore.setItemAsync(secureKey(key, 'chunks'), `v2:${nextBank}:${chunks.length}`);
+    } catch (error) {
       await Promise.all(
-        Array.from({ length: previousCount - chunks.length }, (_, offset) =>
-          SecureStore.deleteItemAsync(secureKey(key, String(chunks.length + offset))).catch(() => undefined),
+        chunks.map((_, index) => SecureStore.deleteItemAsync(chunkKey(key, nextBank, index)).catch(() => undefined)),
+      );
+      throw error;
+    }
+    if (previous) {
+      await Promise.all(
+        Array.from({ length: previous.count }, (_, index) =>
+          SecureStore.deleteItemAsync(chunkKey(key, previous.bank, index)).catch(() => undefined),
         ),
       );
     }
   },
   async removeItem(key: string) {
-    const count = parseManifestCount(await SecureStore.getItemAsync(secureKey(key, 'chunks'))) ?? 0;
-    if (count > 0) {
+    const manifest = parseSecureManifest(await SecureStore.getItemAsync(secureKey(key, 'chunks')));
+    if (manifest) {
       await Promise.all(
-        Array.from({ length: count }, (_, index) => SecureStore.deleteItemAsync(secureKey(key, String(index)))),
+        Array.from({ length: manifest.count }, (_, index) => SecureStore.deleteItemAsync(chunkKey(key, manifest.bank, index))),
       );
     }
     await Promise.all([

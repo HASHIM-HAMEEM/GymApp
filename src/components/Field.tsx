@@ -70,7 +70,7 @@ export interface ControlProps {
   placeholder?: string;
   onChangeText?: (t: string) => void;
   inputMode?: 'text' | 'tel' | 'email' | 'numeric' | 'decimal';
-  webType?: 'date' | 'password';
+  webType?: 'date' | 'password' | 'text';
   webMin?: string;
   webMax?: string;
   secure?: boolean;
@@ -124,7 +124,17 @@ export const Control = React.forwardRef<TextInput, ControlProps>(function Contro
 }: ControlProps, ref) {
   const { darkMode, isRtl } = useApp();
   const c = useColors(darkMode);
+  const [focused, setFocused] = React.useState(false);
   const controlRef = inputRef ?? ref;
+  const handleFocus = (event: Parameters<NonNullable<ControlProps['onFocus']>>[0]) => {
+    setFocused(true);
+    onFocus?.(event);
+  };
+  const handleBlur = (event: Parameters<NonNullable<ControlProps['onBlur']>>[0]) => {
+    setFocused(false);
+    onBlur?.(event);
+  };
+  const htmlType = webType ?? (secure ? 'password' : inputMode === 'email' ? 'email' : inputMode === 'tel' ? 'tel' : 'text');
   const inputStyle: TextStyle = {
     flex: 1,
     fontFamily: typography.fontFamily,
@@ -138,35 +148,40 @@ export const Control = React.forwardRef<TextInput, ControlProps>(function Contro
     <View
       style={[
         ctrlStyles.base,
-        { borderColor: error ? c.bad : c.line2, backgroundColor: c.bg1 },
+        { borderColor: error ? c.bad : focused ? c.ink2 : c.line2, backgroundColor: c.bg1 },
         multiline && { minHeight: 120, alignItems: 'flex-start', paddingVertical: 14 },
         style,
       ]}
     >
       {leading}
-      {Platform.OS === 'web' && (webType || secure) ? (
+      {Platform.OS === 'web' && !multiline ? (
         <input
           data-form-field={fieldKey}
+          id={fieldKey}
+          name={fieldKey}
           ref={controlRef as React.Ref<HTMLInputElement>}
           aria-label={accessibilityLabel}
+          aria-invalid={error || undefined}
           value={value}
           defaultValue={defaultValue}
           placeholder={placeholder}
           onChange={(event) => onChangeText?.(event.currentTarget.value)}
-          type={webType ?? 'password'}
+          type={htmlType}
           min={webMin}
           max={webMax}
           maxLength={maxLength}
           autoComplete={autoComplete === 'off' ? 'off' : autoComplete}
           autoFocus={autoFocus}
           disabled={!editable}
-          onFocus={onFocus as never}
-          onBlur={onBlur as never}
+          onFocus={handleFocus as never}
+          onBlur={handleBlur as never}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && onSubmitEditing) onSubmitEditing({ nativeEvent: { text: value ?? '' } } as never);
           }}
-          inputMode={inputMode}
+          inputMode={inputMode === 'numeric' || inputMode === 'decimal' ? inputMode : undefined}
           enterKeyHint={returnKeyType === 'next' ? 'next' : returnKeyType === 'done' ? 'done' : undefined}
+          autoCapitalize={htmlType === 'email' || htmlType === 'tel' || htmlType === 'password' ? 'none' : autoCapitalize === 'none' ? 'none' : autoCapitalize === 'characters' ? 'characters' : autoCapitalize === 'words' ? 'words' : 'sentences'}
+          autoCorrect={autoCorrect === false || htmlType === 'email' || htmlType === 'tel' || htmlType === 'password' ? 'off' : undefined}
           style={{
             ...(inputStyle as React.CSSProperties),
             minWidth: 0,
@@ -197,8 +212,8 @@ export const Control = React.forwardRef<TextInput, ControlProps>(function Contro
         textContentType={textContentType}
         returnKeyType={returnKeyType}
         onSubmitEditing={onSubmitEditing}
-        onFocus={onFocus}
-        onBlur={onBlur}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         editable={editable}
         style={{
           ...inputStyle,

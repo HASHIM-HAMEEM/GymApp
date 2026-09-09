@@ -155,19 +155,20 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   const longSession = JSON.stringify({ access_token: 'a'.repeat(2600), refresh_token: 'r'.repeat(500), user: { id: 'u1' } });
   await storage.setItem('sb-project-auth-token', longSession);
   eq('secureStorage roundtrip (chunked)', await storage.getItem('sb-project-auth-token'), longSession);
-  check('secureStorage chunk keys recorded', recordedKeys.some((k) => k.includes('.0')) && recordedKeys.some((k) => k.includes('.chunks')));
+  check('secureStorage chunk keys recorded', recordedKeys.some((k) => /\.[ab]\.0$/.test(k)) && recordedKeys.some((k) => k.includes('.chunks')));
   check('secureStorage key charset valid', recordedKeys.every((k) => /^[a-zA-Z0-9._-]+$/.test(k)), recordedKeys.join(','));
 
   await storage.setItem('sb-project-auth-token', 'short');
   eq('secureStorage overwrite long->short', await storage.getItem('sb-project-auth-token'), 'short');
-  check('secureStorage stale chunks removed', !secureStore._store.has('sb-project-auth-token.1') && secureStore._store.get('sb-project-auth-token.0') === 'short');
+  check('secureStorage switches banks atomically', secureStore._store.get('sb-project-auth-token.chunks') === 'v2:b:1' && secureStore._store.get('sb-project-auth-token.b.0') === 'short');
+  check('secureStorage stale bank removed', !secureStore._store.has('sb-project-auth-token.a.0'));
 
   secureStore._store.delete('sb-project-auth-token.chunks');
   secureStore._store.set('sb-project-auth-token', 'legacy-value');
   eq('secureStorage legacy direct key', await storage.getItem('sb-project-auth-token'), 'legacy-value');
 
   await storage.setItem('sb-project-auth-token', longSession);
-  secureStore._store.delete('sb-project-auth-token.1');
+  secureStore._store.delete('sb-project-auth-token.a.1');
   eq('secureStorage missing chunk returns null', await storage.getItem('sb-project-auth-token'), null);
 
   await storage.removeItem('sb-project-auth-token');
@@ -179,7 +180,9 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   const fieldSource = fs.readFileSync(path.join(root, 'src/components/Field.tsx'), 'utf8');
   const passwordSource = fs.readFileSync(path.join(root, 'app/set-password.tsx'), 'utf8');
   const invitationsSource = fs.readFileSync(path.join(root, 'supabase/functions/_shared/invitations.ts'), 'utf8');
-  check('web secure controls use native password inputs', fieldSource.includes("Platform.OS === 'web' && (webType || secure)") && fieldSource.includes("type={webType ?? 'password'}"));
+  const formScrollSource = fs.readFileSync(path.join(root, 'src/components/FormScroll.tsx'), 'utf8');
+  check('web controls use native HTML inputs', fieldSource.includes("Platform.OS === 'web' && !multiline ?") && fieldSource.includes("type={htmlType}"));
+  check('form scroll never blurs inputs on web drags', formScrollSource.includes("keyboardDismissMode={Platform.OS === 'web' ? 'none'"));
   eq('both password fields opt into native web password input', [...passwordSource.matchAll(/webType="password"/g)].length, 2);
   check('invitation resend supports confirmed unfinished onboarding', invitationsSource.includes('verificationType: "invite" | "recovery"') && invitationsSource.includes('type: verificationType'));
   check('invitation emails use attempt-specific idempotency', invitationsSource.includes('request.sendAttempt ?? 1'));

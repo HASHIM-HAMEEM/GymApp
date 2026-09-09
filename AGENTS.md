@@ -15,7 +15,7 @@ Expo Router + TypeScript on a Supabase backend (Postgres + Auth + Edge Functions
 - Day-to-day sign-in is **email + password** (`/signin`). Password reset uses `resetPasswordForEmail` → same `/confirm` → `/set-password` path.
 - Roles live in `public.profiles` (`role`, `account_state`), never in `user_metadata`. Authorization is enforced server-side: RLS policies + `current_user_is_admin()` RPC checks. The service/secret key exists only in Edge Functions and `scripts/bootstrap-admin.mjs`.
 - One admin is bootstrapped locally: `npm run bootstrap:admin` (refuses if a different active admin already exists).
-- The "Aadhar" field is now **National ID** (Egyptian context), stored as `members.national_id` and treated as private PII.
+- The "Aadhaar" field is the Indian national ID, stored as `members.national_id` and treated as private PII; validated with a Verhoeff checksum in SQL and the Edge Functions.
 
 ## Commands
 
@@ -40,7 +40,7 @@ Expo Router + TypeScript on a Supabase backend (Postgres + Auth + Edge Functions
 - Derived membership status (`membership_status()`): stored `state` is only `active|paused|cancelled`; `active/expiring/expired/due/upcoming` are computed from dates + `amount_due`. Never persist a computed status. **Cancelled memberships always sort last** in `member_admission`, `admin_dashboard`, `search_members`, and `publish_notice` audience selection — a cancelled renewal must never shadow the member's real current/expired term.
 - Append-only tables: `payments`, `check_ins`, `activity_log` (triggers reject UPDATE/DELETE).
 - Every mutation is an RPC: `create_member_invitation`, `renew_membership` (**no manual start dates — always pass `p_start_date: null`; the server starts renewals after the current term or today**), `set_membership_state` (pause needs `p_pause_until` within the term), `check_in_member`, `check_in_by_qr`, `publish_notice` (snapshots recipients), `mark_notice_read`, `update_member_profile`, `update_admin_profile` (admin display name + reception desk), `update_club_config` (club name/address/city/phone/hours — what members see in-app), `issue_qr_pass(p_revoke_existing)` (rotating QR; see below).
-- Service-role-only RPCs: `finalize_member_invitation`, `mark_member_invitation_failed`, `member_invitation_auth_user`, `active_admin_profiles`, `bootstrap_admin_profile`, `claim_member_invitation_resend` guards (60s cooldown, 5-attempt cap).
+- Service-role-only RPCs: `finalize_member_invitation`, `mark_member_invitation_failed`, `member_invitation_auth_user`, `active_admin_profiles`, `bootstrap_admin_profile`, `claim_member_invitation_resend` guards (60s cooldown, 10-attempt cap, 24h expiry renewal per resend).
 - QR passes are opaque 64-hex/256-bit tokens; only their SHA-256 hash is stored; single-use; 60s TTL; auto-refresh every 45s keeping one predecessor valid (no scan races); manual regenerate passes `p_revoke_existing: true` and invalidates every prior pass immediately.
 
 ## App structure

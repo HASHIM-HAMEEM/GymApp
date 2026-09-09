@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AppBar, Body } from '@/components/Chrome';
 import { Banner } from '@/components/Surfaces';
@@ -20,19 +20,40 @@ function passwordProblem(value: string): string | null {
   return null;
 }
 
-function PasswordInput({ value, onChangeText, placeholder }: { value: string; onChangeText: (value: string) => void; placeholder: string }) {
+function PasswordInput({
+  value,
+  onChangeText,
+  placeholder,
+  inputRef,
+  fieldKey,
+  returnKeyType,
+  onSubmitEditing,
+}: {
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  inputRef: React.RefObject<TextInput | null>;
+  fieldKey: string;
+  returnKeyType: 'next' | 'done';
+  onSubmitEditing?: () => void;
+}) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
   const [visible, setVisible] = React.useState(false);
   return (
     <Control
+      ref={inputRef}
+      fieldKey={fieldKey}
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
       secure={!visible}
+      webType={visible ? 'text' : 'password'}
       autoCapitalize="none"
       autoCorrect={false}
       autoComplete="new-password"
+      returnKeyType={returnKeyType}
+      onSubmitEditing={onSubmitEditing}
       trailing={(
         <Pressable accessibilityRole="button" accessibilityLabel={visible ? 'Hide password' : 'Show password'} hitSlop={10} onPress={() => setVisible((current) => !current)} style={styles.eye}>
           <Icon name="eye" size={20} color={c.ink3} />
@@ -52,6 +73,9 @@ export default function ChangePassword() {
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const currentRef = React.useRef<TextInput>(null);
+  const nextRef = React.useRef<TextInput>(null);
+  const confirmRef = React.useRef<TextInput>(null);
 
   const save = async () => {
     const problem = passwordProblem(next);
@@ -81,9 +105,9 @@ export default function ChangePassword() {
           <Body style={{ gap: 18 }}>
             {done ? <Banner variant="info">Password changed. Use the new password next time you sign in.</Banner> : null}
             {error ? <Banner variant="error">{error}</Banner> : null}
-            <Field label="Current password"><PasswordInput value={current} onChangeText={setCurrent} placeholder="Current password" /></Field>
-            <Field label="New password" hint="At least 10 characters with upper case, lower case, and a number."><PasswordInput value={next} onChangeText={setNext} placeholder="New password" /></Field>
-            <Field label="Confirm new password"><PasswordInput value={confirm} onChangeText={setConfirm} placeholder="Repeat new password" /></Field>
+            <Field label="Current password"><PasswordInput inputRef={currentRef} fieldKey="current-password" value={current} onChangeText={setCurrent} placeholder="Current password" returnKeyType="next" onSubmitEditing={() => nextRef.current?.focus()} /></Field>
+            <Field label="New password" hint="At least 10 characters with upper case, lower case, and a number."><PasswordInput inputRef={nextRef} fieldKey="new-password" value={next} onChangeText={setNext} placeholder="New password" returnKeyType="next" onSubmitEditing={() => confirmRef.current?.focus()} /></Field>
+            <Field label="Confirm new password"><PasswordInput inputRef={confirmRef} fieldKey="confirm-password" value={confirm} onChangeText={setConfirm} placeholder="Repeat new password" returnKeyType="done" onSubmitEditing={() => void save()} /></Field>
             <Button block loading={saving} disabled={done} onPress={() => void save()}>Change password</Button>
           </Body>
       </FormScroll>

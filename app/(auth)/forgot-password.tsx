@@ -89,6 +89,8 @@ export default function ForgotPassword() {
 
         <Field label={t('auth.email')} error={error ?? undefined} hint={t('auth.emailHint')}>
           <Control
+            fieldKey="email"
+            accessibilityLabel={t('auth.email')}
             value={email}
             onChangeText={(t) => {
               setEmail(t);
@@ -101,6 +103,7 @@ export default function ForgotPassword() {
             autoComplete="email"
             textContentType="emailAddress"
             returnKeyType="done"
+            onSubmitEditing={canSubmit ? submit : undefined}
             error={Boolean(error)}
           />
         </Field>

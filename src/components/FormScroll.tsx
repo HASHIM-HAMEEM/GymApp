@@ -6,12 +6,17 @@ export type FormScrollRef = {
   focusField: (name: string) => void;
 };
 
+/**
+ * Keeps the focused field visible when its container (e.g. a bottom Sheet)
+ * shares the screen with the mobile keyboard. Skipped on iOS — Safari
+ * scrolls focused inputs natively and extra scrolling fights the
+ * keyboard — and only reacts when the field is genuinely clipped.
+ * Safe on web forms: FormScroll sets keyboardDismissMode='none' there,
+ * so programmatic scrolling can no longer blur the focused input.
+ */
 export function useKeepFocusedFieldVisible(enabled = true) {
   React.useEffect(() => {
     if (!enabled || Platform.OS !== 'web' || typeof window === 'undefined' || !window.visualViewport) return;
-    // iOS Safari scrolls the focused field into view natively when the
-    // keyboard opens; calling scrollIntoView there (especially smooth)
-    // fights the keyboard and can dismiss it. Skip iOS entirely.
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     if (isIOS) return;
@@ -20,8 +25,6 @@ export function useKeepFocusedFieldVisible(enabled = true) {
       const active = document.activeElement as HTMLElement | null;
       if (!active || !['INPUT', 'TEXTAREA'].includes(active.tagName)) return;
       const rect = active.getBoundingClientRect();
-      // Only react when the field is genuinely clipped by the keyboard;
-      // never scroll when it is already visible.
       if (rect.top < 0 || rect.bottom > viewport.height - 8) {
         requestAnimationFrame(() => active.scrollIntoView({ block: 'center', behavior: 'auto' }));
       }
@@ -37,7 +40,6 @@ export const FormScroll = React.forwardRef<FormScrollRef, ScrollViewProps>(funct
   const scrollRef = React.useRef<ScrollView>(null);
   const scrollOffset = React.useRef(0);
   const fields = React.useRef(new Map<string, React.RefObject<TextInput | null>>());
-  useKeepFocusedFieldVisible();
   React.useImperativeHandle(ref, () => ({
     registerField: (name, inputRef) => fields.current.set(name, inputRef),
     focusField: (name) => {
@@ -49,7 +51,7 @@ export const FormScroll = React.forwardRef<FormScrollRef, ScrollViewProps>(funct
       if (!input) return;
       input.focus();
       if (Platform.OS === 'web') {
-        (input as unknown as HTMLElement).scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        (input as unknown as HTMLElement).scrollIntoView?.({ block: 'center', behavior: 'auto' });
         return;
       }
       input.measureInWindow((_x, y) => {
@@ -67,7 +69,7 @@ export const FormScroll = React.forwardRef<FormScrollRef, ScrollViewProps>(funct
         contentInsetAdjustmentBehavior="automatic"
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        keyboardDismissMode={Platform.OS === 'web' ? 'none' : Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         onScroll={(event) => { scrollOffset.current = event.nativeEvent.contentOffset.y; props.onScroll?.(event); }}
         scrollEventThrottle={16}
       >

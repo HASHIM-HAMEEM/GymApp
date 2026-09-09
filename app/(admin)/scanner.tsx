@@ -282,8 +282,13 @@ export default function Scanner() {
                     tagVariant={tagInfo.variant}
                     busy={checkInManual.isPending}
                     onCheckIn={() => {
+                      if (!candidate.databaseId) {
+                        setScanError(t('scanner.manualError'));
+                        setManualOpen(false);
+                        return;
+                      }
                       checkInManual.mutate(
-                        { memberId: candidate.databaseId!, reception: (profile?.reception ?? 'A') as 'A' | 'B' },
+                        { memberId: candidate.databaseId, reception: (profile?.reception ?? 'A') as 'A' | 'B' },
                         {
                           onSuccess: (result) => {
                             setManualOpen(false);

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar } from '@/components/Chrome';
@@ -21,6 +21,7 @@ export default function SignIn() {
   const [password, setPassword] = React.useState('');
   const [formError, setFormError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const passwordRef = React.useRef<TextInput>(null);
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   const canSubmit = emailValid && password.length > 0;
@@ -61,6 +62,7 @@ export default function SignIn() {
           hint={t('auth.emailHint')}
         >
           <Control
+            fieldKey="email"
             accessibilityLabel={t('auth.email')}
             value={email}
             onChangeText={(t) => {
@@ -74,17 +76,23 @@ export default function SignIn() {
             autoComplete="email"
             textContentType="emailAddress"
             returnKeyType="next"
+            onSubmitEditing={() => passwordRef.current?.focus()}
             error={Boolean(formError && !emailValid)}
           />
         </Field>
 
         <Field label={t('auth.password')}>
           <Control
+            ref={passwordRef}
+            fieldKey="password"
             accessibilityLabel={t('auth.password')}
             value={password}
             onChangeText={setPassword}
             placeholder={t('auth.passwordPlaceholder')}
             secure
+            webType="password"
+            autoCapitalize="none"
+            autoCorrect={false}
             autoComplete="current-password"
             textContentType="password"
             returnKeyType="done"

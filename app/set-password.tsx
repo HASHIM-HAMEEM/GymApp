@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, spacing, typography } from '@/theme/tokens';
 import { AppBar } from '@/components/Chrome';
@@ -25,6 +25,8 @@ export default function SetPassword() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [done, setDone] = React.useState(false);
+  const passwordRef = React.useRef<TextInput>(null);
+  const confirmRef = React.useRef<TextInput>(null);
 
   const isInviteFlow = Boolean(profile?.mustSetPassword);
 
@@ -130,6 +132,9 @@ export default function SetPassword() {
           hint={t('setPassword.hint', { count: MIN_LENGTH })}
         >
           <Control
+            ref={passwordRef}
+            fieldKey="new-password"
+            accessibilityLabel={t('auth.password')}
             value={password}
             onChangeText={(t) => {
               setPasswordValue(t);
@@ -143,6 +148,7 @@ export default function SetPassword() {
             autoComplete="new-password"
             textContentType="newPassword"
             returnKeyType="next"
+            onSubmitEditing={() => confirmRef.current?.focus()}
             error={Boolean(error)}
           />
         </Field>
@@ -152,6 +158,9 @@ export default function SetPassword() {
           error={mismatch ? t('setPassword.mismatch') : undefined}
         >
           <Control
+            ref={confirmRef}
+            fieldKey="confirm-password"
+            accessibilityLabel={t('setPassword.confirmLabel')}
             value={confirm}
             onChangeText={(t) => {
               setConfirmValue(t);

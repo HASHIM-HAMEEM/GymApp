@@ -86,8 +86,7 @@ async function sendInviteWithResend(
   tokenHash: string,
   verificationType: "invite" | "recovery",
 ): Promise<void> {
-  const redirectUrl = "https://apexgc.vercel.app/confirm";
-  const link = `${redirectUrl}?token_hash=${encodeURIComponent(tokenHash)}&type=${verificationType}`;
+  const link = `${context.config.redirectUrl}?token_hash=${encodeURIComponent(tokenHash)}&type=${verificationType}`;
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -167,7 +166,7 @@ export async function deliverMemberInvitation(
     const { data, error } = await context.service.auth.admin.generateLink({
       type: verificationType,
       email: request.email,
-      options: { redirectTo: "https://apexgc.vercel.app/confirm" },
+      options: { redirectTo: context.config.redirectUrl },
     });
     if (!error) {
       invitedUser = data.user;

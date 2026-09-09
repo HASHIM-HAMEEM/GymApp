@@ -57,7 +57,7 @@ export function loadRuntimeConfig(): RuntimeConfig {
     serviceKey: requiredEnvironmentValue(["SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY"]),
     redirectUrl: validateRedirectUrl(
       Deno.env.get("APP_AUTH_REDIRECT_URL")?.trim() ||
-        "https://firdous-gym-app.vercel.app/confirm",
+        "https://apexgc.vercel.app/confirm",
     ),
   };
 }

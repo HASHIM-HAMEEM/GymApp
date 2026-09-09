@@ -28,6 +28,7 @@ export default function Confirm() {
 
   React.useEffect(() => {
     if (startedRef.current) return;
+    let active = true;
     const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : '';
     const rawType = typeof params.type === 'string' ? params.type : '';
     const type = rawType === 'invite' || rawType === 'recovery' || rawType === 'email' ? rawType : null;
@@ -57,6 +58,7 @@ export default function Confirm() {
     requireSupabase()
       .auth.verifyOtp({ token_hash: tokenHash, type })
       .then(({ error }) => {
+        if (!active) return;
         if (error) {
           setPhase('error');
           setMessage(t('confirm.expiredLink'));
@@ -70,9 +72,11 @@ export default function Confirm() {
         );
       })
       .catch(() => {
+        if (!active) return;
         setPhase('error');
         setMessage(t('confirm.requestFailed'));
       });
+    return () => { active = false; };
   }, [params.token_hash, params.type, t, router]);
 
   React.useEffect(() => {
