@@ -62,7 +62,7 @@ async function main() {
 
   console.log("\nDone! Admin user ready:");
   console.log(`  Email: ${email}`);
-  console.log(`  Password: ${password}`);
+  console.log("  Password: supplied securely through ADMIN_PASSWORD (not displayed)");
   console.log("  Role: admin");
 }
 

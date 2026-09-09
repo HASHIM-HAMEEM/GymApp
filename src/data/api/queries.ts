@@ -576,15 +576,7 @@ export function usePublishNotice() {
         },
         'The notice could not be published.',
       );
-      try {
-        const push = await invokeEdge<{ attempted: number; failed: number; sent: number }>(
-          'send-notice-push',
-          { noticeId: notice.notice_id },
-        );
-        return { ...notice, push };
-      } catch {
-        return { ...notice, push: null };
-      }
+      return notice;
     },
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['notices'] });

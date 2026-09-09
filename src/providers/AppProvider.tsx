@@ -8,11 +8,8 @@ import { authRedirectUrl, isSupabaseConfigured, listenForAuthRefresh, requireSup
 import type { AppProfile, Language, Role } from '@/data/types';
 import { translate, type TranslationKey } from '@/lib/i18n';
 import {
-  openNotificationSettings,
   getNotificationState,
-  registerPushDevice,
   requestNotificationPermission,
-  unregisterPushDevice,
   type NotificationState,
 } from '@/lib/notifications';
 
@@ -112,7 +109,6 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
   const [startupTimedOut, setStartupTimedOut] = React.useState(false);
   const effectiveNetworkState = manualNetworkState ?? networkState;
   const isOnline = effectiveNetworkState.isConnected !== false && effectiveNetworkState.isInternetReachable !== false;
-  const pushToken = React.useRef<string | null>(null);
   const previousUserId = React.useRef<string | null>(null);
 
   React.useEffect(() => {
@@ -145,7 +141,7 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     void getNotificationState()
       .then((state) => {
-        if (active) setNotificationState(state);
+        if (active) setNotificationState(state === 'granted' ? 'registered' : state);
       })
       .catch(() => {
         if (active) setNotificationState('unconfigured');
@@ -157,19 +153,8 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const refreshNotifications = React.useCallback(async () => {
     const state = await getNotificationState().catch(() => 'unconfigured' as const);
-    if (state === 'granted' && session) {
-      try {
-        const result = await registerPushDevice();
-        pushToken.current = result.token ?? null;
-        setNotificationState(result.state);
-      } catch {
-        pushToken.current = null;
-        setNotificationState('unconfigured');
-      }
-      return;
-    }
-    setNotificationState(state);
-  }, [session]);
+    setNotificationState(state === 'granted' ? 'registered' : state);
+  }, []);
 
   React.useEffect(() => {
     const subscription = NativeAppState.addEventListener('change', (state) => {
@@ -177,24 +162,6 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     });
     return () => subscription.remove();
   }, [refreshNotifications]);
-
-  React.useEffect(() => {
-    if (!session) return;
-    let active = true;
-    void getNotificationState()
-      .then(async (permission) => permission === 'granted' ? registerPushDevice() : { state: permission })
-      .then((result) => {
-        if (!active) return;
-        pushToken.current = 'token' in result ? result.token ?? null : null;
-        setNotificationState(result.state);
-      })
-      .catch(() => {
-        if (active) setNotificationState('unconfigured');
-      });
-    return () => {
-      active = false;
-    };
-  }, [session]);
 
   const profileQuery = useQuery({
     queryKey: ['profile', session?.user.id],
@@ -259,10 +226,6 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = React.useCallback(async () => {
     setAuthError(null);
-    if (pushToken.current) {
-      await unregisterPushDevice(pushToken.current).catch(() => undefined);
-      pushToken.current = null;
-    }
     const { error } = await requireSupabase().auth.signOut({ scope: 'local' });
     if (error) throw error;
     cache.clear();
@@ -312,17 +275,8 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const requestNotifications = React.useCallback(async () => {
     const permission = await requestNotificationPermission();
-    setNotificationState(permission);
-    if (permission === 'denied') {
-      await openNotificationSettings();
-      return;
-    }
-    if (session) {
-      const result = await registerPushDevice();
-      pushToken.current = result.token ?? null;
-      setNotificationState(result.state);
-    }
-  }, [session]);
+    setNotificationState(permission === 'granted' ? 'registered' : permission);
+  }, []);
 
   const refreshProfile = React.useCallback(async () => {
     await cache.invalidateQueries({ queryKey: ['profile', session?.user.id] });

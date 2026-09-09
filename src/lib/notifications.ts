@@ -1,14 +1,13 @@
 import { Linking, Platform } from 'react-native';
-import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NotificationResponse } from 'expo-notifications';
 import { requireSupabase } from './supabase';
 
 /**
- * expo-notifications throws on import in Expo Go (Android, SDK 53+) because
- * remote push was removed from Expo Go. We skip loading the module entirely
- * in Expo Go so the error never fires; push reports `expo-go` state.
+ * Apex uses local device alerts backed by Supabase notice polling. The module
+ * is skipped in Expo Go because its Android notification runtime differs from
+ * the installed application.
  */
 type NotificationsModule = typeof import('expo-notifications');
 let Notifications: NotificationsModule | null = null;
@@ -131,29 +130,6 @@ export async function requestNotificationPermission(): Promise<NotificationState
     : permission.canAskAgain ? 'prompt' : 'denied';
 }
 
-export async function registerPushDevice(): Promise<{ state: NotificationState; token?: string }> {
-  const permissionState = await requestNotificationPermission();
-  if (permissionState !== 'granted') return { state: permissionState };
-  if (!Device.isDevice) return { state: 'unconfigured' };
-  if (Constants.appOwnership === 'expo') return { state: 'expo-go' };
-
-  const mod = await loadNotifications();
-  if (!mod) return { state: 'unconfigured' };
-
-  const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID?.trim()
-    || Constants.expoConfig?.extra?.eas?.projectId
-    || Constants.easConfig?.projectId;
-  if (!projectId) return { state: 'unconfigured' };
-
-  const token = (await mod.getExpoPushTokenAsync({ projectId })).data;
-  const { error } = await requireSupabase().rpc('register_push_device', {
-    p_expo_push_token: token,
-    p_platform: Platform.OS,
-  });
-  if (error) throw error;
-  return { state: 'registered', token };
-}
-
 export async function sendTestNotification(): Promise<void> {
   if (Platform.OS === 'web' || isExpoGo()) return;
   const mod = await loadNotifications();
@@ -172,13 +148,6 @@ export async function sendTestNotification(): Promise<void> {
       ? { type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1, channelId: 'club-notices' }
       : { type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1 },
   });
-}
-
-export async function unregisterPushDevice(token: string) {
-  const { error } = await requireSupabase().rpc('unregister_push_device', {
-    p_expo_push_token: token,
-  });
-  if (error) throw error;
 }
 
 export async function openNotificationSettings() {
@@ -220,6 +189,14 @@ export interface NoticeNotificationInput {
   title: string;
   body: string;
   read: boolean;
+}
+
+export function selectFreshNotices(
+  notices: NoticeNotificationInput[],
+  knownIds: Set<string> | null,
+): NoticeNotificationInput[] {
+  if (knownIds === null) return [];
+  return notices.filter((notice) => !notice.read && !knownIds.has(notice.id)).slice(0, 3);
 }
 
 async function loadNotifiedIds(): Promise<Set<string> | null> {
@@ -277,12 +254,10 @@ export async function processNoticesForNotification(
     await saveNotifiedIds(new Set(notices.map((n) => n.id)));
     return 0;
   }
-  const fresh = notices.filter((n) => !n.read && !known.has(n.id));
+  const fresh = selectFreshNotices(notices, known);
   if (fresh.length === 0) return 0;
-
-  const toAlert = fresh.slice(0, 3);
   let alerted = 0;
-  for (const notice of toAlert) {
+  for (const notice of fresh) {
     if (await notifyNotice(notice)) alerted += 1;
   }
   const next = new Set(notices.map((n) => n.id));

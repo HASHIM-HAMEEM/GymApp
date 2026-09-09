@@ -2,17 +2,11 @@
   "expo": {
     "name": "Apex",
     "slug": "apex",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#050708"
-    },
     "userInterfaceStyle": "automatic",
     "scheme": "apex",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hashimhameem.apex",
@@ -30,7 +24,7 @@
     },
     "android": {
       "package": "com.hashimhameem.apex",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.CAMERA"
@@ -74,6 +68,7 @@
           "defaultChannel": "club-notices"
         }
       ],
+      "expo-background-task",
       [
         "expo-localization",
         {
@@ -85,7 +80,15 @@
           ]
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#050708"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

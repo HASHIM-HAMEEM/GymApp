@@ -54,7 +54,7 @@ export default function NotificationSettings() {
         <Body style={{ gap: 24 }}>
           {error ? <Banner variant="error">{error}</Banner> : null}
           {testSent ? <Banner variant="info">{t('notifications.testSent')}</Banner> : null}
-          {notificationState === 'unsupported' ? <Banner variant="info">Push notifications are available in the installed Apex app. Notices remain available in this browser.</Banner> : null}
+          {notificationState === 'unsupported' ? <Banner variant="info">Device alerts are available in the installed Apex app. Notices remain available in this browser.</Banner> : null}
           {notificationState === 'expo-go' ? <Banner variant="info">{t('notifications.expoGo')}</Banner> : null}
           {notificationState === 'unconfigured' ? <Banner variant="warn">{t('notifications.unconfigured')}</Banner> : null}
 
@@ -71,7 +71,7 @@ export default function NotificationSettings() {
           {nativeAvailable && notificationState !== 'denied' && notificationState !== 'registered' ? (
             <Button block loading={busy} onPress={() => void enable()}>{t('notifications.enable')}</Button>
           ) : null}
-          {nativeAvailable && notificationState !== 'prompt' && notificationState !== 'denied' ? (
+          {nativeAvailable && (notificationState === 'registered' || notificationState === 'granted') ? (
             <Button variant="secondary" block disabled={busy} onPress={() => void test()}>{t('notifications.test')}</Button>
           ) : null}
           {nativeAvailable && (notificationState === 'denied' || notificationState === 'registered' || notificationState === 'granted') ? (

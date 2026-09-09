@@ -32,6 +32,15 @@ function runModule(file, resolve, env = {}) {
 const i18n = runModule('src/lib/i18n.ts', {});
 const translate = i18n.translate;
 const aadhaar = runModule('src/lib/aadhaar.ts', {});
+const noticeNotifications = runModule('src/lib/notifications.ts', {
+  'react-native': { Platform: { OS: 'web' }, Linking: { openSettings: async () => {} } },
+  'expo-constants': { __esModule: true, default: { appOwnership: null } },
+  '@react-native-async-storage/async-storage': {
+    __esModule: true,
+    default: { getItem: async () => null, setItem: async () => undefined },
+  },
+  './supabase': { requireSupabase: () => ({}) },
+});
 
 const tokens = { colors: { accent: '#F5F5F5', ink3: '#7E7E7E', lineStrong: 'x', line: 'y', warnDot: 'w', badDot: 'b' } };
 const format = runModule('src/data/format.ts', {
@@ -105,6 +114,19 @@ eq('Aadhaar accepts a valid Verhoeff checksum', aadhaar.isValidAadhaar('1000 000
 eq('Aadhaar rejects an invalid checksum', aadhaar.isValidAadhaar('1000 0000 0005'), false);
 eq('Aadhaar rejects all zeroes', aadhaar.isValidAadhaar('0000 0000 0000'), false);
 eq('Aadhaar masks routine display', aadhaar.maskAadhaar('100000000004'), '•••• •••• 0004');
+
+{
+  const notices = [
+    { id: 'n1', title: 'One', body: 'One', read: false },
+    { id: 'n2', title: 'Two', body: 'Two', read: true },
+    { id: 'n3', title: 'Three', body: 'Three', read: false },
+    { id: 'n4', title: 'Four', body: 'Four', read: false },
+    { id: 'n5', title: 'Five', body: 'Five', read: false },
+  ];
+  eq('notice alerts suppress existing notices on first run', noticeNotifications.selectFreshNotices(notices, null).length, 0);
+  eq('notice alerts exclude read and previously notified notices', noticeNotifications.selectFreshNotices(notices, new Set(['n1'])).map((n) => n.id).join(','), 'n3,n4,n5');
+  eq('notice alerts cap each check at three', noticeNotifications.selectFreshNotices(notices, new Set()).length, 3);
+}
 
 {
   const today = new Date(format.todayIso() + 'T00:00:00Z');

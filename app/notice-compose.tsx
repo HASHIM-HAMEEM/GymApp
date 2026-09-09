@@ -38,7 +38,6 @@ function NoticeComposeInner() {
   const [urgent, setUrgent] = React.useState(false);
   const [step, setStep] = React.useState<'compose' | 'confirm' | 'success' | 'failure'>('compose');
   const [deliveredCount, setDeliveredCount] = React.useState(0);
-  const [pushDelivery, setPushDelivery] = React.useState<'sent' | 'none' | 'failed'>('none');
   const [error, setError] = React.useState<string | null>(null);
 
   const audienceLabels: Record<Audience, string> = {
@@ -67,7 +66,6 @@ function NoticeComposeInner() {
         urgent,
       });
       setDeliveredCount(result.recipient_count);
-      setPushDelivery(result.push === null ? 'failed' : result.push.sent > 0 ? 'sent' : 'none');
       setStep('success');
     } catch (err) {
       if (err instanceof ApiCallError && err.code === 'VALIDATION_ERROR') {
@@ -90,15 +88,7 @@ function NoticeComposeInner() {
         <Text style={[styles.successBody, { color: c.ink2, writingDirection: textDir }]}>
           {t('noticeCompose.delivered', { count: deliveredCount })}
         </Text>
-        <Banner variant={pushDelivery === 'failed' ? 'warn' : 'info'}>
-          <Text style={{ writingDirection: textDir }}>
-            {pushDelivery === 'sent'
-              ? t('notices.pushed')
-              : pushDelivery === 'failed'
-                ? t('notices.pushUnavailable')
-                : t('notices.noPushDevices')}
-          </Text>
-        </Banner>
+        <Banner variant="info"><Text style={{ writingDirection: textDir }}>{t('notices.localDelivery')}</Text></Banner>
         <View style={{ alignSelf: 'stretch' }}>
           <KVList>
             <KVRow label={t('noticeCompose.notice')}>
