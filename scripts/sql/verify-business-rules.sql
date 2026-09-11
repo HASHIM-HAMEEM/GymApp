@@ -659,6 +659,33 @@ select harness.eq('removed member excluded from server search',
 select harness.set_user('a0000000-0000-0000-0000-000000000003');
 select harness.eq('removed account has no current member id', public.current_member_id(), null::uuid);
 select harness.throws('removed member cannot issue QR','42501', $$select public.issue_qr_pass(false)$$);
+select harness.throws('removed profile cannot complete onboarding','42501', $$select public.complete_member_onboarding()$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.throws('removed member cannot be renewed','22023', $$select public.renew_membership(
+  p_member_id=>(select val::uuid from ctx where key='riya_member'),
+  p_plan_id=>(select id from public.plans where slug='premium-monthly'),
+  p_amount_paid=>100,p_payment_method=>'cash',
+  p_request_id=>'f0000000-0000-0000-0000-000000000099')$$);
+select harness.throws('removed member cannot check in at the desk','22023',
+  $$select public.check_in_member((select val::uuid from ctx where key='riya_member'),'A')$$);
+select harness.throws('removed membership cannot change state','22023',
+  $$select public.set_membership_state((select val::uuid from ctx where key='riya_membership'),'resume',null)$$);
+select harness.throws('removed member email cannot be re-invited','23505',
+  $$select public.create_member_invitation('Riya','Sharma','riya@test.apex.local')$$);
+select harness.eq('removed member appears under the removed filter',
+  (select count(*) from public.search_members('Riya',100,0,'removed')),1::bigint);
+select harness.eq('removed member detail exposes removal metadata',
+  (select (d->>'removed_at') is not null and d->>'removal_reason' = 'QA removal'
+   from public.member_detail((select val::uuid from ctx where key='riya_member')) d), true);
+select public.restore_member((select val::uuid from ctx where key='riya_member'),'QA restore');
+select harness.eq('restored member returns to normal search',
+  (select count(*) from public.search_members('Riya',100,0,null)),1::bigint);
+select harness.eq('restored member leaves the removed filter',
+  (select count(*) from public.search_members('Riya',100,0,'removed')),0::bigint);
+select harness.eq('restored profile is active again',
+  (select account_state from public.profiles where id='a0000000-0000-0000-0000-000000000003'), 'active');
+select harness.throws('restoring a live member fails','P0002',
+  $$select public.restore_member((select val::uuid from ctx where key='riya_member'))$$);
 select harness.set_user('a0000000-0000-0000-0000-000000000002');
 insert into ctx(key,val) select 'renewal_upi',r.id::text from public.create_upi_payment_request(null,(select id from public.plans where slug='premium-monthly')) r;
 select public.submit_upi_payment((select val::uuid from ctx where key='renewal_upi'),'UTR999999',null);

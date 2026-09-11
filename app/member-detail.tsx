@@ -11,7 +11,7 @@ import { KVRow, SectionBlock } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
-import { ApiCallError, useMemberDetail, useRemoveMember, useResendMemberInvitation, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
+import { ApiCallError, newRequestId, useMemberDetail, useRemoveMember, useResendMemberInvitation, useRestoreMember, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
 import { fmtLong, fmtShort, fmtDateTime, statusVisual, formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 import { Language, type TranslationKey } from '@/lib/i18n';
@@ -26,6 +26,7 @@ export default function MemberDetail() {
   const settle = useSettleBalance();
   const waive = useWaiveBalance();
   const removeMember = useRemoveMember();
+  const restoreMember = useRestoreMember();
   const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
   const textDir = isRtl ? 'rtl' : 'ltr';
@@ -42,8 +43,22 @@ export default function MemberDetail() {
   const [activityExpanded, setActivityExpanded] = React.useState(false);
   const [removeOpen, setRemoveOpen] = React.useState(false);
   const [removeReason, setRemoveReason] = React.useState('');
+  const [restoreOpen, setRestoreOpen] = React.useState(false);
 
   const m = member.data;
+  const ms = m?.membership ?? null;
+
+  // Stable idempotency keys: retrying after a lost response replays the
+  // recorded result instead of writing a second payment; changing the
+  // inputs starts a fresh request.
+  const settleRequestId = React.useMemo(
+    () => newRequestId(),
+    [ms?.id, settleAmount, settleMethod],
+  );
+  const waiveRequestId = React.useMemo(
+    () => newRequestId(),
+    [ms?.id, waiveReason],
+  );
 
   function membershipTag(ms: NonNullable<typeof m>['membership']) {
     if (!ms) return { label: t('memberDetail.noMembership'), variant: 'muted' as const, dot: 'muted' as const };
@@ -101,7 +116,6 @@ export default function MemberDetail() {
     );
   }
 
-  const ms = m.membership;
   const isPaused = ms?.status === 'paused';
   const canResend = m.invitationId && m.invitationStatus !== 'accepted' && m.invitationStatus !== 'revoked';
 
@@ -170,7 +184,7 @@ export default function MemberDetail() {
       return;
     }
     try {
-      const row = await settle.mutateAsync({ membershipId: ms.id, amount, method: settleMethod });
+      const row = await settle.mutateAsync({ membershipId: ms.id, amount, method: settleMethod, requestId: settleRequestId });
       setShowingSettle(false);
       setSettleAmount('');
       setActionNote(t('memberDetail.settleSuccess', {
@@ -190,13 +204,26 @@ export default function MemberDetail() {
       return;
     }
     try {
-      const row = await waive.mutateAsync({ membershipId: ms.id, reason: waiveReason.trim() });
+      const row = await waive.mutateAsync({ membershipId: ms.id, reason: waiveReason.trim(), requestId: waiveRequestId });
       setShowingWaive(false);
       setWaiveReason('');
       setActionNote(t('memberDetail.waiveSuccess', { receipt: `\u200E${row.receipt_number ?? t('common.notAvailable')}\u200E` }));
       setActionError(null);
     } catch (err) {
       setActionError(t('memberDetail.waiveFailed'));
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!m?.databaseId) return;
+    try {
+      await restoreMember.mutateAsync({ memberId: m.databaseId });
+      setRestoreOpen(false);
+      setActionError(null);
+      setActionNote(t('memberDetail.restoreSuccess'));
+    } catch (err) {
+      setRestoreOpen(false);
+      setActionError(err instanceof ApiCallError ? err.message : t('memberDetail.restoreFailed'));
     }
   };
 
@@ -241,7 +268,25 @@ export default function MemberDetail() {
             <Tag variant="accent" style={{ alignSelf: 'center' }}>{t('common.member')}</Tag>
           </View>
 
-          {m.invitationStatus && m.invitationStatus !== 'accepted' ? (
+          {m.removed ? (
+            <View style={[styles.inviteBox, { backgroundColor: c.bg1, borderColor: c.line }]}>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={[styles.inviteTitle, { color: c.ink, writingDirection: textDir }]}>
+                  {t('memberDetail.removedTitle')}
+                </Text>
+                <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
+                  {t('memberDetail.removedBody', { date: `\u200E${fmtLong(m.removedAt?.slice(0, 10) ?? '', language)}\u200E` })}
+                </Text>
+                {m.removalReason ? (
+                  <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
+                    {t('memberDetail.removalReason', { reason: m.removalReason })}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ) : null}
+
+          {m.invitationStatus && m.invitationStatus !== 'accepted' && !m.removed ? (
             <View style={[styles.inviteBox, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={[styles.inviteTitle, { color: c.ink, writingDirection: textDir }]}>
@@ -397,6 +442,13 @@ export default function MemberDetail() {
 
           <View style={{ gap: 10 }}>
             <SectionLabel>{t('common.member')}</SectionLabel>
+            {m.removed ? (
+              <View style={[styles.actions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <Button variant="secondary" size="sm" onPress={() => setRestoreOpen(true)}>
+                  {t('memberDetail.restore')}
+                </Button>
+              </View>
+            ) : (
             <View style={[styles.actions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
               <Button
                 variant="secondary"
@@ -434,6 +486,7 @@ export default function MemberDetail() {
                 Remove member
               </Button>
             </View>
+            )}
           </View>
 
         </Body>
@@ -540,6 +593,21 @@ export default function MemberDetail() {
                 .catch(() => setActionError('The member could not be removed. Check your connection and try again.'));
             }}
           >Remove member</Button>
+        </View>
+      </Sheet>
+
+      <Sheet visible={restoreOpen} onClose={() => setRestoreOpen(false)}>
+        <Text style={[styles.sheetTitle, { color: c.ink, writingDirection: textDir }]}>
+          {t('memberDetail.restoreTitle', { name: m.firstName })}
+        </Text>
+        <Text style={[styles.sheetBody, { color: c.ink3, writingDirection: textDir }]}>
+          {t('memberDetail.restoreBody')}
+        </Text>
+        <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <Button variant="secondary" onPress={() => setRestoreOpen(false)}>{t('common.cancel')}</Button>
+          <Button onPress={() => { void handleRestore(); }} loading={restoreMember.isPending}>
+            {t('memberDetail.restoreConfirm')}
+          </Button>
         </View>
       </Sheet>
     </View>

@@ -95,6 +95,9 @@ export type ApiMemberDetail = {
   national_id: string | null;
   address: string | null;
   account_state: string;
+  /** Set when the member was removed; absent on backends predating the lifecycle migration */
+  removed_at?: string | null;
+  removal_reason?: string | null;
   created_at: string;
   /** Server as-of date in the club's timezone */
   as_of: string;

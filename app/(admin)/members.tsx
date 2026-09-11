@@ -18,7 +18,7 @@ export default function AdminMembers() {
   const router = useRouter();
   const [query, setQuery] = React.useState('');
   const deferredQuery = React.useDeferredValue(query);
-  const [filter, setFilter] = React.useState<'all' | MembershipStatus>('all');
+  const [filter, setFilter] = React.useState<'all' | MembershipStatus | 'removed'>('all');
   const membersQuery = useMembers(deferredQuery, filter);
   const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
@@ -31,6 +31,7 @@ export default function AdminMembers() {
     { key: 'expired' as const, label: t('status.expired'), dot: 'bad' as const },
     { key: 'paused' as const, label: t('status.paused'), dot: 'muted' as const },
     { key: 'due' as const, label: t('status.due'), dot: 'warn' as const },
+    { key: 'removed' as const, label: t('adminMembers.filterRemoved'), dot: 'muted' as const },
   ];
 
   const members = membersQuery.data ?? [];
@@ -82,6 +83,7 @@ export default function AdminMembers() {
             const ms = m.membership;
             const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
             const invited = m.accountStatus === 'invited';
+            const removed = m.removed === true;
             const lastVisit = m.lastVisitAt ? fmtShort(m.lastVisitAt.slice(0, 10), language) : null;
             return (
               <Pressable
@@ -98,8 +100,8 @@ export default function AdminMembers() {
                     <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
                       <Text style={[styles.msub, { color: c.ink3 }]}>{m.id}</Text>
                       <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 7 }}>
-                        <StatusDot variant={invited ? 'muted' : vis?.dotVariant ?? 'muted'} size={6} />
-                        <Text style={{ color: c.ink2, fontSize: 13, lineHeight: 19 }}>{invited ? t('common.invited') : vis?.tagLabel ?? t('common.noPlan')}</Text>
+                        <StatusDot variant={removed ? 'muted' : invited ? 'muted' : vis?.dotVariant ?? 'muted'} size={6} />
+                        <Text style={{ color: c.ink2, fontSize: 13, lineHeight: 19 }}>{removed ? t('status.removed') : invited ? t('common.invited') : vis?.tagLabel ?? t('common.noPlan')}</Text>
                       </View>
                     </View>
                   </View>

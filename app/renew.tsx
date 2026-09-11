@@ -10,7 +10,7 @@ import { Tag } from '@/components/Tag';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
 import { FormScroll } from '@/components/FormScroll';
-import { useMemberDetail, usePlans, useRenewMembership, useRenewalQuote, type DeskPaymentMethod } from '@/data/api/queries';
+import { useMemberDetail, usePlans, useRenewMembership, useRenewalQuote, newRequestId, type DeskPaymentMethod } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
 import { fmtLong, fmtShort, todayIso, formatMoney } from '@/data/format';
 import { Language, type TranslationKey } from '@/lib/i18n';
@@ -69,6 +69,14 @@ function RenewFlowInner() {
   const agreedPrice = customPrice.trim() ? Number(customPrice) : plan?.price ?? 0;
   const quoteQuery = useRenewalQuote(m?.databaseId, plan?.id, Boolean(m && plan));
 
+  // One idempotency key per unique transaction: retrying the same renewal
+  // replays the recorded result instead of booking a second membership and
+  // payment; changing any input starts a fresh request.
+  const requestId = React.useMemo(
+    () => newRequestId(),
+    [m?.databaseId, plan?.id, customPrice, priceNote, payMethod],
+  );
+
   if (!m) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -97,6 +105,7 @@ function RenewFlowInner() {
         planId: plan.id,
         amountPaid: agreedPrice,
         paymentMethod: agreedPrice === 0 ? 'complimentary' : payMethod,
+        requestId,
         agreedPrice: customPrice.trim() ? agreedPrice : undefined,
         priceNote: customPrice.trim() ? priceNote.trim() : undefined,
       });

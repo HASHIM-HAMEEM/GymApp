@@ -118,6 +118,10 @@ export interface Member {
   memberSince: string; // year or ISO
   lastVisitAt?: string;
   invitationId?: string;
+  /** Set when the admin removed the member (soft delete; records stay for audit) */
+  removed?: boolean;
+  removedAt?: string;
+  removalReason?: string;
   /** Server as-of date (club-local) used for current-term selection */
   asOf?: string;
   membership: Membership | null;

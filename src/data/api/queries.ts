@@ -26,6 +26,9 @@ import { fetchClub, fetchPlans, todayIso } from './api';
 import { mapMemberDetail, mapNoticeRow, mapPlan, mapSearchRow } from './mapper';
 import { CLUB } from '@/data/plans';
 import type { Club } from '@/data/types';
+import { newRequestId } from '@/lib/request-id';
+
+export { newRequestId };
 
 type ClubSettings = Club & { timezone?: string; currency?: string };
 
@@ -199,16 +202,26 @@ export function useMemberDetail(memberNumber?: string) {
     queryKey: ['member', memberNumber],
     queryFn: async (): Promise<Member | null> => {
       const client = requireSupabase();
-      const { data: searchRows, error: searchError } = await client.rpc('search_members', {
-        p_query: memberNumber!.trim(),
-        p_limit: 1,
-        p_offset: 0,
-        p_status: null,
-      });
-      if (searchError) throw rpcError(searchError.code, searchError.message, 'The member could not be loaded.');
-      const row = (searchRows as ApiSearchRow[] | null)?.find(
-        (candidate) => candidate.member_number === memberNumber!.trim(),
-      );
+      const wanted = memberNumber!.trim();
+      let row: ApiSearchRow | undefined;
+      for (const status of [null, 'removed'] as const) {
+        const { data: searchRows, error: searchError } = await client.rpc('search_members', {
+          p_query: wanted,
+          p_limit: 1,
+          p_offset: 0,
+          p_status: status,
+        });
+        // Backends before the lifecycle migration reject 'removed'; the
+        // member simply cannot be opened until the migration is applied.
+        if (searchError) {
+          if (status === 'removed' && searchError.code === '22023') break;
+          throw rpcError(searchError.code, searchError.message, 'The member could not be loaded.');
+        }
+        row = (searchRows as ApiSearchRow[] | null)?.find(
+          (candidate) => candidate.member_number === wanted,
+        );
+        if (row) break;
+      }
       if (!row) return null;
       const detail = await callRpc<ApiMemberDetail>(
         'member_detail',
@@ -223,7 +236,7 @@ export function useMemberDetail(memberNumber?: string) {
 
 export function useMembers(
   query: string,
-  status: 'all' | MembershipStatus,
+  status: 'all' | MembershipStatus | 'removed',
   enabled = true,
 ) {
   return useQuery({
@@ -235,8 +248,15 @@ export function useMembers(
         p_offset: 0,
         p_status: status === 'all' ? null : status,
       });
-      if (error) throw rpcError(error.code, error.message, 'The member list could not be loaded.');
-      return ((data as ApiSearchRow[] | null) ?? []).filter((row) => row.account_state !== 'removed').map(mapSearchRow);
+      if (error) {
+        // Backends before the lifecycle migration have no 'removed' filter —
+        // show an empty list rather than an error until it is applied.
+        if (status === 'removed' && error.code === '22023') return [];
+        throw rpcError(error.code, error.message, 'The member list could not be loaded.');
+      }
+      return ((data as ApiSearchRow[] | null) ?? [])
+        .filter((row) => (status === 'removed' ? row.membership_status === 'removed' : row.membership_status !== 'removed' && row.account_state !== 'removed'))
+        .map(mapSearchRow);
     },
     enabled,
   });
@@ -383,12 +403,6 @@ export function useUpdateClub() {
 
 export type DeskPaymentMethod = 'upi' | 'cash' | 'card' | 'wallet';
 
-function newRequestId(): string {
-  return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 export function useRenewMembership() {
   const cache = useQueryClient();
   return useMutation({
@@ -397,6 +411,7 @@ export function useRenewMembership() {
       planId: string;
       amountPaid: number;
       paymentMethod: DeskPaymentMethod | 'complimentary';
+      requestId: string;
       agreedPrice?: number;
       priceNote?: string;
     }) =>
@@ -408,7 +423,7 @@ export function useRenewMembership() {
           p_start_date: null,
           p_amount_paid: input.amountPaid,
           p_payment_method: input.paymentMethod,
-          p_request_id: newRequestId(),
+          p_request_id: input.requestId,
           ...(input.agreedPrice === undefined ? {} : { p_agreed_price: input.agreedPrice, p_price_note: input.priceNote }),
         },
         'The renewal could not be recorded.',
@@ -418,6 +433,7 @@ export function useRenewMembership() {
       void cache.invalidateQueries({ queryKey: ['member'] });
       void cache.invalidateQueries({ queryKey: ['current-member'] });
       void cache.invalidateQueries({ queryKey: ['dashboard'] });
+      void cache.invalidateQueries({ queryKey: ['renewal-quote'] });
     },
   });
 }
@@ -443,6 +459,7 @@ export function useSettleBalance() {
       membershipId: string;
       amount: number;
       method: DeskPaymentMethod;
+      requestId: string;
     }) =>
       callRpc<ApiSettleRow>(
         'settle_membership_balance',
@@ -450,7 +467,7 @@ export function useSettleBalance() {
           p_membership_id: input.membershipId,
           p_amount: input.amount,
           p_method: input.method,
-          p_request_id: newRequestId(),
+          p_request_id: input.requestId,
         },
         'The payment could not be recorded.',
       ),
@@ -466,13 +483,13 @@ export function useSettleBalance() {
 export function useWaiveBalance() {
   const cache = useQueryClient();
   return useMutation({
-    mutationFn: (input: { membershipId: string; reason: string }) =>
+    mutationFn: (input: { membershipId: string; reason: string; requestId: string }) =>
       callRpc<ApiWaiveRow>(
         'waive_membership_balance',
         {
           p_membership_id: input.membershipId,
           p_reason: input.reason,
-          p_request_id: newRequestId(),
+          p_request_id: input.requestId,
         },
         'The waiver could not be recorded.',
       ),
@@ -513,6 +530,21 @@ export function useRemoveMember() {
   return useMutation({
     mutationFn: (input: { memberId: string; reason?: string }) =>
       callRpc<void>('remove_member', { p_member_id: input.memberId, p_reason: input.reason?.trim() || null }, 'The member could not be removed.'),
+    onSuccess: async () => {
+      await Promise.all([
+        cache.invalidateQueries({ queryKey: ['members'] }),
+        cache.invalidateQueries({ queryKey: ['member'] }),
+        cache.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]);
+    },
+  });
+}
+
+export function useRestoreMember() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { memberId: string; reason?: string }) =>
+      callRpc<void>('restore_member', { p_member_id: input.memberId, p_reason: input.reason?.trim() || null }, 'The member could not be restored.'),
     onSuccess: async () => {
       await Promise.all([
         cache.invalidateQueries({ queryKey: ['members'] }),

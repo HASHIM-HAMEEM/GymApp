@@ -171,7 +171,7 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     asOf: detail.as_of,
     accountStatus: detail.account_state === 'active'
       ? 'active'
-      : detail.account_state === 'suspended'
+      : detail.account_state === 'suspended' || detail.account_state === 'removed'
         ? 'suspended'
         : 'invited',
     invitationStatus: detail.invitation
@@ -188,6 +188,9 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     nationalId: detail.national_id ?? '',
     address: detail.address ?? '',
     memberSince: memberSinceLabel(detail.created_at),
+    removed: Boolean(detail.removed_at),
+    removedAt: detail.removed_at ?? undefined,
+    removalReason: detail.removal_reason ?? undefined,
     membership,
     visits: mapVisits(detail.check_ins),
     activity: mapActivity(detail.activity),
@@ -209,9 +212,10 @@ export function mapSearchRow(row: ApiSearchRow): Member {
   return {
     id: row.member_number,
     databaseId: row.member_id,
+    removed: row.membership_status === 'removed' || row.account_state === 'removed',
     accountStatus: row.account_state === 'active'
       ? 'active'
-      : row.account_state === 'suspended'
+      : row.account_state === 'suspended' || row.account_state === 'removed'
         ? 'suspended'
         : 'invited',
     firstName: row.first_name,

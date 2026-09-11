@@ -210,5 +210,40 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('invitation emails use attempt-specific idempotency', invitationsSource.includes('request.sendAttempt ?? 1'));
 }
 
+{
+  // membership_operations.request_id rejects anything that is not a
+  // lowercase UUID; Hermes has no crypto.randomUUID, so the fallback must
+  // still emit a valid v4 UUID or every renewal/settle/waive fails on-device.
+  const requestId = runModule('src/lib/request-id.ts', {});
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  check('request id is a lowercase v4 UUID', uuidRe.test(requestId.newRequestId()));
+  const realCrypto = globalThis.crypto;
+  Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true });
+  try {
+    const hermesId = requestId.newRequestId();
+    check('request id stays a valid UUID without crypto (Hermes)', uuidRe.test(hermesId), hermesId);
+    check('request ids are unique', requestId.newRequestId() !== requestId.newRequestId());
+  } finally {
+    Object.defineProperty(globalThis, 'crypto', { value: realCrypto, configurable: true });
+  }
+}
+
+{
+  // Removed members keep their records but lose every live capability;
+  // the admin UI must surface them under the Removed filter, not silently
+  // drop them from search results.
+  const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
+  const mapperSource = fs.readFileSync(path.join(root, 'src/data/api/mapper.ts'), 'utf8');
+  const membersSource = fs.readFileSync(path.join(root, 'app/(admin)/members.tsx'), 'utf8');
+  const detailSource = fs.readFileSync(path.join(root, 'app/member-detail.tsx'), 'utf8');
+  check('member search supports the removed filter', queriesSource.includes("p_status: status === 'all' ? null : status") && queriesSource.includes("| 'removed'"));
+  check('removed members hidden from normal search results', queriesSource.includes("row.membership_status !== 'removed'"));
+  check('member detail search falls back to the removed filter', queriesSource.includes("'removed' as const") || queriesSource.includes("[null, 'removed']"));
+  check('restore member mutation exists', queriesSource.includes("callRpc<void>('restore_member'"));
+  check('mapper preserves removed flag on detail and search rows', mapperSource.includes('removed: Boolean(detail.removed_at)') && mapperSource.includes("row.membership_status === 'removed'"));
+  check('member detail renders the removed state and restore action', detailSource.includes('memberDetail.removedTitle') && detailSource.includes('handleRestore'));
+  check('members list offers the removed filter', membersSource.includes("adminMembers.filterRemoved"));
+}
+
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nall client verification checks passed');
