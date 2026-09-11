@@ -50,5 +50,9 @@ supabase/.env.*
 # supabase cli artifacts
 supabase/.temp/
 
+# EAS signing credentials (release keystore — never commit)
+credentials.json
+/credentials/
+
 # oversized local build artifacts (GitHub 100MB limit) — public/apex.apk is the served copy
 /apex-android-release.apk
