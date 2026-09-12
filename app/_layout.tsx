@@ -7,6 +7,7 @@ import { AppProvider, useApp } from '@/providers/AppProvider';
 import { colors, useColors } from '@/theme/tokens';
 import { subscribeToNotificationResponses } from '@/lib/notifications';
 import { StartupState } from '@/components/StartupState';
+import { AppUpdateGate } from '@/components/AppUpdateGate';
 import { Banner } from '@/components/Surfaces';
 import { Button } from '@/components/Button';
 import { StatusBar as WebSafeAreaSpacer } from '@/components/Chrome';
@@ -118,6 +119,7 @@ function RootNav() {
         <Button block onPress={() => void refreshConnectivity().catch(() => undefined)}>Retry connection</Button>
       </View>
     ) : null}
+    <AppUpdateGate />
     </View>
   );
 }

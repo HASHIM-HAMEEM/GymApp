@@ -8,6 +8,7 @@ import { Button } from './Button';
 import { radius, typography, useColors, tracking } from '@/theme/tokens';
 import { useApp } from '@/providers/AppProvider';
 import { notificationStateLabel } from '@/lib/notifications';
+import { CheckForUpdatesRow } from '@/components/CheckForUpdatesRow';
 import type { Language } from '@/data/types';
 
 export function SettingsSection({
@@ -90,6 +91,7 @@ export function PreferencesGroup({
   onExport,
   onPlans,
   onPaymentSetup,
+  onAppUpdate,
   accountRows,
   clubRows,
   signingOut = false,
@@ -98,6 +100,7 @@ export function PreferencesGroup({
   onExport?: () => void;
   onPlans?: () => void;
   onPaymentSetup?: () => void;
+  onAppUpdate?: () => void;
   accountRows?: React.ReactNode;
   clubRows?: React.ReactNode;
   signingOut?: boolean;
@@ -148,6 +151,7 @@ export function PreferencesGroup({
         <SettingsGroup>
           {accountRows}
           <SettingsRow icon="key" label={t('settings.changePassword')} onPress={() => router.push('/change-password')} />
+          <CheckForUpdatesRow label={t('settings.checkUpdates')} />
           <SettingsRow icon="download" label={t('settings.shareApp')} onPress={() => void shareApp()} />
           <SettingsRow
             icon="logout"
@@ -159,12 +163,13 @@ export function PreferencesGroup({
         </SettingsGroup>
       </SettingsSection>
 
-      {onExport || onPlans || onPaymentSetup ? (
+      {onExport || onPlans || onPaymentSetup || onAppUpdate ? (
         <SettingsSection title={t('settings.clubManagement')}>
           <SettingsGroup>
             {clubRows}
             {onPlans ? <SettingsRow icon="card" label={t('settings.membershipPlans')} onPress={onPlans} /> : null}
             {onPaymentSetup ? <SettingsRow icon="receipt" label={t('settings.upiPayments')} onPress={onPaymentSetup} /> : null}
+            {onAppUpdate ? <SettingsRow icon="download" label={t('settings.appUpdate')} onPress={onAppUpdate} /> : null}
             {onExport ? <SettingsRow icon="download" label={t('settings.exportRecords')} onPress={onExport} last /> : null}
           </SettingsGroup>
         </SettingsSection>

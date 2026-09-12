@@ -698,5 +698,33 @@ select harness.eq('UPI renewal confirmation retry returns same payment',
   (select confirmed_payment_id from public.upi_payment_requests where id=(select val::uuid from ctx where key='renewal_upi')));
 select harness.eq('UPI renewal keeps request price',
   (select ms.price_snapshot from public.memberships ms join public.upi_payment_requests r on r.confirmed_membership_id=ms.id where r.id=(select val::uuid from ctx where key='renewal_upi')),2499::numeric);
+
+-- ------------------------------------------- Aadhaar write-once + app releases
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.throws('aadhaar cannot be changed once set','22023',
+  $$update public.members set national_id='585686515189' where id=(select val::uuid from ctx where key='riya_member')$$);
+select harness.throws('aadhaar cannot be cleared once set','22023',
+  $$update public.members set national_id=null where id=(select val::uuid from ctx where key='riya_member')$$);
+select harness.eq('aadhaar unchanged after blocked updates',
+  (select national_id from public.members where id=(select val::uuid from ctx where key='riya_member')),'100000000027');
+
+select harness.eq('no release published yet', public.latest_app_release(), '{}'::jsonb);
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+select harness.throws('member cannot publish a release','42501',
+  $$select public.publish_app_release(5,'1.0.4','https://apexgc.vercel.app/apex.apk',1,'')$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.throws('release rejects insecure apk url','22023',
+  $$select public.publish_app_release(5,'1.0.4','http://example.com/a.apk',1,'')$$);
+select harness.throws('release rejects min version above release','22023',
+  $$select public.publish_app_release(5,'1.0.4','https://apexgc.vercel.app/apex.apk',9,'')$$);
+select harness.eq('admin publishes a release',
+  (public.publish_app_release(5,'1.0.4','https://apexgc.vercel.app/apex.apk',4,'QR fix') > 0), true);
+select harness.eq('latest release returns newest version code',
+  (select (r->>'version_code')::int from (select public.latest_app_release() r) s),5);
+select public.publish_app_release(7,'1.0.6','https://apexgc.vercel.app/apex.apk',1,'');
+select harness.eq('latest release prefers highest version code not insert order',
+  (select (r->>'version_code')::int from (select public.latest_app_release() r) s),7);
+select harness.eq('release visible to signed-out clients (force gate before login)',
+  (select (r->>'min_supported_version_code')::int from (select public.latest_app_release() r) s),1);
 select harness.set_user(null);
 rollback;

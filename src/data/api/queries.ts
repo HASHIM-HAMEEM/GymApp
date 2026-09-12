@@ -22,7 +22,8 @@ import type {
   ApiUpiConfigRow,
   ApiUpiPaymentRequestRow,
 } from './api';
-import { fetchClub, fetchPlans, todayIso } from './api';
+import { fetchClub, fetchLatestAppRelease, fetchPlans, mapAppRelease, todayIso } from './api';
+import type { AppRelease } from '@/lib/app-update';
 import { mapMemberDetail, mapNoticeRow, mapPlan, mapSearchRow } from './mapper';
 import { CLUB } from '@/data/plans';
 import type { Club } from '@/data/types';
@@ -684,6 +685,48 @@ export function useUpdateMemberProfile() {
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['current-member', session?.user.id] });
       void cache.invalidateQueries({ queryKey: ['member'] });
+    },
+  });
+}
+
+export function useLatestAppRelease(enabled = true) {
+  return useQuery<AppRelease | null>({
+    queryKey: ['app-release'],
+    enabled,
+    queryFn: async () => {
+      const row = await fetchLatestAppRelease();
+      return row ? mapAppRelease(row) : null;
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function usePublishAppRelease() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      versionCode: number;
+      versionName: string;
+      apkUrl: string;
+      minSupportedVersionCode: number;
+      notes?: string;
+      sha256?: string;
+    }) =>
+      callRpc<number>(
+        'publish_app_release',
+        {
+          p_version_code: input.versionCode,
+          p_version_name: input.versionName,
+          p_apk_url: input.apkUrl,
+          p_min_supported_version_code: input.minSupportedVersionCode,
+          p_notes: input.notes ?? '',
+          p_sha256: input.sha256 ?? null,
+        },
+        'The release could not be published.',
+      ),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ['app-release'] });
     },
   });
 }

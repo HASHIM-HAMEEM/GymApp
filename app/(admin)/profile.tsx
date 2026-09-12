@@ -12,7 +12,7 @@ import { DeveloperCredit, PreferencesGroup, SettingsRow } from '@/components/Set
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
-import { useClub, useUpdateAdminProfile, useUpdateClub } from '@/data/api/queries';
+import { useClub, usePublishAppRelease, useUpdateAdminProfile, useUpdateClub } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
 
 type ClubHours = { label: string; value: string };
@@ -28,6 +28,7 @@ export default function AdminProfile() {
 
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [clubOpen, setClubOpen] = React.useState(false);
+  const [releaseOpen, setReleaseOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
 
   const handleSignOut = async () => {
@@ -73,6 +74,7 @@ export default function AdminProfile() {
             clubRows={<SettingsRow icon="pin" label={t('settings.clubDetails')} value={club.name} onPress={() => setClubOpen(true)} />}
             onPlans={() => router.push('/plans')}
             onPaymentSetup={() => router.push('/payment-settings')}
+            onAppUpdate={() => setReleaseOpen(true)}
             onExport={() => router.push('/exports')}
             onSignOut={() => void handleSignOut()}
             signingOut={signingOut}
@@ -113,6 +115,8 @@ export default function AdminProfile() {
           }
         }}
       />
+
+      <ReleaseSheet visible={releaseOpen} onClose={() => setReleaseOpen(false)} />
     </View>
   );
 }
@@ -328,6 +332,86 @@ function Row({
   );
   if (onPress) return <Pressable onPress={onPress}>{content}</Pressable>;
   return content;
+}
+
+const DEFAULT_APK_URL = 'https://apexgc.vercel.app/apex.apk';
+
+function ReleaseSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useApp();
+  const publish = usePublishAppRelease();
+  const [versionName, setVersionName] = React.useState('');
+  const [versionCode, setVersionCode] = React.useState('');
+  const [minCode, setMinCode] = React.useState('');
+  const [apkUrl, setApkUrl] = React.useState(DEFAULT_APK_URL);
+  const [notes, setNotes] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [done, setDone] = React.useState(false);
+
+  React.useEffect(() => {
+    if (visible) {
+      setVersionName('');
+      setVersionCode('');
+      setMinCode('');
+      setApkUrl(DEFAULT_APK_URL);
+      setNotes('');
+      setError(null);
+      setDone(false);
+    }
+  }, [visible]);
+
+  const save = async () => {
+    const code = Number.parseInt(versionCode, 10);
+    const min = minCode.trim() ? Number.parseInt(minCode, 10) : 1;
+    if (!versionName.trim() || !Number.isFinite(code) || code < 1 || !Number.isFinite(min) || min < 1
+      || !apkUrl.trim().startsWith('https://')) {
+      setError(t('appRelease.invalid'));
+      return;
+    }
+    setError(null);
+    try {
+      await publish.mutateAsync({
+        versionName: versionName.trim(),
+        versionCode: code,
+        minSupportedVersionCode: min,
+        apkUrl: apkUrl.trim(),
+        notes: notes.trim(),
+      });
+      setDone(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('appRelease.invalid'));
+    }
+  };
+
+  return (
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title={t('appRelease.title')}
+      desc={t('appRelease.desc')}
+    >
+      <View style={{ gap: 14, marginTop: 12 }}>
+        {error ? <Banner variant="error">{error}</Banner> : null}
+        {done ? <Banner variant="info">{t('appRelease.published')}</Banner> : null}
+        <Field label={t('appRelease.versionName')}>
+          <Control value={versionName} onChangeText={setVersionName} placeholder={t('appRelease.versionNamePlaceholder')} />
+        </Field>
+        <Field label={t('appRelease.versionCode')}>
+          <Control value={versionCode} onChangeText={setVersionCode} inputMode="numeric" placeholder={t('appRelease.versionCodePlaceholder')} />
+        </Field>
+        <Field label={t('appRelease.minSupported')} hint={t('appRelease.minSupportedHint')}>
+          <Control value={minCode} onChangeText={setMinCode} inputMode="numeric" placeholder="1" />
+        </Field>
+        <Field label={t('appRelease.apkUrl')}>
+          <Control value={apkUrl} onChangeText={setApkUrl} autoCapitalize="none" />
+        </Field>
+        <Field label={t('appRelease.notes')}>
+          <Control value={notes} onChangeText={setNotes} placeholder={t('appRelease.notesPlaceholder')} multiline />
+        </Field>
+        <Button block loading={publish.isPending} onPress={() => void save()}>{t('appRelease.publish')}</Button>
+        <Button variant="quiet" block onPress={onClose}>{t('common.cancel')}</Button>
+      </View>
+    </Sheet>
+  );
 }
 
 const styles = StyleSheet.create({

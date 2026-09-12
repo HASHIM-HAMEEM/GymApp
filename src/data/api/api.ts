@@ -313,3 +313,32 @@ export async function fetchClub(): Promise<ApiClubRow | null> {
   if (error) throw error;
   return data as ApiClubRow | null;
 }
+
+export type ApiAppReleaseRow = {
+  version_code: number;
+  version_name: string;
+  apk_url: string;
+  min_supported_version_code: number;
+  notes: string;
+  sha256: string | null;
+  published_at: string | null;
+};
+
+/** Latest published app release, or null when none has been published. */
+export async function fetchLatestAppRelease(): Promise<ApiAppReleaseRow | null> {
+  const { data, error } = await requireSupabase().rpc('latest_app_release');
+  if (error) throw error;
+  const row = data as ApiAppReleaseRow | null;
+  return row && typeof row.version_code === 'number' ? row : null;
+}
+
+export function mapAppRelease(row: ApiAppReleaseRow): import('@/lib/app-update').AppRelease {
+  return {
+    versionCode: row.version_code,
+    versionName: row.version_name,
+    apkUrl: row.apk_url,
+    minSupportedVersionCode: row.min_supported_version_code,
+    notes: row.notes,
+    publishedAt: row.published_at,
+  };
+}

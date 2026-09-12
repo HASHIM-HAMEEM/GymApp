@@ -245,5 +245,48 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('members list offers the removed filter', membersSource.includes("adminMembers.filterRemoved"));
 }
 
+{
+  // In-house update mechanism: version comparison must classify forced vs
+  // optional vs up-to-date exactly — a wrong branch either traps members on
+  // a build that still works, or lets a mandatory security update be skipped.
+  const asyncStorageState = new Map();
+  const appUpdate = runModule('src/lib/app-update.ts', {
+    'react-native': { Platform: { OS: 'android' } },
+    'expo-constants': { __esModule: true, default: { expoConfig: { version: '1.0.3', android: { versionCode: 4 } } } },
+    '@react-native-async-storage/async-storage': {
+      __esModule: true,
+      default: {
+        getItem: async (k) => asyncStorageState.get(k) ?? null,
+        setItem: async (k, v) => { asyncStorageState.set(k, v); },
+      },
+    },
+  });
+  const release = { versionCode: 5, minSupportedVersionCode: 4 };
+  check('update status: no release published', appUpdate.updateStatus(3, null) === 'up_to_date');
+  check('update status: current equals latest', appUpdate.updateStatus(5, release) === 'up_to_date');
+  check('update status: newer than latest', appUpdate.updateStatus(6, release) === 'up_to_date');
+  check('update status: supported but behind', appUpdate.updateStatus(4, release) === 'optional');
+  check('update status: below minimum is forced', appUpdate.updateStatus(3, release) === 'forced');
+  check('update status: zero build treated safely', appUpdate.updateStatus(0, release) === 'forced');
+  check('update status: malformed release ignored', appUpdate.updateStatus(3, { versionCode: 0, minSupportedVersionCode: 0 }) === 'up_to_date');
+  check('installed version code read from expo config', appUpdate.currentVersionCode() === 4);
+  const snoozed = await appUpdate.isUpdateSnoozed(5);
+  check('update prompt not snoozed initially', snoozed === false);
+  await appUpdate.snoozeUpdate(5);
+  check('update prompt snoozed per version', (await appUpdate.isUpdateSnoozed(5)) === true);
+  check('snooze is scoped to one version', (await appUpdate.isUpdateSnoozed(6)) === false);
+}
+
+{
+  // Aadhaar write-once: the edit screen must render the locked field when a
+  // value exists and keep the input only for members still missing one.
+  const editProfileSource = fs.readFileSync(path.join(root, 'app/edit-profile.tsx'), 'utf8');
+  check('aadhaar locks once set', editProfileSource.includes('m.nationalId ?') && editProfileSource.includes('profile.nationalIdLockedHint'));
+  const migrationSource = fs.readFileSync(path.join(root, 'supabase/migrations/20260913000000_aadhaar_lock_and_app_releases.sql'), 'utf8');
+  check('aadhaar write-once trigger exists', migrationSource.includes('members_national_id_write_once') && migrationSource.includes('is distinct from old.national_id'));
+  check('app release rpcs exist', migrationSource.includes('latest_app_release') && migrationSource.includes('publish_app_release'));
+  check('release reads work before sign-in', migrationSource.includes('grant execute on function public.latest_app_release() to anon'));
+}
+
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nall client verification checks passed');

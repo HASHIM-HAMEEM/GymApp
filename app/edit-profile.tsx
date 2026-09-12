@@ -140,14 +140,29 @@ export default function EditProfile() {
             />
           </Field>
 
-          <Field label={t('profile.nationalId')} hint={t('profile.nationalIdHint')}>
-            <Control
-              value={nationalId}
-              onChangeText={(value) => setNationalId(formatAadhaar(value))}
-              inputMode="numeric"
-              maxLength={14}
-              placeholder={t('profile.nationalIdPlaceholder')}
-            />
+          <Field
+            label={t('profile.nationalId')}
+            hint={m.nationalId ? t('profile.nationalIdLockedHint') : t('profile.nationalIdHint')}
+          >
+            {m.nationalId ? (
+              <View style={[styles.lockedEmail, { backgroundColor: c.bg2, borderColor: c.line }]}>
+                <Icon name="shield" size={18} color={c.ink3} />
+                <Text
+                  style={[styles.lockedEmailText, { color: c.ink2, textAlign: isRtl ? 'right' : 'left' }]}
+                  numberOfLines={1}
+                >
+                  {formatAadhaar(m.nationalId)}
+                </Text>
+              </View>
+            ) : (
+              <Control
+                value={nationalId}
+                onChangeText={(value) => setNationalId(formatAadhaar(value))}
+                inputMode="numeric"
+                maxLength={14}
+                placeholder={t('profile.nationalIdPlaceholder')}
+              />
+            )}
           </Field>
 
           <Field label={t('profile.address')}>
