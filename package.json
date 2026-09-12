@@ -52,7 +52,8 @@
     "verify:sql": "bash scripts/verify-sql.sh",
     "verify:edge": "cd supabase/functions && npx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target es2022 --strict --allowImportingTsExtensions --ignoreConfig runtime.d.ts create-member-invitation/index.ts resend-member-invitation/index.ts send-notice-push/index.ts process-push-receipts/index.ts send-expiry-reminders/index.ts update-member-email/index.ts",
     "verify": "npm run typecheck && npm run verify:client && npm run verify:sql && npm run verify:edge && npm run build:web",
-    "bootstrap:admin": "node --env-file-if-exists=.env.local scripts/bootstrap-admin.mjs"
+    "bootstrap:admin": "node --env-file-if-exists=.env.local scripts/bootstrap-admin.mjs",
+    "publish:release": "node --env-file-if-exists=.env.local scripts/publish-release.mjs"
   },
   "private": true
 }

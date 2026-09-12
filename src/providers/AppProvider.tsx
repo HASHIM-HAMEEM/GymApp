@@ -130,12 +130,23 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [networkState.isConnected, networkState.isInternetReachable]);
 
+  // Only flip to "offline" after the condition has held for 2s while the app
+  // is in the foreground. Android reports a dropped network while the app is
+  // backgrounded; a timer armed then would fire the instant the app resumes
+  // (before the OS re-reports the network) and flash the offline screen for a
+  // few frames. So: never arm in the background, and re-check when firing.
+  const rawOnlineRef = React.useRef(rawOnline);
+  rawOnlineRef.current = rawOnline;
+  const appActiveRef = React.useRef(NativeAppState.currentState !== 'background');
   React.useEffect(() => {
     if (rawOnline) {
       setOfflineDebounced(false);
       return;
     }
-    const timer = setTimeout(() => setOfflineDebounced(true), 2000);
+    if (!appActiveRef.current) return;
+    const timer = setTimeout(() => {
+      if (!rawOnlineRef.current && appActiveRef.current) setOfflineDebounced(true);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [rawOnline]);
 
@@ -193,13 +204,17 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const subscription = NativeAppState.addEventListener('change', (state) => {
+      appActiveRef.current = state === 'active';
       if (state === 'active') {
         void refreshNotifications();
-        if (offlineDebounced) void refreshConnectivity();
+        // Resume optimistic: drop any stale offline verdict from the
+        // background and let a fresh probe decide.
+        setOfflineDebounced(false);
+        void refreshConnectivity();
       }
     });
     return () => subscription.remove();
-  }, [refreshNotifications, refreshConnectivity, offlineDebounced]);
+  }, [refreshNotifications, refreshConnectivity]);
 
   const profileQuery = useQuery({
     queryKey: ['profile', session?.user.id],

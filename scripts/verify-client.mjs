@@ -374,5 +374,34 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('release reads work before sign-in', migrationSource.includes('grant execute on function public.latest_app_release() to anon'));
 }
 
+{
+  // Releases are published by the script (notes from git), never from the admin app.
+  const adminProfile = fs.readFileSync(path.join(root, 'app/(admin)/profile.tsx'), 'utf8');
+  const settingsSource = fs.readFileSync(path.join(root, 'src/components/SettingsSection.tsx'), 'utf8');
+  const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
+  const releaseScript = fs.readFileSync(path.join(root, 'scripts/publish-release.mjs'), 'utf8');
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  check('admin app has no release publishing screen', !adminProfile.includes('publish_app_release') && !adminProfile.includes('ReleaseSheet') && !settingsSource.includes('onAppUpdate'));
+  check('no client hook can publish releases', !queriesSource.includes('publish_app_release'));
+  // Receiving updates is role-agnostic: one gate at the root, one settings row shared by both profiles.
+  const rootLayout = fs.readFileSync(path.join(root, 'app/_layout.tsx'), 'utf8');
+  const memberProfile = fs.readFileSync(path.join(root, 'app/(member)/profile.tsx'), 'utf8');
+  check('update gate covers admins and members alike', rootLayout.includes('<AppUpdateGate />'));
+  check('admins and members share the check-for-updates row', settingsSource.includes('<CheckForUpdatesRow') && adminProfile.includes('<PreferencesGroup') && memberProfile.includes('<PreferencesGroup'));
+  check('release script derives notes from git and verifies the live apk', releaseScript.includes("'log'") && releaseScript.includes('latest_app_release') && releaseScript.includes('Live APK') && releaseScript.includes('publish_app_release'));
+  check('release script is wired as npm run publish:release', typeof pkg.scripts['publish:release'] === 'string' && pkg.scripts['publish:release'].includes('publish-release.mjs'));
+
+  // Plans: usage-aware delete, only when nothing references the plan.
+  const plansSource = fs.readFileSync(path.join(root, 'app/plans.tsx'), 'utf8');
+  check('admin plans come with usage counts', queriesSource.includes("'admin_plans'") && queriesSource.includes("'delete_membership_plan'"));
+  check('plan delete is offered only for unused plans', plansSource.includes('usage === 0') && plansSource.includes("t('plans.deleteBlocked'") && plansSource.includes('ConfirmModal'));
+
+  // Offline overlay must not flash on resume: no timer armed in the background,
+  // re-check when it fires, and resume clears any stale verdict.
+  const providerSource = fs.readFileSync(path.join(root, 'src/providers/AppProvider.tsx'), 'utf8');
+  check('offline debounce is foreground-only and re-checked on fire', providerSource.includes('if (!appActiveRef.current) return;') && providerSource.includes('if (!rawOnlineRef.current && appActiveRef.current) setOfflineDebounced(true);'));
+  check('resume clears stale offline verdict', /state === 'active'\) \{[\s\S]*?setOfflineDebounced\(false\);[\s\S]*?refreshConnectivity\(\)/.test(providerSource));
+}
+
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nall client verification checks passed');

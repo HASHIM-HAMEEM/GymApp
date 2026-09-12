@@ -800,5 +800,28 @@ select harness.eq('latest release prefers highest version code not insert order'
   (select (r->>'version_code')::int from (select public.latest_app_release() r) s),7);
 select harness.eq('release visible to signed-out clients (force gate before login)',
   (select (r->>'min_supported_version_code')::int from (select public.latest_app_release() r) s),1);
+select harness.throws('republishing an existing or lower version code is refused','22023',
+  $$select public.publish_app_release(7,'1.0.6b','https://apexgc.vercel.app/apex.apk',1,'')$$);
+select harness.set_user(null);
+-- The release script publishes with the service role (notes come from git).
+select set_config('request.jwt.claim.role','service_role',true);
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+select harness.eq('service role can publish a release', (public.publish_app_release(8,'1.0.7','https://apexgc.vercel.app/apex.apk',1,'- from git') > 0), true);
+select set_config('request.jwt.claim.role','',true);
+select set_config('request.jwt.claims','',true);
+
+-- Plan deletion: only when nothing references the plan.
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.eq('admin_plans reports usage counts',
+  (select membership_count > 0 from public.admin_plans() where name='Six-month QA Renamed'), true);
+select harness.throws('a plan with memberships cannot be deleted through the rpc','22023',
+  $$select public.delete_membership_plan((select id from public.plans where name='Six-month QA Renamed'))$$);
+select public.save_membership_plan(null,'Unused QA plan',1,10,true,'');
+select public.delete_membership_plan((select id from public.plans where name='Unused QA plan'));
+select harness.eq('an unused plan can be deleted', (select count(*) from public.plans where name='Unused QA plan'), 0::bigint);
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+select harness.throws('member cannot delete plans','42501',
+  $$select public.delete_membership_plan((select id from public.plans limit 1))$$);
+select harness.eq('member sees no admin plan usage rows', (select count(*) from public.admin_plans()), 0::bigint);
 select harness.set_user(null);
 rollback;

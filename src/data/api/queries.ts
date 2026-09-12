@@ -3,6 +3,7 @@ import { requireSupabase } from '@/lib/supabase';
 import { useApp } from '@/providers/AppProvider';
 import type { Member, MembershipStatus, Notice, QrPass } from '@/data/types';
 import type {
+  ApiAdminPlanRow,
   ApiPlanRow,
   ApiCheckInByQrRow,
   ApiCheckInManualRow,
@@ -95,11 +96,15 @@ export function useAdminPlans() {
   const { role } = useApp();
   return useQuery({
     queryKey: ['admin-plans'], enabled: role === 'admin',
-    queryFn: async () => {
-      const { data, error } = await requireSupabase().from('plans').select('id,slug,name,duration_months,price,currency,blurb,is_active').order('duration_months');
-      if (error) throw error;
-      return (data ?? []) as ApiPlanRow[];
-    },
+    queryFn: () => callRpc<ApiAdminPlanRow[]>('admin_plans', {}, 'Plans could not be loaded.'),
+  });
+}
+
+export function useDeletePlan() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (planId: string) => callRpc<null>('delete_membership_plan', { p_plan_id: planId }, 'This plan could not be deleted.'),
+    onSuccess: async () => { await Promise.all([cache.invalidateQueries({queryKey:['plans']}),cache.invalidateQueries({queryKey:['admin-plans']})]); },
   });
 }
 
@@ -704,34 +709,6 @@ export function useLatestAppRelease(enabled = true) {
   });
 }
 
-export function usePublishAppRelease() {
-  const cache = useQueryClient();
-  return useMutation({
-    mutationFn: (input: {
-      versionCode: number;
-      versionName: string;
-      apkUrl: string;
-      minSupportedVersionCode: number;
-      notes?: string;
-      sha256?: string;
-    }) =>
-      callRpc<number>(
-        'publish_app_release',
-        {
-          p_version_code: input.versionCode,
-          p_version_name: input.versionName,
-          p_apk_url: input.apkUrl,
-          p_min_supported_version_code: input.minSupportedVersionCode,
-          p_notes: input.notes ?? '',
-          p_sha256: input.sha256 ?? null,
-        },
-        'The release could not be published.',
-      ),
-    onSuccess: () => {
-      void cache.invalidateQueries({ queryKey: ['app-release'] });
-    },
-  });
-}
 
 export function useCreateMemberInvitation() {
   const cache = useQueryClient();

@@ -8,7 +8,7 @@
       "source": "/apex.apk",
       "headers": [
         { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
-        { "key": "Content-Disposition", "value": "attachment; filename=\"Apex-1.0.4.apk\"" },
+        { "key": "Content-Disposition", "value": "attachment; filename=\"Apex-1.0.5.apk\"" },
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     },
@@ -16,7 +16,7 @@
       "source": "/download",
       "headers": [
         { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
-        { "key": "Content-Disposition", "value": "attachment; filename=\"Apex-1.0.4.apk\"" },
+        { "key": "Content-Disposition", "value": "attachment; filename=\"Apex-1.0.5.apk\"" },
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]
     }

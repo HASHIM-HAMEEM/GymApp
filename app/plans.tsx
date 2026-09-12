@@ -6,9 +6,9 @@ import { radius, tracking, useColors } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
 import { Button } from '@/components/Button';
 import { Field, Control } from '@/components/Field';
-import { Sheet, Switch } from '@/components/Overlays';
-import { useAdminPlans, useSavePlan } from '@/data/api/queries';
-import type { ApiPlanRow } from '@/data/api/api';
+import { ConfirmModal, Sheet, Switch } from '@/components/Overlays';
+import { useAdminPlans, useDeletePlan, useSavePlan } from '@/data/api/queries';
+import type { ApiAdminPlanRow } from '@/data/api/api';
 import { formatMoney } from '@/data/format';
 
 export default function Plans() {
@@ -17,7 +17,9 @@ export default function Plans() {
   const router = useRouter();
   const plans = useAdminPlans();
   const save = useSavePlan();
-  const [editing, setEditing] = React.useState<ApiPlanRow | 'new' | null>(null);
+  const remove = useDeletePlan();
+  const [editing, setEditing] = React.useState<ApiAdminPlanRow | 'new' | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [name, setName] = React.useState('');
   const [months, setMonths] = React.useState('1');
   const [price, setPrice] = React.useState('');
@@ -28,10 +30,15 @@ export default function Plans() {
 
   if (role !== 'admin') return <Redirect href="/welcome" />;
 
-  const edit = (row: ApiPlanRow | 'new') => {
+  const editingRow = editing && editing !== 'new' ? editing : null;
+  const usage = editingRow ? Number(editingRow.membership_count) + Number(editingRow.upi_request_count) : 0;
+  const canDelete = editingRow !== null && usage === 0;
+
+  const edit = (row: ApiAdminPlanRow | 'new') => {
     setEditing(row);
     setError('');
     save.reset();
+    remove.reset();
     setName(row === 'new' ? '' : row.name);
     setMonths(row === 'new' ? '1' : String(row.duration_months));
     setPrice(row === 'new' ? '' : String(row.price));
@@ -60,6 +67,18 @@ export default function Plans() {
     }
   };
 
+  const confirmRemoval = async () => {
+    if (!editingRow || remove.isPending) return;
+    try {
+      await remove.mutateAsync(editingRow.id);
+      setConfirmDelete(false);
+      setEditing(null);
+    } catch (e) {
+      setConfirmDelete(false);
+      setError(e instanceof Error ? e.message : t('plans.deleteFailed'));
+    }
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar title={t('plans.title')} onBack={() => router.back()} />
@@ -84,6 +103,11 @@ export default function Plans() {
                   {row.blurb ? (
                     <Text style={[styles.planBlurb, { color: c.ink3, writingDirection: textDir }]}>{row.blurb}</Text>
                   ) : null}
+                  <Text style={[styles.planBlurb, { color: c.ink4, writingDirection: textDir }]}>
+                    {Number(row.membership_count) > 0
+                      ? t('plans.usedBy', { count: Number(row.membership_count) })
+                      : t('plans.unused')}
+                  </Text>
                 </View>
                 <Button size="sm" variant="secondary" onPress={() => edit(row)}>{t('plans.edit')}</Button>
               </View>
@@ -130,8 +154,30 @@ export default function Plans() {
             <Text accessibilityRole="alert" style={[styles.error, { color: c.bad, writingDirection: textDir }]}>{error}</Text>
           ) : null}
           <Button block loading={save.isPending} onPress={submit}>{t('plans.save')}</Button>
+          {editingRow ? (
+            canDelete ? (
+              <Button block variant="danger" loading={remove.isPending} onPress={() => setConfirmDelete(true)}>
+                {t('plans.delete')}
+              </Button>
+            ) : (
+              <Text style={[styles.effectNote, { color: c.ink3, writingDirection: textDir }]}>
+                {t('plans.deleteBlocked', { count: usage })}
+              </Text>
+            )
+          ) : null}
         </View>
       </Sheet>
+      <ConfirmModal
+        visible={confirmDelete}
+        pending={remove.isPending}
+        title={t('plans.deleteTitle')}
+        confirmLabel={t('plans.delete')}
+        confirmVariant="danger"
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => void confirmRemoval()}
+      >
+        <Text style={{ color: c.ink2, writingDirection: textDir }}>{t('plans.deleteBody', { name: editingRow?.name ?? '' })}</Text>
+      </ConfirmModal>
     </View>
   );
 }

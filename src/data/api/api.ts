@@ -14,6 +14,12 @@ export type ApiPlanRow = {
   is_active: boolean;
 };
 
+/** admin_plans(): plan row plus how many records reference it. */
+export type ApiAdminPlanRow = ApiPlanRow & {
+  membership_count: number;
+  upi_request_count: number;
+};
+
 export type ApiClubRow = {
   name: string;
   address: string;

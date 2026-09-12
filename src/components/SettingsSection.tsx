@@ -91,7 +91,6 @@ export function PreferencesGroup({
   onExport,
   onPlans,
   onPaymentSetup,
-  onAppUpdate,
   accountRows,
   clubRows,
   signingOut = false,
@@ -100,7 +99,6 @@ export function PreferencesGroup({
   onExport?: () => void;
   onPlans?: () => void;
   onPaymentSetup?: () => void;
-  onAppUpdate?: () => void;
   accountRows?: React.ReactNode;
   clubRows?: React.ReactNode;
   signingOut?: boolean;
@@ -163,13 +161,12 @@ export function PreferencesGroup({
         </SettingsGroup>
       </SettingsSection>
 
-      {onExport || onPlans || onPaymentSetup || onAppUpdate ? (
+      {onExport || onPlans || onPaymentSetup ? (
         <SettingsSection title={t('settings.clubManagement')}>
           <SettingsGroup>
             {clubRows}
             {onPlans ? <SettingsRow icon="card" label={t('settings.membershipPlans')} onPress={onPlans} /> : null}
             {onPaymentSetup ? <SettingsRow icon="receipt" label={t('settings.upiPayments')} onPress={onPaymentSetup} /> : null}
-            {onAppUpdate ? <SettingsRow icon="download" label={t('settings.appUpdate')} onPress={onAppUpdate} /> : null}
             {onExport ? <SettingsRow icon="download" label={t('settings.exportRecords')} onPress={onExport} last /> : null}
           </SettingsGroup>
         </SettingsSection>
