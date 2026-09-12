@@ -24,7 +24,7 @@ Expo Router + TypeScript on a Supabase backend (Postgres + Auth + Edge Functions
 - Typecheck: `npm run typecheck` (typed routes regenerate when the dev server starts)
 - Web production build: `npx expo export --platform web`
 - Bootstrap the first admin: `npm run bootstrap:admin`
-- Publish an Android release (after `vercel --prod` has shipped `public/apex.apk`): `npm run publish:release` (dry run: `-- --dry-run`; force everyone: `-- --force`). Version/versionCode come from `app.json`, sha256 from the APK, and the "what's new" text from git commit subjects since the previous release. It refuses if the live APK differs from `public/apex.apk` or the versionCode was already published. **There is deliberately no release-publishing screen in the admin app.**
+- Publish an Android release (order matters: **commit → build → `vercel --prod` → `npm run publish:release`**, so the notes include the commit you are shipping): `npm run publish:release` (dry run: `-- --dry-run`; force everyone: `-- --force`). Version/versionCode come from `app.json`, sha256 from the APK, and the "what's new" text from git commit subjects since the previous release. It refuses if the live APK differs from `public/apex.apk` or the versionCode was already published. **There is deliberately no release-publishing screen in the admin app.**
 - Local database: `supabase start` (needs Docker), then `supabase db reset`, `supabase test db` (pgTAP), `supabase functions serve`
 - Apply migrations to the linked project: `supabase db push`; deploy functions: `supabase functions deploy create-member-invitation resend-member-invitation update-member-email`
 
