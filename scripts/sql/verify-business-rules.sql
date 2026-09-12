@@ -632,6 +632,41 @@ begin
 end;
 $$;
 select harness.throws('reject invalid plan price','22023', $$select public.save_membership_plan(null,'Invalid',6,'NaN',true)$$);
+-- Plan lifecycle: description edits, deactivation and deletion.
+do $$
+declare p uuid; m uuid; term record; q record; n int;
+begin
+  select id into p from public.plans where name='Six-month QA';
+  select member_id into m from public.memberships where plan_id=p limit 1;
+  perform public.save_membership_plan(p,'Six-month QA',6,1500,true,'Full access · six months');
+  perform harness.eq('plan blurb is editable', (select blurb from public.plans where id=p), 'Full access · six months');
+  perform public.save_membership_plan(p,'Six-month QA Renamed',12,1500,true);
+  perform harness.eq('omitting blurb keeps the existing one', (select blurb from public.plans where id=p), 'Full access · six months');
+  perform harness.eq('plan rename keeps historic term names', (select count(*) from public.memberships where plan_id=p and plan_name_snapshot='Six-month QA'), (select count(*) from public.memberships where plan_id=p));
+  select * into q from public.renewal_quote(m, p);
+  perform harness.eq('renewal quote follows the edited duration', q.end_date - q.start_date + 1 >= 365, true);
+  perform public.save_membership_plan(p,'Six-month QA Renamed',12,1500,false);
+  perform harness.eq('deactivated plan hidden from active list', (select count(*) from public.plans where id=p and is_active), 0::bigint);
+  perform harness.eq('members keep terms on a deactivated plan', (select count(*) from public.memberships where plan_id=p and state<>'cancelled') > 0, true);
+  begin
+    perform public.renew_membership(m, p, null, 1500, 'cash', 'f0000000-0000-0000-0000-00000000000e');
+    raise exception 'FAIL renewal on inactive plan was allowed';
+  exception when sqlstate '22023' then
+    raise notice 'ok - renewal on a deactivated plan is refused';
+  end;
+  begin
+    delete from public.plans where id=p;
+    raise exception 'FAIL plan with memberships was deleted';
+  exception when foreign_key_violation then
+    raise notice 'ok - a plan with memberships cannot be deleted';
+  end;
+  select count(*) into n from information_schema.role_table_grants where table_schema='public' and table_name='plans' and grantee='authenticated' and privilege_type in ('INSERT','UPDATE','DELETE');
+  perform harness.eq('clients have no direct write access to plans', n, 0);
+  perform public.save_membership_plan(p,'Six-month QA Renamed',12,1500,true);
+end;
+$$;
+select harness.throws('plan description length is capped','22023',
+  $$select public.save_membership_plan(null,'Long blurb',1,100,true,repeat('x',161))$$);
 set role authenticated;
 select harness.set_user('a0000000-0000-0000-0000-000000000002');
 select harness.throws('member cannot edit prices','42501', $$select public.save_membership_plan(null,'Blocked',6,10,true)$$);
@@ -707,6 +742,45 @@ select harness.throws('aadhaar cannot be cleared once set','22023',
   $$update public.members set national_id=null where id=(select val::uuid from ctx where key='riya_member')$$);
 select harness.eq('aadhaar unchanged after blocked updates',
   (select national_id from public.members where id=(select val::uuid from ctx where key='riya_member')),'100000000027');
+
+-- Duplicate Aadhaar must be reported as an Aadhaar problem, never as a duplicate email.
+select harness.throws('duplicate aadhaar raises a specific message','23505',
+  $$select public.create_member_invitation('Dup','Aadhaar','dup-aadhaar@test.apex.local',null,null,null,null,'100000000027',null)$$);
+do $$
+begin
+  perform public.create_member_invitation('Dup','Aadhaar','dup-aadhaar@test.apex.local',null,null,null,null,'100000000027',null);
+  raise exception 'FAIL duplicate aadhaar was accepted';
+exception when unique_violation then
+  if sqlerrm not like 'This Aadhaar number is already registered to member MRD-%' then
+    raise exception 'FAIL duplicate aadhaar message :: %', sqlerrm;
+  end if;
+  raise notice 'ok - duplicate aadhaar message names the existing member';
+end $$;
+
+-- Email correction before onboarding.
+insert into ctx (key, val)
+select 'typo_member', r.member_id::text
+from public.create_member_invitation('Typo','Mail','typo@test.apex.local',null,null,null,null,'100000000058',null) r;
+select harness.throws('email correction rejects same address','22023',
+  $$select public.update_member_email((select val::uuid from ctx where key='typo_member'),'typo@test.apex.local')$$);
+select harness.throws('email correction rejects malformed address','22023',
+  $$select public.update_member_email((select val::uuid from ctx where key='typo_member'),'not-an-email')$$);
+select harness.throws('email correction rejects an address in use','23505',
+  $$select public.update_member_email((select val::uuid from ctx where key='typo_member'),'asha@test.apex.local')$$);
+select harness.eq('email correction retargets member and invitation',
+  (select r.new_email from public.update_member_email((select val::uuid from ctx where key='typo_member'),'Fixed@Test.Apex.Local') r),
+  'fixed@test.apex.local');
+select harness.eq('member email updated',
+  (select email::text from public.members where id=(select val::uuid from ctx where key='typo_member')),'fixed@test.apex.local');
+select harness.eq('invitation reset to pending with corrected email',
+  (select status || ':' || email::text from public.member_invitations where member_id=(select val::uuid from ctx where key='typo_member') order by created_at desc limit 1),
+  'pending:fixed@test.apex.local');
+select harness.throws('email correction blocked once member is active','22023',
+  $$select public.update_member_email((select val::uuid from ctx where key='asha_member'),'asha-new@test.apex.local')$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+select harness.throws('member cannot correct emails','42501',
+  $$select public.update_member_email((select val::uuid from ctx where key='typo_member'),'x@test.apex.local')$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
 
 select harness.eq('no release published yet', public.latest_app_release(), '{}'::jsonb);
 select harness.set_user('a0000000-0000-0000-0000-000000000002');

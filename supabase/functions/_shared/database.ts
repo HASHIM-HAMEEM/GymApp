@@ -34,7 +34,17 @@ function rpcError(error: { code?: string; message?: string } | null | undefined,
     case "42501":
       return new ApiError(403, "ADMIN_REQUIRED", "An active administrator account is required.");
     case "23505":
-      return new ApiError(409, "INVITATION_EXISTS", "An account or invitation already exists for this email.");
+      // The database raises distinct messages for duplicate Aadhaar vs email.
+      if (/aadhaar/i.test(error.message ?? "")) {
+        return new ApiError(409, "AADHAAR_EXISTS", error.message ?? "This Aadhaar number is already registered.");
+      }
+      return new ApiError(
+        409,
+        "INVITATION_EXISTS",
+        /removed member/i.test(error.message ?? "")
+          ? error.message as string
+          : "An account or invitation already exists for this email.",
+      );
     case "22023":
       return new ApiError(400, "VALIDATION_ERROR", error.message || "The invitation details are invalid.");
     case "P0002":

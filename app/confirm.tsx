@@ -29,8 +29,13 @@ export default function Confirm() {
   React.useEffect(() => {
     if (startedRef.current) return;
     let active = true;
-    const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : '';
-    const rawType = typeof params.type === 'string' ? params.type : '';
+    // On web the router params can lag the first paint; fall back to the
+    // real URL so a valid link never flashes the "incomplete link" state.
+    const webQuery = typeof window !== 'undefined' && typeof window.location?.search === 'string'
+      ? new URLSearchParams(window.location.search)
+      : null;
+    const tokenHash = typeof params.token_hash === 'string' ? params.token_hash : (webQuery?.get('token_hash') ?? '');
+    const rawType = typeof params.type === 'string' ? params.type : (webQuery?.get('type') ?? '');
     const type = rawType === 'invite' || rawType === 'recovery' || rawType === 'email' ? rawType : null;
 
     if (!supabaseConfigured() || !tokenHash || !type) {

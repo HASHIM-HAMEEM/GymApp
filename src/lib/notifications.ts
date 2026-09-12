@@ -130,26 +130,6 @@ export async function requestNotificationPermission(): Promise<NotificationState
     : permission.canAskAgain ? 'prompt' : 'denied';
 }
 
-export async function sendTestNotification(): Promise<void> {
-  if (Platform.OS === 'web' || isExpoGo()) return;
-  const mod = await loadNotifications();
-  if (!mod) throw new Error('Notifications are unavailable in this build.');
-  const permission = await requestNotificationPermission();
-  if (permission !== 'granted') throw new Error('Notification permission is not granted.');
-  await ensureNotificationChannel(mod);
-  await mod.scheduleNotificationAsync({
-    content: {
-      title: 'Apex notifications are ready',
-      body: 'This device can show club notices.',
-      sound: 'default',
-      data: { url: '/notification-settings' },
-    },
-    trigger: Platform.OS === 'android'
-      ? { type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1, channelId: 'club-notices' }
-      : { type: mod.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 1 },
-  });
-}
-
 export async function openNotificationSettings() {
   if (Platform.OS !== 'web') await Linking.openSettings();
 }

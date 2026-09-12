@@ -24,11 +24,15 @@ export default function SetPassword() {
   const [confirm, setConfirmValue] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [done, setDone] = React.useState(false);
+  // `done` carries the flow that was completed. It must be captured at submit
+  // time: completing onboarding clears profile.mustSetPassword, so reading
+  // the live profile afterwards would misclassify an invite as a recovery
+  // and sign the brand-new member straight back out.
+  const [done, setDone] = React.useState<'invite' | 'recovery' | null>(null);
   const passwordRef = React.useRef<TextInput>(null);
   const confirmRef = React.useRef<TextInput>(null);
 
-  const isInviteFlow = Boolean(profile?.mustSetPassword);
+  const isInviteFlow = done ? done === 'invite' : Boolean(profile?.mustSetPassword);
 
   function passwordProblem(password: string): string | null {
     if (password.length < MIN_LENGTH) {
@@ -50,7 +54,7 @@ export default function SetPassword() {
 
   React.useEffect(() => {
     if (!done) return;
-    if (isInviteFlow) {
+    if (done === 'invite') {
       const timer = setTimeout(() => router.replace('/'), 1100);
       return () => clearTimeout(timer);
     }
@@ -60,7 +64,7 @@ export default function SetPassword() {
         .finally(() => router.replace('/signin'));
     }, 1100);
     return () => clearTimeout(timer);
-  }, [done, isInviteFlow, router, signOut]);
+  }, [done, router, signOut]);
 
   const submit = async () => {
     const found = passwordProblem(password);
@@ -74,9 +78,10 @@ export default function SetPassword() {
     }
     setError(null);
     setLoading(true);
+    const flow = isInviteFlow ? 'invite' : 'recovery';
     try {
-      await setPassword(password, isInviteFlow);
-      setDone(true);
+      await setPassword(password, flow === 'invite');
+      setDone(flow);
     } catch {
       setError(t('setPassword.saveFailed'));
     } finally {

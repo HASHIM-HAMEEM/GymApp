@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AppState, Platform } from 'react-native';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
+export const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim();
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 const chunkSize = 1800;
 

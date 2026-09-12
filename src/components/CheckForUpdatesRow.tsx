@@ -42,6 +42,9 @@ export function CheckForUpdatesRow({ label }: { label: string }) {
     }
   };
 
+  // Android-only: the in-house APK update flow does not apply on web/iOS.
+  if (Platform.OS !== 'android') return null;
+
   return (
     <>
       <SettingsRow

@@ -9,7 +9,7 @@ import { Banner } from '@/components/Surfaces';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/providers/AppProvider';
 import { useCurrentMember, useUpdateMemberProfile } from '@/data/api/queries';
-import { formatAadhaar, isValidAadhaar, normalizeAadhaar } from '@/lib/aadhaar';
+import { formatAadhaar, isValidAadhaar, maskAadhaar, normalizeAadhaar } from '@/lib/aadhaar';
 import { FormScroll } from '@/components/FormScroll';
 
 function indiaPhone(value: string): string {
@@ -151,7 +151,7 @@ export default function EditProfile() {
                   style={[styles.lockedEmailText, { color: c.ink2, textAlign: isRtl ? 'right' : 'left' }]}
                   numberOfLines={1}
                 >
-                  {formatAadhaar(m.nationalId)}
+                  {maskAadhaar(m.nationalId)}
                 </Text>
               </View>
             ) : (

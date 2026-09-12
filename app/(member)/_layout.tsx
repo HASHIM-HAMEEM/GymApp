@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Tabs, Redirect } from 'expo-router';
 import { useColors } from '@/theme/tokens';
 import { TabBar, TabDef } from '@/components/Chrome';
@@ -53,8 +54,9 @@ function MemberTabBar({ state }: TabBarProps) {
 }
 
 export default function MemberLayout() {
-  const { role, darkMode } = useApp();
+  const { role, darkMode, notificationState, requestNotifications } = useApp();
   const c = useColors(darkMode);
+  const notificationPrompted = React.useRef(false);
 
   // Periodic background notice check (~every 15 min) so notifications
   // arrive even when the app is closed. No-op on web and Expo Go.
@@ -62,6 +64,24 @@ export default function MemberLayout() {
     if (Platform.OS === 'web') return;
     void registerNoticeBackgroundTask();
   }, []);
+
+  // Ask for notification permission once after member sign-in.
+  React.useEffect(() => {
+    if (Platform.OS === 'web' || notificationPrompted.current) return;
+    if (notificationState !== 'prompt') return;
+    let active = true;
+    void AsyncStorage.getItem('apex.notificationsPrompted.v1')
+      .then((value) => {
+        if (!active || value !== null || notificationPrompted.current) return;
+        notificationPrompted.current = true;
+        void AsyncStorage.setItem('apex.notificationsPrompted.v1', '1').catch(() => undefined);
+        void requestNotifications().catch(() => undefined);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [notificationState, requestNotifications]);
 
   if (role !== 'member') {
     return <Redirect href={role === 'admin' ? '/(admin)/today' : '/welcome'} />;

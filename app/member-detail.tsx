@@ -4,14 +4,14 @@ import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView } f
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useColors, radius, spacing, typography, tracking } from '@/theme/tokens';
 import { AppBar, Body } from '@/components/Chrome';
-import { Button } from '@/components/Button';
+import { Button, TextButton } from '@/components/Button';
 import { Tag, SectionLabel } from '@/components/Tag';
 import { Sheet } from '@/components/Overlays';
 import { KVRow, SectionBlock } from '@/components/Surfaces';
 import { LtrText } from '@/components/LtrText';
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
-import { ApiCallError, newRequestId, useMemberDetail, useRemoveMember, useResendMemberInvitation, useRestoreMember, useSetMembershipState, useSettleBalance, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
+import { ApiCallError, newRequestId, useMemberDetail, useRemoveMember, useResendMemberInvitation, useRestoreMember, useSetMembershipState, useSettleBalance, useUpdateMemberEmail, useWaiveBalance, type DeskPaymentMethod } from '@/data/api/queries';
 import { fmtLong, fmtShort, fmtDateTime, statusVisual, formatMoney } from '@/data/format';
 import { useApp } from '@/providers/AppProvider';
 import { Language, type TranslationKey } from '@/lib/i18n';
@@ -22,6 +22,7 @@ export default function MemberDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const member = useMemberDetail(id);
   const resend = useResendMemberInvitation();
+  const updateEmail = useUpdateMemberEmail();
   const setState = useSetMembershipState();
   const settle = useSettleBalance();
   const waive = useWaiveBalance();
@@ -44,6 +45,9 @@ export default function MemberDetail() {
   const [removeOpen, setRemoveOpen] = React.useState(false);
   const [removeReason, setRemoveReason] = React.useState('');
   const [restoreOpen, setRestoreOpen] = React.useState(false);
+  const [changeEmailOpen, setChangeEmailOpen] = React.useState(false);
+  const [changeEmailValue, setChangeEmailValue] = React.useState('');
+  const [changeEmailError, setChangeEmailError] = React.useState<string | null>(null);
 
   const m = member.data;
   const ms = m?.membership ?? null;
@@ -92,6 +96,8 @@ export default function MemberDetail() {
       pending: 'common.pending',
       sent: 'common.invited',
       accepted: 'member.active',
+      failed: 'common.failed',
+      revoked: 'common.revoked',
     };
     return map[s] ? t(map[s] as TranslationKey) : s;
   }
@@ -117,6 +123,7 @@ export default function MemberDetail() {
   }
 
   const isPaused = ms?.status === 'paused';
+  const upcoming = m.upcomingMembership;
   const canResend = m.invitationId && m.invitationStatus !== 'accepted' && m.invitationStatus !== 'revoked';
 
   const handleResend = async () => {
@@ -227,6 +234,30 @@ export default function MemberDetail() {
     }
   };
 
+  const openChangeEmail = () => {
+    setChangeEmailValue(m?.email ?? '');
+    setChangeEmailError(null);
+    setChangeEmailOpen(true);
+  };
+
+  const handleChangeEmail = async () => {
+    if (!m?.databaseId) return;
+    const email = changeEmailValue.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setChangeEmailError(t('memberNew.emailInvalid'));
+      return;
+    }
+    try {
+      await updateEmail.mutateAsync({ memberId: m.databaseId, email });
+      setChangeEmailOpen(false);
+      setChangeEmailError(null);
+      setActionError(null);
+      setActionNote(t('memberDetail.changeEmailDone'));
+    } catch (err) {
+      setChangeEmailError(err instanceof ApiCallError ? err.message : t('memberDetail.changeFailed'));
+    }
+  };
+
   const settleMethodLabels: Record<DeskPaymentMethod, string> = {
     cash: t('payment.cash'),
     card: t('payment.card'),
@@ -292,13 +323,18 @@ export default function MemberDetail() {
                 <Text style={[styles.inviteTitle, { color: c.ink, writingDirection: textDir }]}>
                   {t('memberDetail.invitationStatus', { status: inviteStatusLabel(m.invitationStatus) })}
                 </Text>
-                <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
-                  {t('memberDetail.invitationWaiting')}
+                <Text style={[styles.inviteSub, { color: m.invitationStatus === 'failed' ? c.bad : c.ink3, writingDirection: textDir }]}>
+                  {m.invitationStatus === 'failed'
+                    ? (m.invitationError || t('memberDetail.invitationFailed'))
+                    : t('memberDetail.invitationWaiting')}
                 </Text>
               </View>
-              {canResend ? (
-                <Button size="sm" loading={resend.isPending} onPress={handleResend}>{t('memberDetail.resend')}</Button>
-              ) : null}
+              <View style={{ alignItems: isRtl ? 'flex-start' : 'flex-end', gap: 6 }}>
+                {canResend ? (
+                  <Button size="sm" loading={resend.isPending} onPress={handleResend}>{t('memberDetail.resend')}</Button>
+                ) : null}
+                <TextButton quiet onPress={openChangeEmail}>{t('memberDetail.changeEmail')}</TextButton>
+              </View>
             </View>
           ) : null}
 
@@ -349,6 +385,31 @@ export default function MemberDetail() {
             </SectionBlock>
           ) : null}
 
+          {upcoming ? (
+            <SectionBlock title={<SectionLabel>{t('memberDetail.nextTerm')}</SectionLabel>}>
+              <View style={[styles.membershipCard, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
+                  <Text style={[styles.planName, { color: c.ink, writingDirection: textDir }]}>{upcoming.planName}</Text>
+                  <LtrText style={[styles.dateLine, { color: c.ink3 }]}>
+                    {fmtLong(upcoming.startDate, language)} — {fmtLong(upcoming.expiryDate, language)}
+                  </LtrText>
+                </View>
+              </View>
+              {upcoming.payment ? (
+                <KVRow label={t('memberDetail.payment')}>
+                  <Text style={{ writingDirection: textDir }}>
+                    {t('memberDetail.paymentSummary', { state: paymentStateLabel(upcoming.payment.state), method: paymentMethodLabel(upcoming.payment.method) })}
+                    {upcoming.payment.receiptNumber ? ` · \u200E${upcoming.payment.receiptNumber}\u200E` : ''}
+                  </Text>
+                </KVRow>
+              ) : upcoming.amountDue ? (
+                <KVRow label={t('membership.amountDue')}>
+                  <LtrText style={{ color: c.warn }}>{formatMoney(upcoming.amountDue, upcoming.currency, language)}</LtrText>
+                </KVRow>
+              ) : null}
+            </SectionBlock>
+          ) : null}
+
           <SectionBlock title={<SectionLabel>{t('memberDetail.profileEmergency')}</SectionLabel>}>
             <KVRow label={t('common.member')}>
               <Text style={{ writingDirection: textDir }}>{m.firstName} {m.lastName}</Text>
@@ -381,6 +442,31 @@ export default function MemberDetail() {
                 </Text>
               </KVRow>
             ) : null}
+          </SectionBlock>
+
+          <SectionBlock title={<SectionLabel>{t('memberDetail.payments')}</SectionLabel>}>
+            {m.payments.length === 0 ? (
+              <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                <Text style={{ color: c.ink4, writingDirection: textDir }}>{t('memberDetail.noPayments')}</Text>
+              </View>
+            ) : (
+              m.payments.map((p) => (
+                <View key={p.id} style={[styles.vrow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <LtrText style={[styles.vdate, { color: c.ink, fontFamily: typography.mono }]}>{p.receiptNumber}</LtrText>
+                      <Text style={[styles.vrec, { color: c.ink3, writingDirection: textDir }]}>
+                        {`\u200E${formatMoney(p.amount, p.currency, language)}\u200E`} · {paymentMethodLabel(p.method)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.logTime, { color: c.ink4, writingDirection: textDir }]}>
+                      {`${p.planName ? `${p.planName} · ` : ''}\u200E${fmtShort(p.termStart, language)}–${fmtShort(p.termEnd, language)}\u200E${p.membershipCancelled ? ` · ${t('memberDetail.termCancelled')}` : ''}`}
+                    </Text>
+                  </View>
+                  <LtrText style={[styles.vtime, { color: c.ink3, flex: 0 }]}>{fmtShort(p.date, language)}</LtrText>
+                </View>
+              ))
+            )}
           </SectionBlock>
 
           <SectionBlock title={<SectionLabel>{t('memberDetail.visitHistory')}</SectionLabel>}>
@@ -609,6 +695,40 @@ export default function MemberDetail() {
             {t('memberDetail.restoreConfirm')}
           </Button>
         </View>
+      </Sheet>
+
+      <Sheet visible={changeEmailOpen} onClose={() => setChangeEmailOpen(false)}>
+        <KeyboardAvoidingView behavior="padding">
+        <Text style={[styles.sheetTitle, { color: c.ink, writingDirection: textDir }]}>
+          {t('memberDetail.changeEmailTitle')}
+        </Text>
+        <Text style={[styles.sheetBody, { color: c.ink3, writingDirection: textDir }]}>
+          {t('memberDetail.changeEmailDesc')}
+        </Text>
+        {changeEmailError ? (
+          <Banner variant="error" style={{ marginBottom: 14 }}>
+            <Text style={{ writingDirection: textDir }}>{changeEmailError}</Text>
+          </Banner>
+        ) : null}
+        <Field label={t('memberDetail.email')}>
+          <Control
+            value={changeEmailValue}
+            onChangeText={(value) => { setChangeEmailValue(value); setChangeEmailError(null); }}
+            placeholder={t('auth.emailPlaceholder')}
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="off"
+            textContentType="none"
+          />
+        </Field>
+        <View style={[styles.sheetActions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+          <Button variant="secondary" onPress={() => setChangeEmailOpen(false)}>{t('common.cancel')}</Button>
+          <Button loading={updateEmail.isPending} onPress={handleChangeEmail}>
+            {t('memberDetail.changeEmailSave')}
+          </Button>
+        </View>
+        </KeyboardAvoidingView>
       </Sheet>
     </View>
   );

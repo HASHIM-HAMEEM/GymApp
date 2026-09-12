@@ -106,8 +106,8 @@ export function useAdminPlans() {
 export function useSavePlan() {
   const cache = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id?: string; name: string; months: number; price: number; active: boolean }) => callRpc<string>('save_membership_plan', {
-      p_plan_id: input.id ?? null, p_name: input.name, p_months: input.months, p_price: input.price, p_active: input.active,
+    mutationFn: (input: { id?: string; name: string; months: number; price: number; blurb: string; active: boolean }) => callRpc<string>('save_membership_plan', {
+      p_plan_id: input.id ?? null, p_name: input.name, p_months: input.months, p_price: input.price, p_active: input.active, p_blurb: input.blurb,
     }, 'Plan could not be saved. Check your connection and ensure the pricing database update is installed.'),
     onSuccess: async () => { await Promise.all([cache.invalidateQueries({queryKey:['plans']}),cache.invalidateQueries({queryKey:['admin-plans']})]); },
   });
@@ -268,6 +268,8 @@ export function useDashboard() {
     queryKey: ['dashboard'],
     queryFn: () => callRpc<ApiDashboard>('admin_dashboard', {}, 'The dashboard could not be loaded.'),
     staleTime: 10_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -780,6 +782,22 @@ export function useResendMemberInvitation() {
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['members'] });
       void cache.invalidateQueries({ queryKey: ['member'] });
+    },
+  });
+}
+
+export function useUpdateMemberEmail() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { memberId: string; email: string }) =>
+      invokeEdge<{ memberId: string; email: string; status: string }>('update-member-email', {
+        memberId: input.memberId,
+        email: input.email,
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ['member'] });
+      void cache.invalidateQueries({ queryKey: ['members'] });
+      void cache.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 }

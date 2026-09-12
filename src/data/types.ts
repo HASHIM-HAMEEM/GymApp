@@ -100,12 +100,29 @@ export interface ActivityEntry {
   kind: 'checkin' | 'membership' | 'create' | 'renew' | 'notice';
 }
 
+export type MemberPayment = {
+  id: string;
+  receiptNumber: string;
+  amount: number;
+  currency?: string;
+  method: string;
+  kind: string;
+  /** ISO date the payment was recorded */
+  date: string;
+  planName: string;
+  termStart: string;
+  termEnd: string;
+  membershipCancelled: boolean;
+};
+
 export interface Member {
   id: string; // MRD-XXXX
   databaseId?: string;
   authUserId?: string;
   accountStatus?: AccountStatus;
   invitationStatus?: InvitationStatus;
+  /** Provider/server reason for the last failed send, shown to admins. */
+  invitationError?: string;
   firstName: string;
   lastName: string;
   phone: string; // +91 98765 43210
@@ -125,6 +142,10 @@ export interface Member {
   /** Server as-of date (club-local) used for current-term selection */
   asOf?: string;
   membership: Membership | null;
+  /** Earliest non-cancelled term starting after the as-of date (a paid renewal queued behind the current term) */
+  upcomingMembership: Membership | null;
+  /** Full payment ledger, newest first */
+  payments: MemberPayment[];
   visits: Visit[];
   activity: ActivityEntry[];
 }

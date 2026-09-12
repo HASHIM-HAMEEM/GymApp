@@ -1,6 +1,7 @@
 import type {
   ActivityEntry,
   Member,
+  MemberPayment,
   Membership,
   MembershipStatus,
   Notice,
@@ -164,6 +165,30 @@ export function mapActivity(rows: ApiActivityDetail[]): ActivityEntry[] {
 export function mapMemberDetail(detail: ApiMemberDetail): Member {
   const current = pickCurrentMembership(detail.memberships, detail.as_of);
   const membership = current ? mapMembership(current, detail.payments) : null;
+  const asOf = detail.as_of ?? todayIso();
+  const upcomingRow = detail.memberships
+    .filter((row) => row.state !== 'cancelled' && row.id !== current?.id && row.start_date > asOf)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null;
+  const upcomingMembership = upcomingRow ? mapMembership(upcomingRow, detail.payments) : null;
+  const payments: MemberPayment[] = detail.payments
+    .slice()
+    .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
+    .map((row) => {
+      const term = detail.memberships.find((candidate) => candidate.id === row.membership_id);
+      return {
+        id: row.id,
+        receiptNumber: row.receipt_number,
+        amount: row.amount !== null ? Number(row.amount) : 0,
+        currency: row.currency ?? undefined,
+        method: paymentMethodLabel(row.method),
+        kind: row.kind,
+        date: row.paid_at.slice(0, 10),
+        planName: term?.plan_name ?? '',
+        termStart: term?.start_date ?? '',
+        termEnd: term?.end_date ?? '',
+        membershipCancelled: term?.state === 'cancelled',
+      };
+    });
   return {
     id: detail.member_number,
     databaseId: detail.id,
@@ -178,6 +203,9 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
       ? (detail.invitation.status === 'cancelled' ? 'revoked' : detail.invitation.status) as Member['invitationStatus']
       : undefined,
     invitationId: detail.invitation?.id,
+    invitationError: detail.invitation?.status === 'failed'
+      ? (detail.invitation.last_error ?? '').replace(/^[A-Z_]+:\s*/, '') || undefined
+      : undefined,
     firstName: detail.first_name,
     lastName: detail.last_name,
     phone: detail.phone ?? '',
@@ -192,6 +220,8 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     removedAt: detail.removed_at ?? undefined,
     removalReason: detail.removal_reason ?? undefined,
     membership,
+    upcomingMembership,
+    payments,
     visits: mapVisits(detail.check_ins),
     activity: mapActivity(detail.activity),
   };
@@ -226,6 +256,8 @@ export function mapSearchRow(row: ApiSearchRow): Member {
     address: '',
     memberSince: '',
     membership,
+    upcomingMembership: null,
+    payments: [],
     lastVisitAt: row.last_check_in ?? undefined,
     visits: [],
     activity: [],

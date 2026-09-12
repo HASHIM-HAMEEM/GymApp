@@ -21,24 +21,38 @@ import { Icon } from '@/components/Icon';
  * The OS enforces the rest: same-signature requirement, "install unknown apps"
  * consent, atomic replace, data preserved.
  */
-export async function downloadAndInstall(
+export async function downloadApk(
   release: AppRelease,
   onProgress: (fraction: number) => void,
-): Promise<void> {
+): Promise<string> {
   const FS = await import('expo-file-system/legacy');
-  const { startActivityAsync } = await import('expo-intent-launcher');
-
   const base = FS.cacheDirectory ?? FS.documentDirectory;
   if (!base) throw new Error('No writable directory');
   const target = `${base}apex-update-${release.versionCode}.apk`;
+
+  // Reuse a fully downloaded copy (e.g. user came back from the installer).
+  const existing = await FS.getInfoAsync(target);
+  if (existing.exists && !existing.isDirectory && existing.size > 1_000_000) {
+    onProgress(1);
+    return target;
+  }
+
   const task = FS.createDownloadResumable(release.apkUrl, target, {}, (progress) => {
     const total = progress.totalBytesExpectedToWrite;
     if (total > 0) onProgress(progress.totalBytesWritten / total);
   });
   const result = await task.downloadAsync();
-  if (!result?.uri) throw new Error('Download failed');
+  if (!result?.uri || result.status !== 200) {
+    await FS.deleteAsync(target, { idempotent: true });
+    throw new Error('Download failed');
+  }
+  return result.uri;
+}
 
-  const contentUri = await FS.getContentUriAsync(result.uri);
+export async function openInstaller(fileUri: string): Promise<void> {
+  const FS = await import('expo-file-system/legacy');
+  const { startActivityAsync } = await import('expo-intent-launcher');
+  const contentUri = await FS.getContentUriAsync(fileUri);
   // FLAG_GRANT_READ_URI_PERMISSION | FLAG_ACTIVITY_NEW_TASK
   await startActivityAsync('android.intent.action.VIEW', {
     data: contentUri,
@@ -47,24 +61,36 @@ export async function downloadAndInstall(
   });
 }
 
-type DownloadState = 'idle' | 'downloading' | 'installing' | 'error';
+type DownloadState = 'idle' | 'downloading' | 'ready' | 'error';
 
+/**
+ * idle → downloading → ready (installer opened) → ready (user came back)
+ * The installer runs outside the app; when the promise resolves the user is
+ * back in Apex either because the install was cancelled, or because Android
+ * sent them to "Allow from this source" first. Either way the file is kept
+ * and the button becomes "Install" so one tap reopens the installer.
+ */
 function useDownloader() {
   const [state, setState] = React.useState<DownloadState>('idle');
   const [progress, setProgress] = React.useState(0);
+  const fileRef = React.useRef<string | null>(null);
 
   const start = React.useCallback(async (release: AppRelease) => {
-    setState('downloading');
-    setProgress(0);
     try {
-      await downloadAndInstall(release, setProgress);
-      setState('installing');
+      if (!fileRef.current) {
+        setState('downloading');
+        setProgress(0);
+        fileRef.current = await downloadApk(release, setProgress);
+      }
+      setState('ready');
+      await openInstaller(fileRef.current);
     } catch {
+      fileRef.current = null;
       setState('error');
     }
   }, []);
 
-  return { state, progress, start, reset: () => { setState('idle'); setProgress(0); } };
+  return { state, progress, start };
 }
 
 function UpdateBody({
@@ -76,7 +102,7 @@ function UpdateBody({
 }) {
   const { darkMode, isRtl, t } = useApp();
   const c = useColors(darkMode);
-  const busy = dl.state === 'downloading' || dl.state === 'installing';
+  const busy = dl.state === 'downloading';
 
   return (
     <View style={{ gap: 14, marginTop: 4 }}>
@@ -98,12 +124,20 @@ function UpdateBody({
         </View>
       ) : null}
 
+      {dl.state === 'ready' ? (
+        <Text style={[styles.meta, { color: c.ink3, textAlign: isRtl ? 'right' : 'left', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+          {t('update.readyHint')}
+        </Text>
+      ) : null}
+
       <Button block loading={busy} onPress={() => void dl.start(release)}>
         {dl.state === 'error'
           ? t('update.retry')
-          : busy
-            ? t('update.downloading', { pct: Math.round(dl.progress * 100) })
-            : t('update.download')}
+          : dl.state === 'ready'
+            ? t('update.install')
+            : busy
+              ? t('update.downloading', { pct: Math.round(dl.progress * 100) })
+              : t('update.download')}
       </Button>
     </View>
   );

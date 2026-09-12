@@ -179,10 +179,21 @@ export default function MemberNew() {
       });
       setCreated({ memberNumber: result.memberNumber, email: email.trim() });
     } catch (error) {
-      if (error instanceof ApiCallError && error.code === 'INVITATION_EXISTS') {
+      if (error instanceof ApiCallError && error.code === 'AADHAAR_EXISTS') {
+        setFieldErrors((current) => ({ ...current, aadhaar: error.message }));
+        formRef.current?.focusField('aadhaar');
+        setFormError(error.message || t('memberNew.aadhaarExists'));
+      } else if (error instanceof ApiCallError && error.code === 'INVITATION_EXISTS') {
+        setFieldErrors((current) => ({ ...current, email: t('memberNew.emailInUse') }));
+        formRef.current?.focusField('email');
         setFormError(t('memberNew.invitationExists'));
       } else if (error instanceof ApiCallError && error.code === 'VALIDATION_ERROR') {
-        setFormError(t('memberNew.validationFailed'));
+        setFormError(error.message && error.message !== 'The submitted details are invalid.'
+          ? error.message
+          : t('memberNew.validationFailed'));
+      } else if (error instanceof ApiCallError && error.code === 'INVITATION_EMAIL_REJECTED') {
+        setFieldErrors((current) => ({ ...current, email: t('memberNew.emailRejected') }));
+        setFormError(t('memberNew.emailRejectedDetail', { email: email.trim() }));
       } else if (
         error instanceof ApiCallError
         && ['INVITATION_SEND_FAILED', 'INVITATION_LINK_FAILED'].includes(error.code)

@@ -169,13 +169,19 @@ export default function MemberHome() {
           <MembershipCard
             name={m ? `${m.firstName} ${m.lastName}` : t('member.apexMember')}
             plan={ms ? ms.planName.replace(/ Monthly| Annual/i, '') : t('common.noPlan')}
-            validUntil={ms ? fmtLong(ms.expiryDate, language) : m?.memberSince ?? t('common.notAvailable')}
+            validUntil={ms ? fmtLong(ms.expiryDate, language) : undefined}
             memberId={m?.id ?? 'MRD-····'}
             variant={ms?.status === 'expiring' || ms?.status === 'due' ? 'warn' : ms?.status === 'expired' ? 'bad' : 'active'}
             href={canShowQr ? '/qr' : '/member-overview'}
             showQr={canShowQr && Boolean(qrQuery.data?.value)}
             qrValue={qrQuery.data?.value}
           />
+
+          {m?.upcomingMembership ? (
+            <Text style={[styles.noPlan, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+              {t('membership.nextTermStarts', { date: `\u200E${fmtLong(m.upcomingMembership.startDate, language)}\u200E` })}
+            </Text>
+          ) : null}
 
           {m ? (
             <TapCard onPress={() => router.push('/(member)/visits')}>

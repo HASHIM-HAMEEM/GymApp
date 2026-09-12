@@ -94,10 +94,12 @@ export function MembershipCard({
       </View>
 
       <View style={[styles.footRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-        <View style={styles.stat}>
-          <Text style={[styles.statCap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('membership.validUntilLabel')}</Text>
-          <Text style={[styles.statVal, { writingDirection: 'ltr' }]}>{validUntil ?? memberSince ?? '—'}</Text>
-        </View>
+        {validUntil || memberSince ? (
+          <View style={styles.stat}>
+            <Text style={[styles.statCap, { writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('membership.validUntilLabel')}</Text>
+            <Text style={[styles.statVal, { writingDirection: 'ltr' }]}>{validUntil ?? memberSince ?? '—'}</Text>
+          </View>
+        ) : null}
 
         {showQr ? (
           <View style={styles.qrPlate}>

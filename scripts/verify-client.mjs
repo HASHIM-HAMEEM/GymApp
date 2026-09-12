@@ -246,6 +246,65 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
 }
 
 {
+  // Correcting a mistyped sign-in email is only safe while the invitation
+  // is pending — after activation the edge function refuses, so the client
+  // must offer the action solely in the not-yet-accepted branch.
+  const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
+  const detailSource = fs.readFileSync(path.join(root, 'app/member-detail.tsx'), 'utf8');
+  const newSource = fs.readFileSync(path.join(root, 'app/member-new.tsx'), 'utf8');
+  check('update member email goes through the edge function', queriesSource.includes("invokeEdge<") && queriesSource.includes("'update-member-email'"));
+  check('member detail offers email correction before acceptance', detailSource.includes('memberDetail.changeEmail') && detailSource.includes("invitationStatus !== 'accepted'"));
+  check('member creation maps duplicate aadhaar and rejected email errors', newSource.includes("'AADHAAR_EXISTS'") && newSource.includes("'INVITATION_EMAIL_REJECTED'"));
+}
+
+{
+  const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
+  const plansSource = fs.readFileSync(path.join(root, 'app/plans.tsx'), 'utf8');
+  check('plan descriptions are saved through the rpc', queriesSource.includes('p_blurb: input.blurb'));
+  check('plans screen uses localized copy', plansSource.includes("t('plans.") && !plansSource.includes("'Membership plans'") && !plansSource.includes("'Create plan'"));
+}
+
+{
+  // A renewal paid before the current term ends must surface the queued
+  // term and every receipt — the ledger is the only audit trail admins see.
+  const mapper = runModule('src/data/api/mapper.ts', {
+    './api': {
+      normalizeStatus: (s) => ['active', 'expiring', 'expired', 'paused', 'due', 'upcoming'].includes(s) ? s : 'none',
+      todayIso: () => '2026-09-12',
+    },
+  });
+  const term = (id, start, end, status) => ({
+    id, plan_id: 'plan-1', plan_name: 'Monthly', state: 'active', status,
+    start_date: start, end_date: end, amount_due: 0, grace_until: null,
+    pause_until: null, price: 1500, currency: 'INR',
+  });
+  const detail = {
+    id: 'db-1', member_number: 'MRD-0001', first_name: 'Test', last_name: 'Member',
+    email: 'm@example.com', phone: null, date_of_birth: null,
+    emergency_contact_name: null, emergency_contact_phone: null, national_id: null,
+    address: null, account_state: 'active', removed_at: null, removal_reason: null,
+    created_at: '2026-09-01T00:00:00Z', as_of: '2026-09-12', invitation: null,
+    memberships: [term('ms-1', '2026-09-12', '2026-10-11', 'active'), term('ms-2', '2026-10-12', '2026-11-11', 'upcoming')],
+    payments: [
+      { id: 'pay-1', receipt_number: 'MRD-R-2026-000032', membership_id: 'ms-1', amount: 1500, currency: 'INR', method: 'cash', kind: 'membership', paid_at: '2026-09-12T10:00:00Z' },
+      { id: 'pay-2', receipt_number: 'MRD-R-2026-000033', membership_id: 'ms-2', amount: 1500, currency: 'INR', method: 'upi', kind: 'membership', paid_at: '2026-09-15T10:00:00Z' },
+    ],
+    check_ins: [], activity: [],
+  };
+  const mapped = mapper.mapMemberDetail(detail);
+  check('mapper picks the covering term as current', mapped.membership?.startDate === '2026-09-12');
+  check('mapper surfaces the queued renewal as upcoming', mapped.upcomingMembership?.startDate === '2026-10-12');
+  check('mapper keeps the full payment ledger newest-first', mapped.payments.length === 2 && mapped.payments[0].receiptNumber === 'MRD-R-2026-000033');
+
+  const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
+  const editProfileSource = fs.readFileSync(path.join(root, 'app/edit-profile.tsx'), 'utf8');
+  const updatesRowSource = fs.readFileSync(path.join(root, 'src/components/CheckForUpdatesRow.tsx'), 'utf8');
+  check('member edit masks a locked aadhaar', editProfileSource.includes('maskAadhaar('));
+  check('update check row is android-only', updatesRowSource.includes("Platform.OS !== 'android'"));
+  check('admin dashboard refetches in the background', queriesSource.includes('refetchInterval'));
+}
+
+{
   // In-house update mechanism: version comparison must classify forced vs
   // optional vs up-to-date exactly — a wrong branch either traps members on
   // a build that still works, or lets a mandatory security update be skipped.
@@ -253,6 +312,7 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   const appUpdate = runModule('src/lib/app-update.ts', {
     'react-native': { Platform: { OS: 'android' } },
     'expo-constants': { __esModule: true, default: { expoConfig: { version: '1.0.3', android: { versionCode: 4 } } } },
+    'expo-application': { nativeBuildVersion: '4', nativeApplicationVersion: '1.0.3' },
     '@react-native-async-storage/async-storage': {
       __esModule: true,
       default: {
@@ -269,12 +329,38 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('update status: below minimum is forced', appUpdate.updateStatus(3, release) === 'forced');
   check('update status: zero build treated safely', appUpdate.updateStatus(0, release) === 'forced');
   check('update status: malformed release ignored', appUpdate.updateStatus(3, { versionCode: 0, minSupportedVersionCode: 0 }) === 'up_to_date');
-  check('installed version code read from expo config', appUpdate.currentVersionCode() === 4);
+  check('installed version code read from native package info', appUpdate.currentVersionCode() === 4);
+  const appUpdateDrift = runModule('src/lib/app-update.ts', {
+    'react-native': { Platform: { OS: 'android' } },
+    'expo-constants': { __esModule: true, default: { expoConfig: { version: '1.0.3', android: { versionCode: 9 } } } },
+    'expo-application': { nativeBuildVersion: '4', nativeApplicationVersion: '1.0.3' },
+    '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async () => null, setItem: async () => undefined } },
+  });
+  check('native package info wins over stale app.json version code', appUpdateDrift.currentVersionCode() === 4);
+  const appUpdateNoNative = runModule('src/lib/app-update.ts', {
+    'react-native': { Platform: { OS: 'android' } },
+    'expo-constants': { __esModule: true, default: { expoConfig: { version: '1.0.3', android: { versionCode: 4 } } } },
+    'expo-application': { nativeBuildVersion: null, nativeApplicationVersion: null },
+    '@react-native-async-storage/async-storage': { __esModule: true, default: { getItem: async () => null, setItem: async () => undefined } },
+  });
+  check('falls back to app.json version code without native info', appUpdateNoNative.currentVersionCode() === 4);
+  const gateSource = fs.readFileSync(path.join(root, 'src/components/AppUpdateGate.tsx'), 'utf8');
+  check('installer reuses the downloaded apk instead of spinning forever', gateSource.includes("'ready'") && gateSource.includes('update.install') && !gateSource.includes("'installing'"));
+  check('install intent grants uri read permission', gateSource.includes('flags: 1 | 268435456'));
   const snoozed = await appUpdate.isUpdateSnoozed(5);
   check('update prompt not snoozed initially', snoozed === false);
   await appUpdate.snoozeUpdate(5);
   check('update prompt snoozed per version', (await appUpdate.isUpdateSnoozed(5)) === true);
   check('snooze is scoped to one version', (await appUpdate.isUpdateSnoozed(6)) === false);
+}
+
+{
+  // Invite acceptance must not be misclassified as a password recovery once
+  // complete_member_onboarding clears profile.mustSetPassword (that used to
+  // sign the brand-new member straight back out to the welcome screen).
+  const setPasswordSource = fs.readFileSync(path.join(root, 'app/set-password.tsx'), 'utf8');
+  check('set-password captures the flow at submit time', setPasswordSource.includes("const flow = isInviteFlow ? 'invite' : 'recovery'") && setPasswordSource.includes('setDone(flow)'));
+  check('set-password routes invite completion home, not to sign-in', setPasswordSource.includes("if (done === 'invite')") && !setPasswordSource.includes('[done, isInviteFlow, router, signOut]'));
 }
 
 {

@@ -12,6 +12,7 @@ import {
   requestNotificationPermission,
   type NotificationState,
 } from '@/lib/notifications';
+import { probeInternet } from '@/lib/connectivity';
 
 interface AppState {
   session: Session | null;
@@ -104,12 +105,39 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
   );
   const [notificationState, setNotificationState] = React.useState<NotificationState>('prompt');
   const networkState = Network.useNetworkState();
-  const [manualNetworkState, setManualNetworkState] = React.useState<Network.NetworkState | null>(null);
-  React.useEffect(() => { setManualNetworkState(null); }, [networkState.isConnected, networkState.isInternetReachable]);
+  const [probeOnline, setProbeOnline] = React.useState<boolean | null>(null);
+  const [offlineDebounced, setOfflineDebounced] = React.useState(false);
   const [startupTimedOut, setStartupTimedOut] = React.useState(false);
-  const effectiveNetworkState = manualNetworkState ?? networkState;
-  const isOnline = effectiveNetworkState.isConnected !== false && effectiveNetworkState.isInternetReachable !== false;
+  const hardOffline = networkState.isConnected === false;
+  const suspect = networkState.isConnected === true && networkState.isInternetReachable === false;
+  const rawOnline = !hardOffline && !(suspect && probeOnline === false);
+  const isOnline = !offlineDebounced;
   const previousUserId = React.useRef<string | null>(null);
+
+  // The OS "validated" flag (isInternetReachable) is briefly false after every
+  // connect and can stay false on networks that block the connectivity check.
+  // When it disagrees with isConnected, verify with a real HTTPS probe —
+  // unknown state and unresolved probes count as online.
+  React.useEffect(() => {
+    setProbeOnline(null);
+    if (!suspect) return;
+    let active = true;
+    void probeInternet().then((ok) => {
+      if (active) setProbeOnline(ok);
+    });
+    return () => {
+      active = false;
+    };
+  }, [networkState.isConnected, networkState.isInternetReachable]);
+
+  React.useEffect(() => {
+    if (rawOnline) {
+      setOfflineDebounced(false);
+      return;
+    }
+    const timer = setTimeout(() => setOfflineDebounced(true), 2000);
+    return () => clearTimeout(timer);
+  }, [rawOnline]);
 
   React.useEffect(() => {
     if (!supabase) return;
@@ -156,12 +184,22 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     setNotificationState(state === 'granted' ? 'registered' : state);
   }, []);
 
+  const refreshConnectivity = React.useCallback(async () => {
+    const state = await Network.getNetworkStateAsync();
+    const ok = state.isConnected === false ? false : await probeInternet();
+    setProbeOnline(ok);
+    if (ok) setOfflineDebounced(false);
+  }, []);
+
   React.useEffect(() => {
     const subscription = NativeAppState.addEventListener('change', (state) => {
-      if (state === 'active') void refreshNotifications();
+      if (state === 'active') {
+        void refreshNotifications();
+        if (offlineDebounced) void refreshConnectivity();
+      }
     });
     return () => subscription.remove();
-  }, [refreshNotifications]);
+  }, [refreshNotifications, refreshConnectivity, offlineDebounced]);
 
   const profileQuery = useQuery({
     queryKey: ['profile', session?.user.id],
@@ -180,10 +218,6 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => setStartupTimedOut(true), 10_000);
     return () => clearTimeout(timer);
   }, [authLoading]);
-
-  const refreshConnectivity = React.useCallback(async () => {
-    setManualNetworkState(await Network.getNetworkStateAsync());
-  }, []);
 
   const retryStartup = React.useCallback(async () => {
     setStartupTimedOut(false);
@@ -305,7 +339,7 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     t,
     notificationState,
     isOnline,
-    connectivityKnown: effectiveNetworkState.isConnected !== undefined,
+    connectivityKnown: networkState.isConnected !== undefined,
     startupTimedOut,
     startupError: Boolean(session && profileQuery.isError && !profileQuery.data),
     signIn,
@@ -332,10 +366,8 @@ function SessionProvider({ children }: { children: React.ReactNode }) {
     language,
     t,
     notificationState,
-    networkState,
-    manualNetworkState,
+    networkState.isConnected,
     isOnline,
-    effectiveNetworkState.isConnected,
     startupTimedOut,
     authLoading,
     signIn,

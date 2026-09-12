@@ -6,7 +6,7 @@ import { Banner, SectionBlock } from '@/components/Surfaces';
 import { Button } from '@/components/Button';
 import { SectionLabel } from '@/components/Tag';
 import { SettingsGroup, SettingsRow } from '@/components/SettingsSection';
-import { notificationStateLabel, openNotificationSettings, sendTestNotification } from '@/lib/notifications';
+import { notificationStateLabel, openNotificationSettings } from '@/lib/notifications';
 import { useApp } from '@/providers/AppProvider';
 import { useColors, typography } from '@/theme/tokens';
 
@@ -16,31 +16,15 @@ export default function NotificationSettings() {
   const c = useColors(darkMode);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [testSent, setTestSent] = React.useState(false);
 
   const enable = async () => {
     setBusy(true);
     setError(null);
-    setTestSent(false);
     try {
       await requestNotifications();
       await refreshNotifications();
     } catch {
       setError(t('notifications.registerFailed'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const test = async () => {
-    setBusy(true);
-    setError(null);
-    setTestSent(false);
-    try {
-      await sendTestNotification();
-      setTestSent(true);
-    } catch {
-      setError(t('notifications.testFailed'));
     } finally {
       setBusy(false);
     }
@@ -53,7 +37,6 @@ export default function NotificationSettings() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <Body style={{ gap: 24 }}>
           {error ? <Banner variant="error">{error}</Banner> : null}
-          {testSent ? <Banner variant="info">{t('notifications.testSent')}</Banner> : null}
           {notificationState === 'unsupported' ? <Banner variant="info">Device alerts are available in the installed Apex app. Notices remain available in this browser.</Banner> : null}
           {notificationState === 'expo-go' ? <Banner variant="info">{t('notifications.expoGo')}</Banner> : null}
           {notificationState === 'unconfigured' ? <Banner variant="warn">{t('notifications.unconfigured')}</Banner> : null}
@@ -70,9 +53,6 @@ export default function NotificationSettings() {
 
           {nativeAvailable && notificationState !== 'denied' && notificationState !== 'registered' ? (
             <Button block loading={busy} onPress={() => void enable()}>{t('notifications.enable')}</Button>
-          ) : null}
-          {nativeAvailable && (notificationState === 'registered' || notificationState === 'granted') ? (
-            <Button variant="secondary" block disabled={busy} onPress={() => void test()}>{t('notifications.test')}</Button>
           ) : null}
           {nativeAvailable && (notificationState === 'denied' || notificationState === 'registered' || notificationState === 'granted') ? (
             <Button variant="secondary" block disabled={busy} onPress={() => void openNotificationSettings()}>{t('notifications.openSettings')}</Button>

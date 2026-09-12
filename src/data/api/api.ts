@@ -80,6 +80,7 @@ export type ApiInvitationDetail = {
   sent_at: string | null;
   accepted_at: string | null;
   expires_at: string;
+  last_error?: string | null;
 } | null;
 
 export type ApiMemberDetail = {

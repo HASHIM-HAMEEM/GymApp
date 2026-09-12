@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import * as Application from 'expo-application';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** One row of the public.app_releases table, as returned by latest_app_release(). */
@@ -14,15 +15,21 @@ export type AppRelease = {
 
 export type UpdateStatus = 'up_to_date' | 'optional' | 'forced';
 
-/** The versionCode baked into the installed binary (0 on web/dev). */
+/**
+ * The versionCode of the installed binary (0 on web/dev). Read from the real
+ * Android PackageInfo first — that is what the OS compares on install — and
+ * fall back to the app.json value embedded at build time.
+ */
 export function currentVersionCode(): number {
   if (Platform.OS !== 'android') return 0;
+  const native = Number.parseInt(Application.nativeBuildVersion ?? '', 10);
+  if (Number.isFinite(native) && native > 0) return native;
   const code = Constants.expoConfig?.android?.versionCode;
   return typeof code === 'number' && Number.isFinite(code) ? code : 0;
 }
 
 export function currentVersionName(): string {
-  return Constants.expoConfig?.version ?? '';
+  return Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '';
 }
 
 /**

@@ -174,6 +174,12 @@ export default function MembershipScreen() {
             )}
           </KVList>
 
+          {m?.upcomingMembership ? (
+            <Text style={{ fontFamily: typography.fontFamily, fontSize: 13, letterSpacing: tracking.small, lineHeight: 19, color: c.ink3, marginTop: 10, writingDirection: isRtl ? 'rtl' : 'ltr' }}>
+              {t('membership.nextTermStarts', { date: `\u200E${fmtLong(m.upcomingMembership.startDate, language)}\u200E` })}
+            </Text>
+          ) : null}
+
           <View style={styles.ctas}>
             {ms.status === 'active' || ms.status === 'expiring' || ms.status === 'due' ? (
               <>

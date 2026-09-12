@@ -103,6 +103,25 @@ async function sendInviteWithResend(
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
+    // Resend answers 4xx when the address itself is unusable (invalid or
+    // reserved domain, suppressed recipient). Say so — a retry cannot fix a
+    // typo, and the member row already exists and needs a corrected email.
+    let providerMessage = "";
+    try {
+      const body = (await response.json()) as { message?: string };
+      providerMessage = typeof body?.message === "string" ? body.message : "";
+    } catch {
+      providerMessage = "";
+    }
+    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+      console.error("invitation email rejected", { status: response.status, providerMessage });
+      throw new ApiError(
+        422,
+        "INVITATION_EMAIL_REJECTED",
+        "The email provider rejected this address. Check the member's email for typos or an unsupported domain, then resend.",
+      );
+    }
+    console.error("invitation email failed", { status: response.status, providerMessage });
     throw new ApiError(502, "INVITATION_SEND_FAILED", "The invitation email could not be sent. Try again later.");
   }
 }
