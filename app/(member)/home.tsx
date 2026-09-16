@@ -62,7 +62,7 @@ export default function MemberHome() {
   const c = useColors(darkMode);
   const [clearOpen, setClearOpen] = React.useState(false);
 
-  const hasUnread = (noticesQuery.data ?? []).some((n) => !n.read);
+  const hasUnread = React.useMemo(() => (noticesQuery.data ?? []).some((n) => !n.read), [noticesQuery.data]);
 
   const handleClearAll = async () => {
     try {
@@ -81,7 +81,10 @@ export default function MemberHome() {
   const today = m?.asOf ?? todayIso();
   const latestNotice = noticesQuery.data?.[0];
   const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
-  const week = weekAround(today, language);
+  const week = React.useMemo(() => weekAround(today, language), [today, language]);
+  // One pass over the visit history instead of a scan per weekday per render.
+  const visitDates = React.useMemo(() => new Set((m?.visits ?? []).map((v) => v.date)), [m?.visits]);
+  const weekVisits = React.useMemo(() => week.filter((wd) => visitDates.has(wd.iso)).length, [week, visitDates]);
 
   const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
   const price = plan?.price ?? ms?.amountDue ?? 0;
@@ -191,12 +194,12 @@ export default function MemberHome() {
                     {t('member.thisWeek')}
                   </Text>
                   <Text style={[styles.weekCount, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
-                    {m.visits.filter((v) => week.some((wd) => wd.iso === v.date)).length} {t('member.visitsThisWeek')}
+                    {weekVisits} {t('member.visitsThisWeek')}
                   </Text>
                 </View>
                 <View style={[styles.weekRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                   {week.map((wd) => {
-                    const visited = m.visits.some((v) => v.date === wd.iso);
+                    const visited = visitDates.has(wd.iso);
                     const isToday = wd.iso === today;
                     const on = visited && !isToday;
                     return (

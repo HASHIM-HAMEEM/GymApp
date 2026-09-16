@@ -170,11 +170,12 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     .filter((row) => row.state !== 'cancelled' && row.id !== current?.id && row.start_date > asOf)
     .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null;
   const upcomingMembership = upcomingRow ? mapMembership(upcomingRow, detail.payments) : null;
+  const termsById = new Map(detail.memberships.map((row) => [row.id, row] as const));
   const payments: MemberPayment[] = detail.payments
     .slice()
     .sort((a, b) => b.paid_at.localeCompare(a.paid_at))
     .map((row) => {
-      const term = detail.memberships.find((candidate) => candidate.id === row.membership_id);
+      const term = termsById.get(row.membership_id);
       return {
         id: row.id,
         receiptNumber: row.receipt_number,

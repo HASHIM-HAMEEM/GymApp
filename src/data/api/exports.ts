@@ -31,14 +31,15 @@ export async function buildAdminExport() {
   ]);
   const termsByMember = new Map<string, Row[]>();
   const paymentsByTerm = new Map<string, Row[]>();
-  for (const row of memberships) {
-    const key = String(row.member_id);
-    termsByMember.set(key, [...(termsByMember.get(key) ?? []), row]);
-  }
-  for (const row of payments) {
-    const key = String(row.membership_id);
-    paymentsByTerm.set(key, [...(paymentsByTerm.get(key) ?? []), row]);
-  }
+  // Append in place: re-spreading the group on every insert is O(n²) over a
+  // 50k-row export and runs on the admin's JS thread.
+  const push = (map: Map<string, Row[]>, key: string, row: Row) => {
+    const list = map.get(key);
+    if (list) list.push(row);
+    else map.set(key, [row]);
+  };
+  for (const row of memberships) push(termsByMember, String(row.member_id), row);
+  for (const row of payments) push(paymentsByTerm, String(row.membership_id), row);
   const rows: unknown[][] = [];
   for (const member of members) {
     const terms = termsByMember.get(String(member.id)) ?? [null];

@@ -278,16 +278,26 @@ export function useDashboard() {
   });
 }
 
+// Notices are polled every 30s for in-app delivery (no remote push). Cap what
+// a single poll pulls: members get the newest NOTICE_PAGE rows (the unread
+// badge and the list only need recent items); admins page up to
+// NOTICE_MAX_PAGES so the history view stays complete for realistic clubs
+// without an unbounded loop on every tick. staleTime > 0 stops a focus/remount
+// refetch from stacking on top of the interval.
+const NOTICE_PAGE = 200;
+const NOTICE_MAX_PAGES = 5;
+
 export function useNotices(asAdmin = false) {
   return useQuery({
     queryKey: ['notices', asAdmin],
-    staleTime: 0,
+    staleTime: 15_000,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
     queryFn: async (): Promise<Notice[]> => {
       const client = requireSupabase();
       const notices: Notice[] = [];
-      for (let offset = 0; ; offset += 200) {
+      const maxPages = asAdmin ? NOTICE_MAX_PAGES : 1;
+      for (let page = 0, offset = 0; page < maxPages; page += 1, offset += NOTICE_PAGE) {
       if (asAdmin) {
         const { data, error } = await client
           .from('notices')
@@ -296,7 +306,7 @@ export function useNotices(asAdmin = false) {
               'author:profiles!notices_author_id_fkey(display_name), notice_deliveries(count)',
           )
           .order('published_at', { ascending: false })
-          .order('id', { ascending: false }).range(offset, offset + 199);
+          .order('id', { ascending: false }).range(offset, offset + NOTICE_PAGE - 1);
         if (error) throw error;
         notices.push(...(data as unknown as ApiNoticeTableRow[]).map((row) => {
           const raw = row as unknown as {
@@ -309,20 +319,21 @@ export function useNotices(asAdmin = false) {
             delivery_count: raw.notice_deliveries?.[0]?.count ?? 0,
           });
         }));
-        if (data.length < 200) return notices;
+        if (data.length < NOTICE_PAGE) return notices;
         continue;
       }
       const { data, error } = await client
         .from('notice_deliveries')
         .select('read_at, notices!inner(id, category, title, body, audience, urgent, published_at)')
         .order('delivered_at', { ascending: false })
-        .order('id', { ascending: false }).range(offset, offset + 199);
+        .order('id', { ascending: false }).range(offset, offset + NOTICE_PAGE - 1);
       if (error) throw error;
       notices.push(...(data as unknown as { read_at: string | null; notices: ApiNoticeTableRow }[]).map((row) =>
         mapNoticeRow({ ...row.notices, read_at: row.read_at }),
       ));
-      if (data.length < 200) return notices;
+      if (data.length < NOTICE_PAGE) return notices;
       }
+      return notices;
     },
   });
 }

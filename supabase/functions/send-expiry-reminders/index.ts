@@ -1,5 +1,6 @@
 import { createClient } from "../_shared/deps.ts";
 import { ApiError, handlePost, successResponse } from "../_shared/http.ts";
+import { mapWithConcurrency } from "../_shared/concurrency.ts";
 
 type Reminder = {
   reminder_id: string;
@@ -46,9 +47,10 @@ Deno.serve((request) => handlePost(request, async () => {
   const { data, error } = await supabase.rpc("claim_expiry_reminders");
   if (error) throw new ApiError(500, "REMINDER_CLAIM_FAILED", "Expiry reminders could not be claimed.");
 
-  let sent = 0;
-  let failed = 0;
-  for (const reminder of (data ?? []) as Reminder[]) {
+  // Bounded parallelism: each send carries its own Idempotency-Key, so a
+  // retry after a timeout can never double-email; 5 in flight keeps a heavy
+  // expiry day well inside the function timeout without hammering Resend.
+  const outcomes = await mapWithConcurrency((data ?? []) as Reminder[], 5, async (reminder) => {
     const member = escapeHtml(reminder.member_name);
     const club = escapeHtml(reminder.club_name);
     const expiry = escapeHtml(reminder.expiry_date);
@@ -70,7 +72,9 @@ Deno.serve((request) => handlePost(request, async () => {
       deliveryError = "Email service unavailable";
     }
     await supabase.rpc("record_expiry_reminder", { p_reminder_id: reminder.reminder_id, p_sent: deliveryError === null, p_error: deliveryError });
-    if (deliveryError) failed += 1; else sent += 1;
-  }
+    return deliveryError === null;
+  });
+  const sent = outcomes.filter((ok) => ok === true).length;
+  const failed = outcomes.length - sent;
   return successResponse({ attempted: sent + failed, sent, failed });
 }));
