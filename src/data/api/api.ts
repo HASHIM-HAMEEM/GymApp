@@ -112,7 +112,9 @@ export type ApiMemberDetail = {
   memberships: ApiMembershipDetail[];
   payments: ApiPaymentDetail[];
   check_ins: ApiCheckInDetail[];
+  check_ins_total?: number;
   activity: ApiActivityDetail[];
+  activity_total?: number;
 };
 
 export type ApiSearchRow = {

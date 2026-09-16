@@ -136,7 +136,7 @@ export default function MembershipScreen() {
                 <KVRow icon="cal" label={t('membership.expiredOn')}>
                   <LtrText style={{ color: c.bad }}>{fmtLong(ms.expiryDate, language)}</LtrText>
                 </KVRow>
-                <KVRow icon="clock" label={t('membership.visitsKept')}>{t('membership.visitsHistory', { count: m ? m.visits.length : 0 })}</KVRow>
+                <KVRow icon="clock" label={t('membership.visitsKept')}>{t('membership.visitsHistory', { count: m ? m.visitsTotal : 0 })}</KVRow>
                 <KVRow icon="receipt" label={t('membership.restartFrom')}>
                   <LtrText>{plan ? formatMoney(plan.price, plan.currency, language) : t('common.notAvailable')}</LtrText>
                 </KVRow>
