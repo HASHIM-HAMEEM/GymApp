@@ -15,6 +15,18 @@ interface ExpoReceiptResult {
   details?: { error?: string };
 }
 
+interface StatusUpdate {
+  id: string;
+  status: "delivered" | "failed" | "unknown";
+  error_code: string | null;
+  error_message: string | null;
+}
+
+interface PendingUpdates {
+  statuses: StatusUpdate[];
+  bumps: string[];
+}
+
 const MAX_ATTEMPTS = 3;
 const BACKOFF_MS = [2_000, 4_000, 8_000];
 
@@ -40,18 +52,32 @@ function serviceClient(key: string, url: string): SupabaseClient {
   });
 }
 
-async function retryOrExpire(service: SupabaseClient, receipt: PendingReceipt): Promise<boolean> {
+function retryOrExpire(updates: PendingUpdates, receipt: PendingReceipt): boolean {
   if (receipt.attempts >= 5) {
-    const { error } = await service.rpc("update_push_receipt_status", {
-      p_receipt_id: receipt.id,
-      p_status: "unknown",
-      p_error_code: "RECEIPT_NOT_AVAILABLE",
-      p_error_message: "Expo did not return a final receipt after repeated checks.",
+    updates.statuses.push({
+      id: receipt.id,
+      status: "unknown",
+      error_code: "RECEIPT_NOT_AVAILABLE",
+      error_message: "Expo did not return a final receipt after repeated checks.",
     });
-    return !error;
+    return true;
   }
-  await service.rpc("bump_push_receipt_attempt", { p_receipt_id: receipt.id });
+  updates.bumps.push(receipt.id);
   return false;
+}
+
+async function flushUpdates(service: SupabaseClient, updates: PendingUpdates): Promise<boolean> {
+  let applied = true;
+  if (updates.statuses.length > 0) {
+    const { error } = await service.rpc("update_push_receipt_statuses", {
+      p_updates: updates.statuses,
+    });
+    if (error) applied = false;
+  }
+  if (updates.bumps.length > 0) {
+    await service.rpc("bump_push_receipt_attempts", { p_receipt_ids: updates.bumps });
+  }
+  return applied;
 }
 
 async function fetchWithRetry(
@@ -128,10 +154,12 @@ Deno.serve((request) =>
     const result = await fetchWithRetry(ticketIds, 1);
 
     if (!result.ok) {
+      const updates: PendingUpdates = { statuses: [], bumps: [] };
       let unknown = 0;
       for (const receipt of receipts) {
-        if (await retryOrExpire(service, receipt)) unknown += 1;
+        if (retryOrExpire(updates, receipt)) unknown += 1;
       }
+      if (!await flushUpdates(service, updates)) unknown = 0;
       return successResponse({
         processed: unknown,
         delivered: 0,
@@ -143,6 +171,7 @@ Deno.serve((request) =>
     }
 
     const receiptResults = result.data ?? {};
+    const updates: PendingUpdates = { statuses: [], bumps: [] };
     let delivered = 0;
     let failed = 0;
     let unknown = 0;
@@ -151,34 +180,42 @@ Deno.serve((request) =>
     for (const receipt of receipts) {
       const expoReceipt = receiptResults[receipt.expo_ticket_id];
       if (!expoReceipt) {
-        if (await retryOrExpire(service, receipt)) unknown += 1;
+        if (retryOrExpire(updates, receipt)) unknown += 1;
         continue;
       }
 
       if (expoReceipt.status === "ok") {
-        const { error } = await service.rpc("update_push_receipt_status", {
-          p_receipt_id: receipt.id,
-          p_status: "delivered",
+        updates.statuses.push({
+          id: receipt.id,
+          status: "delivered",
+          error_code: null,
+          error_message: null,
         });
-        if (!error) delivered += 1;
+        delivered += 1;
       } else {
         const errorCode = expoReceipt.details?.error ?? "EXPO_RECEIPT_ERROR";
         const isTerminal = TERMINAL_ERRORS.has(errorCode);
         if (isTerminal) {
-          const { error } = await service.rpc("update_push_receipt_status", {
-            p_receipt_id: receipt.id,
-            p_status: "failed",
-            p_error_code: errorCode,
-            p_error_message: expoReceipt.message ?? null,
+          updates.statuses.push({
+            id: receipt.id,
+            status: "failed",
+            error_code: errorCode,
+            error_message: expoReceipt.message ?? null,
           });
-          if (!error) failed += 1;
+          failed += 1;
           if (errorCode === "DeviceNotRegistered") {
             invalidTokens.push(receipt.expo_push_token);
           }
-        } else if (await retryOrExpire(service, receipt)) {
+        } else if (retryOrExpire(updates, receipt)) {
           unknown += 1;
         }
       }
+    }
+
+    if (!await flushUpdates(service, updates)) {
+      delivered = 0;
+      failed = 0;
+      unknown = 0;
     }
 
     if (invalidTokens.length > 0) {
