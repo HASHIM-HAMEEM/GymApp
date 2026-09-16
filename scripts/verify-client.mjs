@@ -403,5 +403,26 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('resume clears stale offline verdict', /state === 'active'\) \{[\s\S]*?setOfflineDebounced\(false\);[\s\S]*?refreshConnectivity\(\)/.test(providerSource));
 }
 
+{
+  // Performance guardrails from the scan: no N+1 awaits in cron jobs, no O(n²)
+  // grouping in exports, bounded notice polling, memoized hot-screen work.
+  const receipts = fs.readFileSync(path.join(root, 'supabase/functions/process-push-receipts/index.ts'), 'utf8');
+  const reminders = fs.readFileSync(path.join(root, 'supabase/functions/send-expiry-reminders/index.ts'), 'utf8');
+  const exportsSource = fs.readFileSync(path.join(root, 'src/data/api/exports.ts'), 'utf8');
+  const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
+  const homeSource = fs.readFileSync(path.join(root, 'app/(member)/home.tsx'), 'utf8');
+  const visitsSource = fs.readFileSync(path.join(root, 'app/(member)/visits.tsx'), 'utf8');
+  const mapperSource = fs.readFileSync(path.join(root, 'src/data/api/mapper.ts'), 'utf8');
+  check('push receipts are reconciled with bounded concurrency', receipts.includes('mapWithConcurrency(receipts, RPC_CONCURRENCY') && !/for \(const receipt of receipts\) \{\s*if \(await retryOrExpire/.test(receipts));
+  check('expiry reminders are sent with bounded concurrency', reminders.includes('mapWithConcurrency(') && !reminders.includes('for (const reminder of'));
+  check('export grouping appends in place', !exportsSource.includes('[...(termsByMember.get(key)') && exportsSource.includes('list.push(row)'));
+  check('notice polling is bounded and not stale-zero', queriesSource.includes('staleTime: 15_000') && queriesSource.includes('const maxPages = asAdmin ? NOTICE_MAX_PAGES : 1'));
+  check('member home memoizes week and visit lookups', homeSource.includes('const visitDates = React.useMemo') && homeSource.includes('visitDates.has(wd.iso)') && !homeSource.includes('m.visits.some((v) => v.date === wd.iso)'));
+  check('visits list is memoized', visitsSource.includes('const filtered = React.useMemo'));
+  check('payment ledger maps memberships by id', mapperSource.includes('const termsById = new Map(') && !mapperSource.includes('detail.memberships.find((candidate) => candidate.id === row.membership_id)'));
+  const runtimeExports = runModule('src/data/api/exports.ts', { '@/lib/supabase': { requireSupabase: () => ({}) }, '@/lib/csv': { toCsv: (rows) => rows }, '@/data/format': { fmtShort: (v) => v } });
+  check('exports module still loads', typeof runtimeExports === 'object');
+}
+
 if (failures) { console.error(`\n${failures} failure(s)`); process.exit(1); }
 console.log('\nall client verification checks passed');

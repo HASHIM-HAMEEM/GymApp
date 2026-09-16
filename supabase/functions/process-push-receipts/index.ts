@@ -1,5 +1,6 @@
 import { ApiError, handlePost, successResponse } from "../_shared/http.ts";
 import { createClient, type SupabaseClient } from "../_shared/deps.ts";
+import { mapWithConcurrency } from "../_shared/concurrency.ts";
 
 interface PendingReceipt {
   id: string;
@@ -39,6 +40,8 @@ function serviceClient(key: string, url: string): SupabaseClient {
     auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
   });
 }
+
+const RPC_CONCURRENCY = 8;
 
 async function retryOrExpire(service: SupabaseClient, receipt: PendingReceipt): Promise<boolean> {
   if (receipt.attempts >= 5) {
@@ -128,10 +131,8 @@ Deno.serve((request) =>
     const result = await fetchWithRetry(ticketIds, 1);
 
     if (!result.ok) {
-      let unknown = 0;
-      for (const receipt of receipts) {
-        if (await retryOrExpire(service, receipt)) unknown += 1;
-      }
+      const outcomes = await mapWithConcurrency(receipts, RPC_CONCURRENCY, (receipt) => retryOrExpire(service, receipt));
+      const unknown = outcomes.filter((ok) => ok === true).length;
       return successResponse({
         processed: unknown,
         delivered: 0,
@@ -143,43 +144,40 @@ Deno.serve((request) =>
     }
 
     const receiptResults = result.data ?? {};
-    let delivered = 0;
-    let failed = 0;
-    let unknown = 0;
     const invalidTokens: string[] = [];
+    type Outcome = "delivered" | "failed" | "unknown" | "retried" | "skipped";
 
-    for (const receipt of receipts) {
+    // Same per-receipt decision as before; only the execution is parallel
+    // (bounded), so a 1000-receipt run is ~1000/RPC_CONCURRENCY round trips.
+    const outcomes = await mapWithConcurrency(receipts, RPC_CONCURRENCY, async (receipt): Promise<Outcome> => {
       const expoReceipt = receiptResults[receipt.expo_ticket_id];
       if (!expoReceipt) {
-        if (await retryOrExpire(service, receipt)) unknown += 1;
-        continue;
+        return (await retryOrExpire(service, receipt)) ? "unknown" : "retried";
       }
-
       if (expoReceipt.status === "ok") {
         const { error } = await service.rpc("update_push_receipt_status", {
           p_receipt_id: receipt.id,
           p_status: "delivered",
         });
-        if (!error) delivered += 1;
-      } else {
-        const errorCode = expoReceipt.details?.error ?? "EXPO_RECEIPT_ERROR";
-        const isTerminal = TERMINAL_ERRORS.has(errorCode);
-        if (isTerminal) {
-          const { error } = await service.rpc("update_push_receipt_status", {
-            p_receipt_id: receipt.id,
-            p_status: "failed",
-            p_error_code: errorCode,
-            p_error_message: expoReceipt.message ?? null,
-          });
-          if (!error) failed += 1;
-          if (errorCode === "DeviceNotRegistered") {
-            invalidTokens.push(receipt.expo_push_token);
-          }
-        } else if (await retryOrExpire(service, receipt)) {
-          unknown += 1;
-        }
+        return error ? "skipped" : "delivered";
       }
-    }
+      const errorCode = expoReceipt.details?.error ?? "EXPO_RECEIPT_ERROR";
+      if (TERMINAL_ERRORS.has(errorCode)) {
+        const { error } = await service.rpc("update_push_receipt_status", {
+          p_receipt_id: receipt.id,
+          p_status: "failed",
+          p_error_code: errorCode,
+          p_error_message: expoReceipt.message ?? null,
+        });
+        if (errorCode === "DeviceNotRegistered") invalidTokens.push(receipt.expo_push_token);
+        return error ? "skipped" : "failed";
+      }
+      return (await retryOrExpire(service, receipt)) ? "unknown" : "retried";
+    });
+
+    const delivered = outcomes.filter((o) => o === "delivered").length;
+    const failed = outcomes.filter((o) => o === "failed").length;
+    const unknown = outcomes.filter((o) => o === "unknown").length;
 
     if (invalidTokens.length > 0) {
       await service.rpc("disable_push_devices", {

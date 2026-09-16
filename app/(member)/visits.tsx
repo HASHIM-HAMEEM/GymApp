@@ -36,9 +36,12 @@ export default function VisitsScreen() {
     monthKeys.find((k) => k === todayIso().slice(0, 7)) ?? monthKeys[0] ?? todayIso().slice(0, 7)
   );
 
-  const filtered = visits
-    .filter((v) => v.date.slice(0, 7) === selectedMonth)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const filtered = React.useMemo(
+    () => visits
+      .filter((v) => v.date.slice(0, 7) === selectedMonth)
+      .sort((a, b) => b.date.localeCompare(a.date)),
+    [visits, selectedMonth],
+  );
 
   const count = filtered.length;
 

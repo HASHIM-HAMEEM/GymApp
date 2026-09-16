@@ -450,7 +450,8 @@ export default function MemberDetail() {
                 <Text style={{ color: c.ink4, writingDirection: textDir }}>{t('memberDetail.noPayments')}</Text>
               </View>
             ) : (
-              m.payments.map((p) => (
+              <>
+              {m.payments.slice(0, 12).map((p) => (
                 <View key={p.id} style={[styles.vrow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
                   <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                     <View style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -465,7 +466,13 @@ export default function MemberDetail() {
                   </View>
                   <LtrText style={[styles.vtime, { color: c.ink3, flex: 0 }]}>{fmtShort(p.date, language)}</LtrText>
                 </View>
-              ))
+              ))}
+              {m.payments.length > 12 ? (
+                <Text style={[styles.visitFoot, { color: c.ink4, writingDirection: textDir }]}>
+                  {t('common.countOfTotal', { count: 12, total: m.payments.length })}
+                </Text>
+              ) : null}
+              </>
             )}
           </SectionBlock>
 
