@@ -23,6 +23,7 @@ Expo Router + TypeScript on a Supabase backend (Postgres + Auth + Edge Functions
 - Dev (Expo Go): `npx expo start`
 - Typecheck: `npm run typecheck` (typed routes regenerate when the dev server starts)
 - Web production build: `npx expo export --platform web`
+- Android release APK (arm64-only, ~42 MB): `cd android && JAVA_HOME=<JDK 21 path> ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a`, then copy `app/build/outputs/apk/release/app-release.apk` → `public/apex.apk`. **JDK 24 breaks the build** — AGP prefab config fails with "WARNING: A restricted method in java.lang.System has been called"; use temurin-21 (`/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`) or another JDK ≤21.
 - Bootstrap the first admin: `npm run bootstrap:admin`
 - Publish an Android release (order matters: **commit → build → `vercel --prod` → `npm run publish:release`**, so the notes include the commit you are shipping): `npm run publish:release` (dry run: `-- --dry-run`; force everyone: `-- --force`). Version/versionCode come from `app.json`, sha256 from the APK, and the "what's new" text from git commit subjects since the previous release. It refuses if the live APK differs from `public/apex.apk` or the versionCode was already published. **There is deliberately no release-publishing screen in the admin app.**
 - Local database: `supabase start` (needs Docker), then `supabase db reset`, `supabase test db` (pgTAP), `supabase functions serve`
