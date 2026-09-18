@@ -1,11 +1,32 @@
 /** UTF-8 CSV for Excel/Sheets. Quote cells and neutralize spreadsheet formulas. */
+function csvCell(value: unknown) {
+  let text = value == null ? '' : String(value).replace(/\0/g, '');
+  if (typeof value !== 'number' && /^[\s\uFEFF]*[=+@-]/u.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function csvLine(row: readonly unknown[]) {
+  return row.map(csvCell).join(',');
+}
+
+export function* toCsvChunks(
+  headers: readonly string[],
+  rows: readonly (readonly unknown[])[],
+  rowsPerChunk = 256,
+): Generator<string> {
+  yield `\uFEFF${csvLine(headers)}\r\n`;
+  for (let offset = 0; offset < rows.length; offset += rowsPerChunk) {
+    const end = Math.min(offset + rowsPerChunk, rows.length);
+    const lines: string[] = new Array(end - offset);
+    for (let index = offset; index < end; index += 1) {
+      lines[index - offset] = csvLine(rows[index]);
+    }
+    yield `${lines.join('\r\n')}\r\n`;
+  }
+}
+
 export function toCsv(headers: readonly string[], rows: readonly (readonly unknown[])[]) {
-  const cell = (value: unknown) => {
-    let text = value == null ? '' : String(value).replace(/\0/g, '');
-    if (typeof value !== 'number' && /^[\s\uFEFF]*[=+@-]/u.test(text)) text = `'${text}`;
-    return `"${text.replace(/"/g, '""')}"`;
-  };
-  return '\uFEFF' + [headers, ...rows].map((row) => row.map(cell).join(',')).join('\r\n') + '\r\n';
+  return Array.from(toCsvChunks(headers, rows)).join('');
 }
 
 export function validIsoDate(value: string) {

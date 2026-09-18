@@ -116,7 +116,7 @@ export type MemberPayment = {
 };
 
 export interface Member {
-  id: string; // MRD-XXXX
+  id: string; // APX-XXXXXX (legacy records may be MRD-XXXX)
   databaseId?: string;
   authUserId?: string;
   accountStatus?: AccountStatus;
@@ -126,6 +126,7 @@ export interface Member {
   firstName: string;
   lastName: string;
   phone: string; // +91 98765 43210
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | 'unspecified';
   email: string;
   dateOfBirth?: string;
   emergencyName?: string;
@@ -139,8 +140,12 @@ export interface Member {
   removed?: boolean;
   removedAt?: string;
   removalReason?: string;
+  /** New member number created when this removed record was re-enrolled. */
+  reenrolledAs?: string;
   /** Server as-of date (club-local) used for current-term selection */
   asOf?: string;
+  /** Last day of uninterrupted access already booked across current and queued terms. */
+  accessThrough?: string;
   membership: Membership | null;
   /** Earliest non-cancelled term starting after the as-of date (a paid renewal queued behind the current term) */
   upcomingMembership: Membership | null;
@@ -173,10 +178,21 @@ export interface QrPass {
   expiresAt: string;
 }
 
+export type ClubDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+
+export interface ClubHour {
+  day: ClubDay;
+  label: string;
+  value: string;
+  open: string | null;
+  close: string | null;
+  closed: boolean;
+}
+
 export interface Club {
   name: string;
   address: string;
   city: string;
   phone: string;
-  hours: { label: string; value: string }[];
+  hours: ClubHour[];
 }

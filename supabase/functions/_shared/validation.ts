@@ -9,7 +9,8 @@ export interface MemberInvitationInput {
   email: string;
   firstName: string;
   lastName: string;
-  phone: string | null;
+  phone: string;
+  gender: "male" | "female" | "other" | "prefer_not_to_say" | "unspecified";
   dateOfBirth: string | null;
   emergencyName: string | null;
   emergencyPhone: string | null;
@@ -165,12 +166,21 @@ function normalizePaymentMethod(value: unknown): MemberInvitationInput["paymentM
   return value as MemberInvitationInput["paymentMethod"];
 }
 
+function normalizeGender(value: unknown): MemberInvitationInput["gender"] {
+  if (value === undefined || value === null || value === "") return "unspecified";
+  if (typeof value !== "string" || !["male", "female", "other", "prefer_not_to_say"].includes(value)) {
+    throw new ApiError(400, "VALIDATION_ERROR", "Choose a valid gender option.");
+  }
+  return value as MemberInvitationInput["gender"];
+}
+
 export function parseMemberInvitationInput(body: Record<string, unknown>): MemberInvitationInput {
   assertOnlyKeys(body, [
     "email",
     "firstName",
     "lastName",
     "phone",
+    "gender",
     "dateOfBirth",
     "emergencyName",
     "emergencyPhone",
@@ -189,11 +199,16 @@ export function parseMemberInvitationInput(body: Record<string, unknown>): Membe
   if (body.membershipStartDate !== undefined && body.membershipStartDate !== null && body.membershipStartDate !== "") {
     throw new ApiError(400, "VALIDATION_ERROR", "Membership start dates are server-controlled.");
   }
+  const phone = normalizePhone(body.phone);
+  if (!phone) {
+    throw new ApiError(400, "VALIDATION_ERROR", "A valid mobile number is required.");
+  }
   return {
     email: normalizeEmail(body.email),
     firstName: normalizedText(body.firstName, "firstName", 80),
     lastName: normalizedText(body.lastName, "lastName", 80),
-    phone: normalizePhone(body.phone),
+    phone,
+    gender: normalizeGender(body.gender),
     dateOfBirth: normalizeOptionalIsoDate(body.dateOfBirth, "dateOfBirth", false),
     emergencyName: normalizeOptionalText(body.emergencyName, "emergencyName", 160),
     emergencyPhone: normalizePhone(body.emergencyPhone),

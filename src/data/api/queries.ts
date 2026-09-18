@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { requireSupabase } from '@/lib/supabase';
 import { useApp } from '@/providers/AppProvider';
-import type { Member, MembershipStatus, Notice, QrPass } from '@/data/types';
+import type { ClubHour, Member, MembershipStatus, Notice, QrPass } from '@/data/types';
 import type {
   ApiAdminPlanRow,
   ApiPlanRow,
@@ -29,6 +29,7 @@ import { mapMemberDetail, mapNoticeRow, mapPlan, mapSearchRow } from './mapper';
 import { CLUB } from '@/data/plans';
 import type { Club } from '@/data/types';
 import { newRequestId } from '@/lib/request-id';
+import { normalizeClubHours } from '@/lib/club-hours';
 
 export { newRequestId };
 
@@ -126,7 +127,7 @@ export function useClub() {
     select: (row): ClubSettings => ({
       ...CLUB,
       ...(row ?? {}),
-      hours: row?.hours ?? CLUB.hours,
+      hours: normalizeClubHours(row?.hours ?? CLUB.hours),
     }),
   });
 }
@@ -207,34 +208,12 @@ export function useMemberDetail(memberNumber?: string) {
   return useQuery({
     queryKey: ['member', memberNumber],
     queryFn: async (): Promise<Member | null> => {
-      const client = requireSupabase();
-      const wanted = memberNumber!.trim();
-      let row: ApiSearchRow | undefined;
-      for (const status of [null, 'removed'] as const) {
-        const { data: searchRows, error: searchError } = await client.rpc('search_members', {
-          p_query: wanted,
-          p_limit: 1,
-          p_offset: 0,
-          p_status: status,
-        });
-        // Backends before the lifecycle migration reject 'removed'; the
-        // member simply cannot be opened until the migration is applied.
-        if (searchError) {
-          if (status === 'removed' && searchError.code === '22023') break;
-          throw rpcError(searchError.code, searchError.message, 'The member could not be loaded.');
-        }
-        row = (searchRows as ApiSearchRow[] | null)?.find(
-          (candidate) => candidate.member_number === wanted,
-        );
-        if (row) break;
-      }
-      if (!row) return null;
-      const detail = await callRpc<ApiMemberDetail>(
-        'member_detail',
-        { p_member_id: row.member_id },
+      const detail = await callRpc<ApiMemberDetail | null>(
+        'member_detail_by_number',
+        { p_member_number: memberNumber!.trim() },
         'The member could not be loaded.',
       );
-      return mapMemberDetail(detail);
+      return detail ? mapMemberDetail(detail) : null;
     },
     enabled: Boolean(memberNumber),
   });
@@ -392,28 +371,26 @@ export function useUpdateAdminProfile() {
 export function useUpdateClub() {
   const cache = useQueryClient();
   return useMutation({
-    mutationFn: (input: {
-      name: string;
-      address: string;
-      city: string;
-      phone: string;
-      monThuHours: string;
-      friHours: string;
-      satHours: string;
-    }) =>
-      callRpc<string>(
-        'update_club_config',
-        {
-          p_name: input.name,
-          p_address: input.address,
-          p_city: input.city,
-          p_phone: input.phone,
-          p_mon_thu_hours: input.monThuHours,
-          p_fri_hours: input.friHours,
-          p_sat_hours: input.satHours,
-        },
+    mutationFn: (input: { name: string; address: string; city: string; phone: string }) =>
+      callRpc<void>(
+        'update_club_contact',
+        { p_name: input.name, p_address: input.address, p_city: input.city, p_phone: input.phone },
         'Club details could not be saved.',
       ),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ['club'] });
+    },
+  });
+}
+
+export function useUpdateClubHours() {
+  const cache = useQueryClient();
+  return useMutation({
+    mutationFn: (hours: ClubHour[]) => callRpc<void>(
+      'update_club_hours',
+      { p_hours: hours.map(({ day, open, close, closed }) => ({ day, open, close, closed })) },
+      'Gym schedule could not be saved.',
+    ),
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ['club'] });
     },
@@ -692,7 +669,7 @@ export function useUpdateMemberProfile() {
         'update_member_profile',
         {
           p_first_name: input.firstName,
-          p_phone: input.phone || null,
+          p_phone: input.phone,
           p_emergency_contact_name: input.emergencyName || null,
           p_emergency_contact_phone: input.emergencyPhone || null,
           p_national_id: input.nationalId || null,
@@ -728,7 +705,8 @@ export function useCreateMemberInvitation() {
       email: string;
       firstName: string;
       lastName: string;
-      phone?: string;
+      phone: string;
+      gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
       dateOfBirth?: string;
       emergencyName?: string;
       emergencyPhone?: string;
@@ -744,7 +722,8 @@ export function useCreateMemberInvitation() {
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
-        phone: input.phone ?? null,
+        phone: input.phone,
+        gender: input.gender,
         dateOfBirth: input.dateOfBirth ?? null,
         emergencyName: input.emergencyName ?? null,
         emergencyPhone: input.emergencyPhone ?? null,

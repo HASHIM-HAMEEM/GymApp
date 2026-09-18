@@ -6,12 +6,14 @@ import { AppBar, Body } from '@/components/Chrome';
 import { MembershipCard } from '@/components/MembershipCard';
 import { RingCard } from '@/components/RingCard';
 import { IconButton, Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
 import { Sheet } from '@/components/Overlays';
 import { useApp } from '@/providers/AppProvider';
-import { useCurrentMember, useNotices, usePlans, useQrPass, useMarkAllNoticesRead } from '@/data/api/queries';
+import { useClub, useCurrentMember, useNotices, usePlans, useQrPass, useMarkAllNoticesRead } from '@/data/api/queries';
 import { statusVisual, fmtLong, fmtTodayLabel, fmtDayName, fmtMonthDay, daysBetween, todayIso, formatMoney } from '@/data/format';
 import type { Language, TranslationKey } from '@/lib/i18n';
 import type { Notice } from '@/data/types';
+import { clubDayKey, clubHoursValue, todayClubHour } from '@/lib/club-hours';
 
 /** Wrap a card in a pressable that navigates to member overview. */
 function TapCard({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
@@ -58,9 +60,11 @@ export default function MemberHome() {
   const memberQuery = useCurrentMember();
   const noticesQuery = useNotices();
   const plansQuery = usePlans();
+  const clubQuery = useClub();
   const markAllRead = useMarkAllNoticesRead();
   const c = useColors(darkMode);
   const [clearOpen, setClearOpen] = React.useState(false);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
 
   const hasUnread = React.useMemo(() => (noticesQuery.data ?? []).some((n) => !n.read), [noticesQuery.data]);
 
@@ -79,6 +83,8 @@ export default function MemberHome() {
   const qrQuery = useQrPass(Boolean(canShowQr));
 
   const today = m?.asOf ?? todayIso();
+  const clubHours = clubQuery.data?.hours ?? [];
+  const todayHours = todayClubHour(clubHours, today);
   const latestNotice = noticesQuery.data?.[0];
   const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
   const week = React.useMemo(() => weekAround(today, language), [today, language]);
@@ -88,17 +94,19 @@ export default function MemberHome() {
 
   const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
   const price = plan?.price ?? ms?.amountDue ?? 0;
+  const accessThrough = m?.accessThrough ?? ms?.expiryDate;
+  const bookedBeyondCurrent = Boolean(ms && accessThrough && accessThrough > ms.expiryDate);
 
   const ringProgress = (() => {
-    if (!ms || !ms.startDate) return 0;
+    if (!ms || !ms.startDate || !accessThrough) return 0;
     if (ms.status === 'expired') return 0;
-    const total = daysBetween(ms.expiryDate, ms.startDate);
-    const left = daysBetween(ms.expiryDate, today);
+    const total = daysBetween(accessThrough, ms.startDate);
+    const left = daysBetween(accessThrough, today);
     if (total <= 0) return 0;
     return Math.max(0, Math.min(1, left / total));
   })();
 
-  const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, today)) : 0;
+  const daysLeft = ms && accessThrough ? Math.max(0, daysBetween(accessThrough, today)) : 0;
 
   const h = new Date().getHours();
   const greetingWord =
@@ -162,6 +170,8 @@ export default function MemberHome() {
                     ? t('member.beginsOn', { date: `\u200E${fmtLong(ms.startDate, language)}\u200E` })
                     : ms.status === 'expiring'
                     ? t('member.expiresIn', { days: `\u200E${daysLeft}\u200E` })
+                    : bookedBeyondCurrent
+                    ? t('member.accessBookedUntil', { date: `\u200E${fmtLong(accessThrough!, language)}\u200E` })
                     : t('member.renewsOn', { date: `\u200E${fmtLong(ms.expiryDate, language)}\u200E` })
                 }
                 progress={ringProgress}
@@ -172,13 +182,41 @@ export default function MemberHome() {
           <MembershipCard
             name={m ? `${m.firstName} ${m.lastName}` : t('member.apexMember')}
             plan={ms ? ms.planName.replace(/ Monthly| Annual/i, '') : t('common.noPlan')}
-            validUntil={ms ? fmtLong(ms.expiryDate, language) : undefined}
-            memberId={m?.id ?? 'MRD-····'}
+            validUntil={ms && accessThrough ? fmtLong(accessThrough, language) : undefined}
+            memberId={m?.id ?? 'APX-······'}
             variant={ms?.status === 'expiring' || ms?.status === 'due' ? 'warn' : ms?.status === 'expired' ? 'bad' : 'active'}
             href={canShowQr ? '/qr' : '/member-overview'}
             showQr={canShowQr && Boolean(qrQuery.data?.value)}
             qrValue={qrQuery.data?.value}
           />
+
+          <TapCard onPress={() => router.push('/pay')}>
+            <View style={[styles.upiShortcut, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              <View style={[styles.upiIcon, { backgroundColor: c.accentSoft }]}>
+                <Icon name="receipt" size={20} color={c.accent} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                <Text style={[styles.upiTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('upi.shortcutTitle')}</Text>
+                <Text style={[styles.upiBody, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('upi.shortcutBody')}</Text>
+              </View>
+              <Icon name={isRtl ? 'chevl' : 'chev'} size={16} color={c.ink4} />
+            </View>
+          </TapCard>
+
+          {todayHours ? (
+            <TapCard onPress={() => setScheduleOpen(true)}>
+              <View style={[styles.scheduleCard, { backgroundColor: c.bg1, borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+                <Icon name="clock" size={20} color={todayHours.closed ? c.ink3 : c.ok} />
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <Text style={[styles.upiTitle, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('schedule.today')}</Text>
+                  <Text style={[styles.upiBody, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
+                    {t(clubDayKey(todayHours.day))} · {clubHoursValue(todayHours, language, t('schedule.closed'))}
+                  </Text>
+                </View>
+                <Text style={[styles.viewSchedule, { color: c.accent, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('schedule.viewWeek')}</Text>
+              </View>
+            </TapCard>
+          ) : null}
 
           {m?.upcomingMembership ? (
             <Text style={[styles.noPlan, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
@@ -271,6 +309,23 @@ export default function MemberHome() {
       </ScrollView>
 
       <Sheet
+        visible={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        title={t('schedule.title')}
+        desc={t('schedule.memberDesc')}
+      >
+        <View style={styles.scheduleList}>
+          {clubHours.map((hour) => (
+            <View key={hour.day} style={[styles.scheduleRow, { borderColor: c.line, flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              <Text style={[styles.scheduleDay, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(clubDayKey(hour.day))}</Text>
+              <Text style={[styles.scheduleTime, { color: hour.closed ? c.ink4 : c.ink2, writingDirection: 'ltr' }]}>{clubHoursValue(hour, language, t('schedule.closed'))}</Text>
+            </View>
+          ))}
+          <Button variant="secondary" block onPress={() => setScheduleOpen(false)}>{t('common.done')}</Button>
+        </View>
+      </Sheet>
+
+      <Sheet
         visible={clearOpen}
         onClose={() => setClearOpen(false)}
         title={t('notices.clearAll')}
@@ -310,6 +365,70 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: tracking.small,
     lineHeight: 19,
+  },
+  upiShortcut: {
+    minHeight: 72,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  scheduleCard: {
+    minHeight: 64,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  viewSchedule: {
+    fontFamily: typography.fontFamily,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: tracking.small,
+  },
+  scheduleList: {
+    gap: 0,
+    marginTop: 16,
+  },
+  scheduleRow: {
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderBottomWidth: 1,
+  },
+  scheduleDay: {
+    flex: 1,
+    fontFamily: typography.fontFamily,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  scheduleTime: {
+    fontFamily: typography.mono,
+    fontSize: 13,
+    letterSpacing: tracking.small,
+  },
+  upiIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upiTitle: {
+    fontFamily: typography.fontFamily,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  upiBody: {
+    fontFamily: typography.fontFamily,
+    fontSize: 13,
+    letterSpacing: tracking.small,
+    lineHeight: 18,
   },
   week: {
     borderWidth: 1,

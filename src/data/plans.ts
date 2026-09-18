@@ -49,9 +49,13 @@ export const CLUB: Club = {
   city: '',
   phone: '',
   hours: [
-    { label: 'Mon–Thu', value: '6 AM–11 PM' },
-    { label: 'Fri', value: '7 AM–9 PM' },
-    { label: 'Sat', value: '6 AM–10 PM' },
+    { day: 'monday', label: 'Monday', value: '6:00 AM–11:00 PM', open: '06:00', close: '23:00', closed: false },
+    { day: 'tuesday', label: 'Tuesday', value: '6:00 AM–11:00 PM', open: '06:00', close: '23:00', closed: false },
+    { day: 'wednesday', label: 'Wednesday', value: '6:00 AM–11:00 PM', open: '06:00', close: '23:00', closed: false },
+    { day: 'thursday', label: 'Thursday', value: '6:00 AM–11:00 PM', open: '06:00', close: '23:00', closed: false },
+    { day: 'friday', label: 'Friday', value: '7:00 AM–9:00 PM', open: '07:00', close: '21:00', closed: false },
+    { day: 'saturday', label: 'Saturday', value: '6:00 AM–10:00 PM', open: '06:00', close: '22:00', closed: false },
+    { day: 'sunday', label: 'Sunday', value: 'Closed', open: null, close: null, closed: true },
   ],
 };
 

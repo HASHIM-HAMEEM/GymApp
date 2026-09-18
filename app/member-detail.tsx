@@ -266,6 +266,13 @@ export default function MemberDetail() {
   };
 
   const tag = ms ? membershipTag(ms) : null;
+  const genderLabels: Record<NonNullable<typeof m.gender>, TranslationKey> = {
+    male: 'gender.male',
+    female: 'gender.female',
+    other: 'gender.other',
+    prefer_not_to_say: 'gender.preferNotToSay',
+    unspecified: 'gender.unspecified',
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -311,6 +318,11 @@ export default function MemberDetail() {
                 {m.removalReason ? (
                   <Text style={[styles.inviteSub, { color: c.ink3, writingDirection: textDir }]}>
                     {t('memberDetail.removalReason', { reason: m.removalReason })}
+                  </Text>
+                ) : null}
+                {m.reenrolledAs ? (
+                  <Text style={[styles.inviteSub, { color: c.ink2, writingDirection: textDir }]}>
+                    {t('memberDetail.reenrolledBody', { memberId: `\u200E${m.reenrolledAs}\u200E` })}
                   </Text>
                 ) : null}
               </View>
@@ -420,6 +432,11 @@ export default function MemberDetail() {
             {m.phone ? (
               <KVRow label={t('memberDetail.phone')}>
                 <LtrText>{m.phone}</LtrText>
+              </KVRow>
+            ) : null}
+            {m.gender ? (
+              <KVRow label={t('memberDetail.gender')}>
+                <Text style={{ writingDirection: textDir }}>{t(genderLabels[m.gender])}</Text>
               </KVRow>
             ) : null}
             {m.dateOfBirth ? (
@@ -537,9 +554,15 @@ export default function MemberDetail() {
             <SectionLabel>{t('common.member')}</SectionLabel>
             {m.removed ? (
               <View style={[styles.actions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
-                <Button variant="secondary" size="sm" onPress={() => setRestoreOpen(true)}>
-                  {t('memberDetail.restore')}
-                </Button>
+                {m.reenrolledAs ? (
+                  <Button variant="secondary" size="sm" onPress={() => router.replace({ pathname: '/member-detail', params: { id: m.reenrolledAs! } })}>
+                    {t('memberDetail.openReenrolled')}
+                  </Button>
+                ) : (
+                  <Button variant="secondary" size="sm" onPress={() => setRestoreOpen(true)}>
+                    {t('memberDetail.restore')}
+                  </Button>
+                )}
               </View>
             ) : (
             <View style={[styles.actions, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>

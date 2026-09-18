@@ -43,7 +43,26 @@ Deno.serve((request) =>
     }
 
     const authUserId = typeof row.auth_user_id === "string" ? row.auth_user_id : null;
+    const invitationId = typeof row.invitation_id === "string" ? row.invitation_id : null;
     const oldEmail = typeof row.old_email === "string" ? row.old_email : null;
+    if (invitationId) {
+      const { data: removedUsers, error: prepareError } = await context.service.rpc("prepare_removed_member_reenrolment", {
+        p_invitation_id: invitationId,
+      });
+      if (prepareError) {
+        if (oldEmail) await context.caller.rpc("update_member_email", { p_member_id: body.memberId, p_email: oldEmail });
+        throw new ApiError(500, "REENROLMENT_PREPARE_FAILED", "The previous removed account could not be retired.");
+      }
+      for (const removed of Array.isArray(removedUsers) ? removedUsers : []) {
+        const id = isRecord(removed) && typeof removed.auth_user_id === "string" ? removed.auth_user_id : null;
+        if (!id) continue;
+        const { error: deleteError } = await context.service.auth.admin.deleteUser(id);
+        if (deleteError) {
+          if (oldEmail) await context.caller.rpc("update_member_email", { p_member_id: body.memberId, p_email: oldEmail });
+          throw new ApiError(502, "REENROLMENT_PREPARE_FAILED", "The previous removed account could not be retired. Try again.");
+        }
+      }
+    }
     if (authUserId) {
       const { error: authError } = await context.service.auth.admin.updateUserById(authUserId, { email });
       if (authError) {

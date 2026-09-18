@@ -27,7 +27,14 @@ export type ApiClubRow = {
   phone: string;
   timezone: string;
   currency: string;
-  hours: { label: string; value: string }[] | null;
+  hours: {
+    day?: string;
+    label?: string;
+    value?: string;
+    open?: string | null;
+    close?: string | null;
+    closed?: boolean;
+  }[] | null;
 };
 
 export type ApiMembershipDetail = {
@@ -96,6 +103,8 @@ export type ApiMemberDetail = {
   last_name: string;
   email: string;
   phone: string | null;
+  gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say' | 'unspecified';
+  reenrolled_as_member_number?: string | null;
   date_of_birth: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
@@ -108,6 +117,8 @@ export type ApiMemberDetail = {
   created_at: string;
   /** Server as-of date in the club's timezone */
   as_of: string;
+  /** Last day covered by all non-cancelled current/queued terms. */
+  access_through?: string | null;
   invitation: ApiInvitationDetail;
   memberships: ApiMembershipDetail[];
   payments: ApiPaymentDetail[];

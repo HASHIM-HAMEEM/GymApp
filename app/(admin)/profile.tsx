@@ -12,10 +12,9 @@ import { DeveloperCredit, PreferencesGroup, SettingsRow } from '@/components/Set
 import { Field, Control } from '@/components/Field';
 import { Banner } from '@/components/Surfaces';
 import { useApp } from '@/providers/AppProvider';
-import { useClub, useUpdateAdminProfile, useUpdateClub } from '@/data/api/queries';
+import { useClub, useUpdateAdminProfile, useUpdateClub, useUpdateClubHours } from '@/data/api/queries';
 import { ApiCallError } from '@/data/api/queries';
-
-type ClubHours = { label: string; value: string };
+import { ClubScheduleSheet } from '@/components/ClubScheduleSheet';
 
 export default function AdminProfile() {
   const router = useRouter();
@@ -23,11 +22,13 @@ export default function AdminProfile() {
   const clubQuery = useClub();
   const updateAdminProfile = useUpdateAdminProfile();
   const updateClub = useUpdateClub();
+  const updateClubHours = useUpdateClubHours();
   const c = useColors(darkMode);
   const club = clubQuery.data ?? { name: '', address: '', city: '', phone: '', hours: [] };
 
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [clubOpen, setClubOpen] = React.useState(false);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
   const [signingOut, setSigningOut] = React.useState(false);
 
   const handleSignOut = async () => {
@@ -70,7 +71,12 @@ export default function AdminProfile() {
                 <SettingsRow icon="pin" label={t('settings.reception')} value={t('settings.desk', { desk: profile?.reception ?? 'A' })} onPress={() => setAccountOpen(true)} />
               </>
             )}
-            clubRows={<SettingsRow icon="pin" label={t('settings.clubDetails')} value={club.name} onPress={() => setClubOpen(true)} />}
+            clubRows={(
+              <>
+                <SettingsRow icon="pin" label={t('settings.clubDetails')} value={club.name} onPress={() => setClubOpen(true)} />
+                <SettingsRow icon="clock" label={t('settings.gymSchedule')} value={t('schedule.sevenDay')} onPress={() => setScheduleOpen(true)} />
+              </>
+            )}
             onPlans={() => router.push('/plans')}
             onPaymentSetup={() => router.push('/payment-settings')}
             onExport={() => router.push('/exports')}
@@ -102,7 +108,6 @@ export default function AdminProfile() {
         visible={clubOpen}
         onClose={() => setClubOpen(false)}
         club={club}
-        hours={club.hours}
         saving={updateClub.isPending}
         onSave={async (details) => {
           try {
@@ -111,6 +116,17 @@ export default function AdminProfile() {
           } catch {
             /* banner shown inside sheet */
           }
+        }}
+      />
+
+      <ClubScheduleSheet
+        visible={scheduleOpen}
+        hours={club.hours}
+        saving={updateClubHours.isPending}
+        onClose={() => setScheduleOpen(false)}
+        onSave={async (hours) => {
+          await updateClubHours.mutateAsync(hours);
+          setScheduleOpen(false);
         }}
       />
 
@@ -198,24 +214,14 @@ function ClubSheet({
   visible,
   onClose,
   club,
-  hours,
   saving,
   onSave,
 }: {
   visible: boolean;
   onClose: () => void;
   club: { name: string; address: string; city: string; phone: string };
-  hours: ClubHours[];
   saving: boolean;
-  onSave: (details: {
-    name: string;
-    address: string;
-    city: string;
-    phone: string;
-    monThuHours: string;
-    friHours: string;
-    satHours: string;
-  }) => Promise<void>;
+  onSave: (details: { name: string; address: string; city: string; phone: string }) => Promise<void>;
 }) {
   const { darkMode } = useApp();
   const c = useColors(darkMode);
@@ -223,9 +229,6 @@ function ClubSheet({
   const [address, setAddress] = React.useState(club.address);
   const [city, setCity] = React.useState(club.city);
   const [phone, setPhone] = React.useState(club.phone);
-  const [monThu, setMonThu] = React.useState(hours[0]?.value ?? '');
-  const [fri, setFri] = React.useState(hours[1]?.value ?? '');
-  const [sat, setSat] = React.useState(hours[2]?.value ?? '');
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -234,12 +237,9 @@ function ClubSheet({
       setAddress(club.address);
       setCity(club.city);
       setPhone(club.phone);
-      setMonThu(hours[0]?.value ?? '');
-      setFri(hours[1]?.value ?? '');
-      setSat(hours[2]?.value ?? '');
       setError(null);
     }
-  }, [visible, club.name, club.address, club.city, club.phone, hours]);
+  }, [visible, club.name, club.address, club.city, club.phone]);
 
   const save = async () => {
     let bad: string | null = null;
@@ -247,7 +247,6 @@ function ClubSheet({
     else if (!address.trim()) bad = 'Club address is required.';
     else if (!city.trim()) bad = 'City is required.';
     else if (phone.replace(/\D/g, '').length < 7) bad = 'Enter a valid club phone number.';
-    else if (!monThu.trim() || !fri.trim() || !sat.trim()) bad = 'Fill in all three opening-hours entries.';
     if (bad) {
       setError(bad);
       return;
@@ -258,9 +257,6 @@ function ClubSheet({
       address: address.trim(),
       city: city.trim(),
       phone: phone.trim(),
-      monThuHours: monThu.trim(),
-      friHours: fri.trim(),
-      satHours: sat.trim(),
     });
   };
 
@@ -284,13 +280,6 @@ function ClubSheet({
         </Field>
         <Field label="Front desk phone" hint="Members see this on notices and membership screens.">
           <Control value={phone} onChangeText={setPhone} inputMode="tel" placeholder="+91 22 2619 4400" />
-        </Field>
-        <Field label="Opening hours" hint="One entry per line: Mon–Thu, Fri, Sat.">
-          <Control value={monThu} onChangeText={setMonThu} placeholder="Mon–Thu · e.g. 6 AM–11 PM" />
-          <View style={{ height: 10 }} />
-          <Control value={fri} onChangeText={setFri} placeholder="Fri · e.g. 7 AM–9 PM" />
-          <View style={{ height: 10 }} />
-          <Control value={sat} onChangeText={setSat} placeholder="Sat · e.g. 6 AM–10 PM" />
         </Field>
         <Button block loading={saving} onPress={save}>Save Changes</Button>
         <Button variant="quiet" block onPress={onClose}>Cancel</Button>

@@ -16,9 +16,11 @@ import { useApp } from '@/providers/AppProvider';
 import { formatAadhaar, isValidAadhaar, normalizeAadhaar } from '@/lib/aadhaar';
 import { FormScroll } from '@/components/FormScroll';
 import { DateField } from '@/components/DateField';
+import { Chip } from '@/components/Overlays';
 import type { FormScrollRef } from '@/components/FormScroll';
 
 type PaymentMethod = DeskPaymentMethod | 'complimentary';
+type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
 /** Normalize a phone entry to international format with the club's +91 default. */
 function indiaPhone(value: string): string | undefined {
@@ -57,6 +59,7 @@ export default function MemberNew() {
   const [lastName, setLastName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [phone, setPhone] = React.useState('');
+  const [gender, setGender] = React.useState<Gender | ''>('');
   const [dateOfBirth, setDateOfBirth] = React.useState('');
   const [emName, setEmName] = React.useState('');
   const [emPhone, setEmPhone] = React.useState('');
@@ -97,6 +100,12 @@ export default function MemberNew() {
     upi: t('payment.upi'),
     complimentary: t('payment.complimentaryShort'),
   };
+  const genders: { value: Gender; label: string }[] = [
+    { value: 'male', label: t('gender.male') },
+    { value: 'female', label: t('gender.female') },
+    { value: 'other', label: t('gender.other') },
+    { value: 'prefer_not_to_say', label: t('gender.preferNotToSay') },
+  ];
 
   if (created) {
     return (
@@ -139,7 +148,8 @@ export default function MemberNew() {
     let invalidField = '';
     if (!firstName.trim() || !lastName.trim()) { bad = t('memberNew.nameRequired'); invalidField = !firstName.trim() ? 'firstName' : 'lastName'; }
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { bad = t('memberNew.emailInvalid'); invalidField = 'email'; }
-    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) { bad = t('memberNew.phoneInvalid'); invalidField = 'phone'; }
+    else if (phone.replace(/\D/g, '').length < 10) { bad = t('memberNew.phoneRequired'); invalidField = 'phone'; }
+    else if (!gender) { bad = t('memberNew.genderRequired'); invalidField = 'gender'; }
     else if (dateOfBirth.trim() && !isValidPastOrTodayIso(dateOfBirth.trim())) { bad = t('memberNew.birthDateInvalid'); invalidField = 'dateOfBirth'; }
     else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) { bad = t('memberNew.emergencyBoth'); invalidField = !emName.trim() ? 'emergencyName' : 'emergencyPhone'; }
     else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) { bad = t('memberNew.emergencyPhoneInvalid'); invalidField = 'emergencyPhone'; }
@@ -155,6 +165,7 @@ export default function MemberNew() {
     }
     if (bad) {
       showFieldError(invalidField, bad);
+      if (invalidField === 'gender') setFormError(bad);
       return;
     }
 
@@ -165,7 +176,8 @@ export default function MemberNew() {
         email: email.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        phone: indiaPhone(phone),
+        phone: indiaPhone(phone)!,
+        gender: gender as Gender,
         dateOfBirth: dateOfBirth.trim() || undefined,
         emergencyName: emName.trim() || undefined,
         emergencyPhone: indiaPhone(emPhone),
@@ -231,7 +243,7 @@ export default function MemberNew() {
             />
           </Field>
 
-          <Field label={t('memberNew.phoneOptional')} hint={t('memberNew.phoneHint')} error={fieldErrors.phone}>
+          <Field label={t('memberNew.phone')} hint={t('memberNew.phoneHint')} error={fieldErrors.phone}>
             <Control
               value={phone}
               ref={fieldRefs.phone}
@@ -247,6 +259,20 @@ export default function MemberNew() {
               returnKeyType="next"
               onSubmitEditing={() => formRef.current?.focusField('dateOfBirth')}
             />
+          </Field>
+
+          <Field label={t('memberNew.gender')} hint={t('memberNew.genderHint')} error={fieldErrors.gender}>
+            <View style={[styles.genderRow, { flexDirection: isRtl ? 'row-reverse' : 'row' }]}>
+              {genders.map((option) => (
+                <Chip
+                  key={option.value}
+                  on={gender === option.value}
+                  onPress={() => { setGender(option.value); setFieldErrors((current) => ({ ...current, gender: '' })); }}
+                >
+                  {option.label}
+                </Chip>
+              ))}
+            </View>
           </Field>
 
           <Field label={t('memberNew.birthDateOptional')} hint={t('common.dateFormatHint')} error={fieldErrors.dateOfBirth}>
@@ -398,6 +424,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  genderRow: {
+    flexWrap: 'wrap',
+    gap: 8,
   },
   planCard: {
     flexDirection: 'row',

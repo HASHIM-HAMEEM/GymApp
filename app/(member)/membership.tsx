@@ -85,10 +85,12 @@ export default function MembershipScreen() {
   }
 
   const vis = statusVisual(ms.status, ms, c, language);
-  const tl = timelineFill(ms.startDate, ms.expiryDate);
-  const total = daysBetween(ms.expiryDate, ms.startDate);
+  const accessThrough = m?.accessThrough ?? ms.expiryDate;
+  const bookedBeyondCurrent = accessThrough > ms.expiryDate;
+  const tl = timelineFill(ms.startDate, accessThrough);
+  const total = daysBetween(accessThrough, ms.startDate);
   const today = m?.asOf ?? todayIso();
-  const left = Math.max(0, daysBetween(ms.expiryDate, today));
+  const left = Math.max(0, daysBetween(accessThrough, today));
   const progress = total > 0 ? Math.max(0, Math.min(1, left / total)) : 0;
   const ringValue = String(left);
   const showTimeline = ms.status === 'active' || ms.status === 'expiring' || ms.status === 'upcoming';
@@ -111,7 +113,9 @@ export default function MembershipScreen() {
             variant={vis.dotVariant}
             tag={{ label: vis.tagLabel, variant: vis.tagVariant }}
             title={ms.planName}
-            subtitle={subtitleFor(ms.status, plan?.price, ms.amountDue, ms.currency ?? plan?.currency, ms.expiryDate, language, t)}
+            subtitle={bookedBeyondCurrent && (ms.status === 'active' || ms.status === 'expiring')
+              ? t('member.accessBookedUntil', { date: `\u200E${fmtLong(accessThrough, language)}\u200E` })
+              : subtitleFor(ms.status, plan?.price, ms.amountDue, ms.currency ?? plan?.currency, ms.expiryDate, language, t)}
             progress={progress}
           >
             {showTimeline ? (
@@ -120,7 +124,7 @@ export default function MembershipScreen() {
                 fillColor={vis.fillColor}
                 l1={[t('membership.timelineStart'), fmtShort(ms.startDate, language)]}
                 l2={[t('membership.timelineToday'), fmtShort(today, language)]}
-                l3={[t('membership.timelineEnds'), fmtShort(ms.expiryDate, language)]}
+                l3={[t('membership.timelineEnds'), fmtShort(accessThrough, language)]}
               />
             ) : null}
           </RingCard>
@@ -153,7 +157,7 @@ export default function MembershipScreen() {
             ) : (
               <>
                 <KVRow icon="cal" label={t('membership.started')}><LtrText>{fmtLong(ms.startDate, language)}</LtrText></KVRow>
-                <KVRow icon="cal" label={t('membership.validUntilLabel')}><LtrText>{fmtLong(ms.expiryDate, language)}</LtrText></KVRow>
+                <KVRow icon="cal" label={bookedBeyondCurrent ? t('membership.accessBookedThrough') : t('membership.validUntilLabel')}><LtrText>{fmtLong(accessThrough, language)}</LtrText></KVRow>
                 <KVRow icon="receipt" label={t('membership.lastPayment')}>
                   {ms.payment
                     ? t('membership.paymentDetails', {

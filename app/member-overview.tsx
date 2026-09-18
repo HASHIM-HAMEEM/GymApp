@@ -73,7 +73,8 @@ export default function MemberOverview() {
 
   const today = m.asOf ?? todayIso();
   const vis = ms ? statusVisual(ms.status, ms, c, language) : null;
-  const daysLeft = ms ? Math.max(0, daysBetween(ms.expiryDate, today)) : 0;
+  const accessThrough = m.accessThrough ?? ms?.expiryDate;
+  const daysLeft = ms && accessThrough ? Math.max(0, daysBetween(accessThrough, today)) : 0;
   const plan = ms && plansQuery.data ? plansQuery.data.find((p) => p.id === ms.planId) : undefined;
 
   return (
@@ -135,8 +136,8 @@ export default function MemberOverview() {
                 <KVRow icon="cal" label={t('memberDetail.start')}>
                   <LtrText>{fmtLong(ms.startDate, language)}</LtrText>
                 </KVRow>
-                <KVRow icon="cal" label={t('memberDetail.expiry')}>
-                  <LtrText>{fmtLong(ms.expiryDate, language)}</LtrText>
+                <KVRow icon="cal" label={accessThrough && accessThrough > ms.expiryDate ? t('membership.accessBookedThrough') : t('memberDetail.expiry')}>
+                  <LtrText>{fmtLong(accessThrough ?? ms.expiryDate, language)}</LtrText>
                 </KVRow>
                 <KVRow icon="clock" label={t('member.daysLeft')}>
                   <LtrText style={{ color: vis?.dotVariant === 'bad' ? c.bad : vis?.dotVariant === 'warn' ? c.warn : c.ink }}>

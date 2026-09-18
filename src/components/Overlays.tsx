@@ -61,7 +61,7 @@ export function Sheet({ visible, onClose, title, desc, children }: SheetProps) {
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}>
       <Animated.View
         style={[sheetStyles.scrimColor, { opacity: transition, pointerEvents: 'none' }]}
       />

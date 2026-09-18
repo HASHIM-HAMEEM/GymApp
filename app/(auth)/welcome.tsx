@@ -28,6 +28,7 @@ import { typography, useColors } from '@/theme/tokens';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { WelcomeArtwork } from '@/components/WelcomeArtwork';
 import { LaunchBrand } from '@/components/LaunchBrand';
+import { clubDayKey, clubHoursValue } from '@/lib/club-hours';
 
 
 const STARS = [
@@ -162,7 +163,7 @@ export default function Welcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height, fontScale } = useWindowDimensions();
-  const { darkMode, t, isRtl } = useApp();
+  const { darkMode, t, isRtl, language } = useApp();
   const c = useColors(darkMode);
   const clubQuery = useClub();
   const reducedMotion = useReducedMotion();
@@ -338,8 +339,8 @@ export default function Welcome() {
                 <Text style={[styles.clubCardLabel, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t('welcome.hoursLabel')}</Text>
                 {club.hours.map((h, i) => (
                   <View key={i} style={{ flexDirection: isRtl ? 'row-reverse' : 'row', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-                    <Text selectable style={[styles.infoLine, { color: c.ink3, minWidth: 64, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{h.label}</Text>
-                    <Text selectable style={[styles.infoLine, { color: c.ink2, flex: 1, minWidth: 120, textAlign: isRtl ? 'left' : 'right', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{h.value}</Text>
+                    <Text selectable style={[styles.infoLine, { color: c.ink3, minWidth: 64, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{t(clubDayKey(h.day))}</Text>
+                    <Text selectable style={[styles.infoLine, { color: c.ink2, flex: 1, minWidth: 120, textAlign: isRtl ? 'left' : 'right', writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{clubHoursValue(h, language, t('schedule.closed'))}</Text>
                   </View>
                 ))}
               </View>

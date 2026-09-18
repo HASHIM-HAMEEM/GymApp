@@ -17,7 +17,7 @@ export interface ClaimedInvitation {
 
 export type InvitationLinkState = "linked" | "unlinked" | "unknown";
 
-const MEMBER_NUMBER_PATTERN = /^MRD-[0-9]{4}$/;
+const MEMBER_NUMBER_PATTERN = /^(?:MRD-[0-9]{4}|APX-[0-9]{6})$/;
 
 function resultRow(data: unknown): Record<string, unknown> | null {
   if (isRecord(data)) return data;
@@ -63,7 +63,8 @@ export async function createMemberInvitation(
     p_last_name: input.lastName,
     p_email: input.email,
   };
-  if (input.phone !== null) args.p_phone = input.phone;
+  args.p_phone = input.phone;
+  args.p_gender = input.gender;
   if (input.dateOfBirth !== null) args.p_date_of_birth = input.dateOfBirth;
   if (input.emergencyName !== null) args.p_emergency_contact_name = input.emergencyName;
   if (input.emergencyPhone !== null) args.p_emergency_contact_phone = input.emergencyPhone;

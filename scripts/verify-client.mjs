@@ -238,7 +238,7 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   const detailSource = fs.readFileSync(path.join(root, 'app/member-detail.tsx'), 'utf8');
   check('member search supports the removed filter', queriesSource.includes("p_status: status === 'all' ? null : status") && queriesSource.includes("| 'removed'"));
   check('removed members hidden from normal search results', queriesSource.includes("row.membership_status !== 'removed'"));
-  check('member detail search falls back to the removed filter', queriesSource.includes("'removed' as const") || queriesSource.includes("[null, 'removed']"));
+  check('member detail opens active or removed members in one rpc', queriesSource.includes("'member_detail_by_number'") && !queriesSource.includes("[null, 'removed']"));
   check('restore member mutation exists', queriesSource.includes("callRpc<void>('restore_member'"));
   check('mapper preserves removed flag on detail and search rows', mapperSource.includes('removed: Boolean(detail.removed_at)') && mapperSource.includes("row.membership_status === 'removed'"));
   check('member detail renders the removed state and restore action', detailSource.includes('memberDetail.removedTitle') && detailSource.includes('handleRestore'));
@@ -295,6 +295,13 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   check('mapper picks the covering term as current', mapped.membership?.startDate === '2026-09-12');
   check('mapper surfaces the queued renewal as upcoming', mapped.upcomingMembership?.startDate === '2026-10-12');
   check('mapper keeps the full payment ledger newest-first', mapped.payments.length === 2 && mapped.payments[0].receiptNumber === 'MRD-R-2026-000033');
+  check('mapper extends access through contiguous queued renewals', mapped.accessThrough === '2026-11-11');
+  const renewedNearEnd = mapper.mapMemberDetail({
+    ...detail,
+    as_of: '2026-10-08',
+    memberships: [term('ms-1', '2026-09-12', '2026-10-11', 'expiring'), term('ms-2', '2026-10-12', '2026-11-11', 'upcoming')],
+  });
+  check('queued renewal prevents a false expiring status', renewedNearEnd.membership?.status === 'active');
 
   const queriesSource = fs.readFileSync(path.join(root, 'src/data/api/queries.ts'), 'utf8');
   const editProfileSource = fs.readFileSync(path.join(root, 'app/edit-profile.tsx'), 'utf8');
@@ -404,6 +411,37 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
 }
 
 {
+  const memberNew = fs.readFileSync(path.join(root, 'app/member-new.tsx'), 'utf8');
+  const memberDetail = fs.readFileSync(path.join(root, 'app/member-detail.tsx'), 'utf8');
+  const invitations = fs.readFileSync(path.join(root, 'supabase/functions/_shared/invitations.ts'), 'utf8');
+  const validation = fs.readFileSync(path.join(root, 'supabase/functions/_shared/validation.ts'), 'utf8');
+  const database = fs.readFileSync(path.join(root, 'supabase/functions/_shared/database.ts'), 'utf8');
+  const home = fs.readFileSync(path.join(root, 'app/(member)/home.tsx'), 'utf8');
+  const pay = fs.readFileSync(path.join(root, 'app/pay.tsx'), 'utf8');
+  const renew = fs.readFileSync(path.join(root, 'app/renew.tsx'), 'utf8');
+  const overlays = fs.readFileSync(path.join(root, 'src/components/Overlays.tsx'), 'utf8');
+  const scheduleSheet = fs.readFileSync(path.join(root, 'src/components/ClubScheduleSheet.tsx'), 'utf8');
+  const hours = runModule('src/lib/club-hours.ts', {});
+  const schedule = hours.normalizeClubHours(null);
+
+  check('member registration requires phone and gender in the UI', memberNew.includes("phone.replace(/\\D/g, '').length < 10") && memberNew.includes('!gender') && memberNew.includes("t('memberNew.gender')"));
+  check('edge registration requires phone and validates gender', validation.includes('A valid mobile number is required') && validation.includes('normalizeGender(body.gender)'));
+  check('new member and receipt identifiers use APX prefixes', database.includes('APX-[0-9]{6}') && fs.readFileSync(path.join(root, 'supabase/migrations/20260918020000_fresh_reenrolment_registration_identity.sql'), 'utf8').includes("select 'APX-R-'"));
+  check('removed identity is retired before a fresh invitation', invitations.includes('prepare_removed_member_reenrolment') && invitations.indexOf('retireRemovedMemberAccounts(context, request)') < invitations.indexOf('getExpectedAuthUser(context, request)'));
+  check('removed history links to the fresh profile instead of restore', memberDetail.includes('memberDetail.reenrolledBody') && memberDetail.includes('memberDetail.openReenrolled'));
+  check('invitation email includes the Android download link', invitations.includes('APP_DOWNLOAD_URL') && invitations.includes('Download the Apex Android app'));
+  check('member home exposes UPI QR and native-app payment flow', home.includes("router.push('/pay')") && pay.includes('QRCode') && pay.includes('Linking.openURL(uri)') && pay.includes('upi://pay'));
+  check('renewal keeps one idempotency key for unchanged inputs', renew.includes('const requestId = React.useMemo') && renew.includes('requestId,') && renew.includes('[m?.databaseId, plan?.id, customPrice, priceNote, payMethod]'));
+  check('queued renewals extend the displayed access-through date', home.includes('m?.accessThrough ?? ms?.expiryDate') && home.includes('member.accessBookedUntil'));
+  const qrScreen = fs.readFileSync(path.join(root, 'app/qr.tsx'), 'utf8');
+  check('live QR card shows the full booked-through date', qrScreen.includes('m?.accessThrough ?? ms.expiryDate'));
+  check('freeze sheets avoid the Android keyboard', overlays.includes("Platform.OS === 'android' ? 'height'"));
+  check('weekly schedule defaults to seven ordered days', schedule.length === 7 && schedule[0].day === 'monday' && schedule[6].day === 'sunday');
+  check('weekly schedule picks the correct club-local day', hours.todayClubHour(schedule, '2026-09-18')?.day === 'friday');
+  check('admin schedule uses auto-formatted HH:MM controls', scheduleSheet.includes('clockInput(value)') && scheduleSheet.includes("t('schedule.invalidTime'"));
+}
+
+{
   // Performance guardrails from the scan: no N+1 awaits in cron jobs, no O(n²)
   // grouping in exports, bounded notice polling, memoized hot-screen work.
   const receipts = fs.readFileSync(path.join(root, 'supabase/functions/process-push-receipts/index.ts'), 'utf8');
@@ -413,14 +451,35 @@ const supabaseMod = runModule('src/lib/supabase.ts', {
   const homeSource = fs.readFileSync(path.join(root, 'app/(member)/home.tsx'), 'utf8');
   const visitsSource = fs.readFileSync(path.join(root, 'app/(member)/visits.tsx'), 'utf8');
   const mapperSource = fs.readFileSync(path.join(root, 'src/data/api/mapper.ts'), 'utf8');
-  check('push receipts are reconciled with bounded concurrency', receipts.includes('mapWithConcurrency(receipts, RPC_CONCURRENCY') && !/for \(const receipt of receipts\) \{\s*if \(await retryOrExpire/.test(receipts));
+  const membersSource = fs.readFileSync(path.join(root, 'app/(admin)/members.tsx'), 'utf8');
+  const detailSource = fs.readFileSync(path.join(root, 'app/member-detail.tsx'), 'utf8');
+  const csv = runModule('src/lib/csv.ts', {});
+  const concurrency = runModule('supabase/functions/_shared/concurrency.ts', {});
+  let activeWorkers = 0;
+  let maxWorkers = 0;
+  const concurrentResults = await concurrency.mapWithConcurrency([30, 5, 15, 1], 2, async (delay, index) => {
+    activeWorkers += 1;
+    maxWorkers = Math.max(maxWorkers, activeWorkers);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    activeWorkers -= 1;
+    return index;
+  });
+  check('bounded concurrency preserves order and respects its limit', maxWorkers === 2 && concurrentResults.join(',') === '0,1,2,3');
+  check('push receipts are reconciled in one bulk rpc', receipts.includes("service.rpc(\"apply_push_receipt_updates\"") && !receipts.includes('update_push_receipt_status') && !receipts.includes('bump_push_receipt_attempt'));
   check('expiry reminders are sent with bounded concurrency', reminders.includes('mapWithConcurrency(') && !reminders.includes('for (const reminder of'));
   check('export grouping appends in place', !exportsSource.includes('[...(termsByMember.get(key)') && exportsSource.includes('list.push(row)'));
   check('notice polling is bounded and not stale-zero', queriesSource.includes('staleTime: 15_000') && queriesSource.includes('const maxPages = asAdmin ? NOTICE_MAX_PAGES : 1'));
   check('member home memoizes week and visit lookups', homeSource.includes('const visitDates = React.useMemo') && homeSource.includes('visitDates.has(wd.iso)') && !homeSource.includes('m.visits.some((v) => v.date === wd.iso)'));
   check('visits list is memoized', visitsSource.includes('const filtered = React.useMemo'));
   check('payment ledger maps memberships by id', mapperSource.includes('const termsById = new Map(') && !mapperSource.includes('detail.memberships.find((candidate) => candidate.id === row.membership_id)'));
-  const runtimeExports = runModule('src/data/api/exports.ts', { '@/lib/supabase': { requireSupabase: () => ({}) }, '@/lib/csv': { toCsv: (rows) => rows }, '@/data/format': { fmtShort: (v) => v } });
+  check('admin member results use a virtualized FlatList', membersSource.includes('<FlatList') && !membersSource.includes('{members.map('));
+  check('member visits use a virtualized FlatList', visitsSource.includes('<FlatList') && !visitsSource.includes('{filtered.map('));
+  check('member detail payment rendering is bounded', detailSource.includes('m.payments.slice(0, 12)') && detailSource.includes('m.payments.length > 12'));
+  check('member detail resolves directly by number', queriesSource.includes("'member_detail_by_number'") && !/for \(const status of \[null, 'removed'\]/.test(queriesSource));
+  const csvRows = [['normal', 12], ['=2+2', 'a"b'], ['-1', null]];
+  const expectedCsv = '\uFEFF"h1","h2"\r\n"normal","12"\r\n"\'=2+2","a""b"\r\n"\'-1",""\r\n';
+  check('chunked csv output is byte-identical and formula-safe', Array.from(csv.toCsvChunks(['h1', 'h2'], csvRows, 1)).join('') === expectedCsv && csv.toCsv(['h1', 'h2'], csvRows) === expectedCsv);
+  const runtimeExports = runModule('src/data/api/exports.ts', { '@/lib/supabase': { requireSupabase: () => ({}) }, '@/lib/csv': { toCsvChunks: (headers, rows) => [headers, rows] } });
   check('exports module still loads', typeof runtimeExports === 'object');
 }
 

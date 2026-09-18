@@ -1,6 +1,5 @@
 import { ApiError, handlePost, successResponse } from "../_shared/http.ts";
 import { createClient, type SupabaseClient } from "../_shared/deps.ts";
-import { mapWithConcurrency } from "../_shared/concurrency.ts";
 
 interface PendingReceipt {
   id: string;
@@ -14,6 +13,20 @@ interface ExpoReceiptResult {
   status?: string;
   message?: string;
   details?: { error?: string };
+}
+
+interface ReceiptUpdate {
+  receipt_id: string;
+  action: "delivered" | "failed" | "unknown" | "retry";
+  error_code?: string;
+  error_message?: string | null;
+}
+
+interface UpdateCounts {
+  delivered: number;
+  failed: number;
+  unknown: number;
+  retried: number;
 }
 
 const MAX_ATTEMPTS = 3;
@@ -41,20 +54,29 @@ function serviceClient(key: string, url: string): SupabaseClient {
   });
 }
 
-const RPC_CONCURRENCY = 8;
+function retryUpdate(receipt: PendingReceipt): ReceiptUpdate {
+  return receipt.attempts >= 5
+    ? {
+        receipt_id: receipt.id,
+        action: "unknown",
+        error_code: "RECEIPT_NOT_AVAILABLE",
+        error_message: "Expo did not return a final receipt after repeated checks.",
+      }
+    : { receipt_id: receipt.id, action: "retry" };
+}
 
-async function retryOrExpire(service: SupabaseClient, receipt: PendingReceipt): Promise<boolean> {
-  if (receipt.attempts >= 5) {
-    const { error } = await service.rpc("update_push_receipt_status", {
-      p_receipt_id: receipt.id,
-      p_status: "unknown",
-      p_error_code: "RECEIPT_NOT_AVAILABLE",
-      p_error_message: "Expo did not return a final receipt after repeated checks.",
-    });
-    return !error;
+async function applyUpdates(service: SupabaseClient, updates: ReceiptUpdate[]): Promise<UpdateCounts> {
+  const { data, error } = await service.rpc("apply_push_receipt_updates", { p_updates: updates });
+  if (error) {
+    throw new ApiError(500, "RECEIPT_UPDATE_FAILED", "Push receipt results could not be saved.");
   }
-  await service.rpc("bump_push_receipt_attempt", { p_receipt_id: receipt.id });
-  return false;
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    delivered: Number(row?.delivered ?? 0),
+    failed: Number(row?.failed ?? 0),
+    unknown: Number(row?.unknown ?? 0),
+    retried: Number(row?.retried ?? 0),
+  };
 }
 
 async function fetchWithRetry(
@@ -127,70 +149,51 @@ Deno.serve((request) =>
       return successResponse({ processed: 0, delivered: 0, failed: 0, unknown: 0, retried: 0 });
     }
 
-    const ticketIds = receipts.map((r) => r.expo_ticket_id).filter(Boolean) as string[];
+    const ticketIds = receipts.map((receipt) => receipt.expo_ticket_id).filter(Boolean);
     const result = await fetchWithRetry(ticketIds, 1);
 
     if (!result.ok) {
-      const outcomes = await mapWithConcurrency(receipts, RPC_CONCURRENCY, (receipt) => retryOrExpire(service, receipt));
-      const unknown = outcomes.filter((ok) => ok === true).length;
+      const counts = await applyUpdates(service, receipts.map(retryUpdate));
       return successResponse({
-        processed: unknown,
+        processed: counts.unknown,
         delivered: 0,
         failed: 0,
-        unknown,
-        retried: receipts.length - unknown,
+        unknown: counts.unknown,
+        retried: receipts.length - counts.unknown,
         error: `Expo receipt service returned ${result.status}`,
       });
     }
 
     const receiptResults = result.data ?? {};
     const invalidTokens: string[] = [];
-    type Outcome = "delivered" | "failed" | "unknown" | "retried" | "skipped";
-
-    // Same per-receipt decision as before; only the execution is parallel
-    // (bounded), so a 1000-receipt run is ~1000/RPC_CONCURRENCY round trips.
-    const outcomes = await mapWithConcurrency(receipts, RPC_CONCURRENCY, async (receipt): Promise<Outcome> => {
+    const updates = receipts.map((receipt): ReceiptUpdate => {
       const expoReceipt = receiptResults[receipt.expo_ticket_id];
-      if (!expoReceipt) {
-        return (await retryOrExpire(service, receipt)) ? "unknown" : "retried";
-      }
+      if (!expoReceipt) return retryUpdate(receipt);
       if (expoReceipt.status === "ok") {
-        const { error } = await service.rpc("update_push_receipt_status", {
-          p_receipt_id: receipt.id,
-          p_status: "delivered",
-        });
-        return error ? "skipped" : "delivered";
+        return { receipt_id: receipt.id, action: "delivered" };
       }
       const errorCode = expoReceipt.details?.error ?? "EXPO_RECEIPT_ERROR";
-      if (TERMINAL_ERRORS.has(errorCode)) {
-        const { error } = await service.rpc("update_push_receipt_status", {
-          p_receipt_id: receipt.id,
-          p_status: "failed",
-          p_error_code: errorCode,
-          p_error_message: expoReceipt.message ?? null,
-        });
-        if (errorCode === "DeviceNotRegistered") invalidTokens.push(receipt.expo_push_token);
-        return error ? "skipped" : "failed";
-      }
-      return (await retryOrExpire(service, receipt)) ? "unknown" : "retried";
+      if (!TERMINAL_ERRORS.has(errorCode)) return retryUpdate(receipt);
+      if (errorCode === "DeviceNotRegistered") invalidTokens.push(receipt.expo_push_token);
+      return {
+        receipt_id: receipt.id,
+        action: "failed",
+        error_code: errorCode,
+        error_message: expoReceipt.message ?? null,
+      };
     });
 
-    const delivered = outcomes.filter((o) => o === "delivered").length;
-    const failed = outcomes.filter((o) => o === "failed").length;
-    const unknown = outcomes.filter((o) => o === "unknown").length;
-
+    const counts = await applyUpdates(service, updates);
     if (invalidTokens.length > 0) {
-      await service.rpc("disable_push_devices", {
-        p_expo_push_tokens: invalidTokens,
-      });
+      await service.rpc("disable_push_devices", { p_expo_push_tokens: invalidTokens });
     }
 
     return successResponse({
-      processed: delivered + failed + unknown,
-      delivered,
-      failed,
-      unknown,
-      retried: receipts.length - delivered - failed - unknown,
+      processed: counts.delivered + counts.failed + counts.unknown,
+      delivered: counts.delivered,
+      failed: counts.failed,
+      unknown: counts.unknown,
+      retried: receipts.length - counts.delivered - counts.failed - counts.unknown,
     });
   }),
 );

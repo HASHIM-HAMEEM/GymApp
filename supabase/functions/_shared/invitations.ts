@@ -70,6 +70,35 @@ async function resendKey(context: AdminRequestContext): Promise<string> {
   return data;
 }
 
+async function retireRemovedMemberAccounts(
+  context: AdminRequestContext,
+  request: DeliveryRequest,
+): Promise<void> {
+  const { data, error } = await context.service.rpc("prepare_removed_member_reenrolment", {
+    p_invitation_id: request.invitationId,
+  });
+  if (error) {
+    return failInvitation(
+      context,
+      request,
+      new ApiError(500, "REENROLMENT_PREPARE_FAILED", "The previous removed account could not be retired."),
+    );
+  }
+  const rows = Array.isArray(data) ? data : [];
+  for (const row of rows) {
+    const id = isRecord(row) && typeof row.auth_user_id === "string" ? row.auth_user_id : null;
+    if (!id) continue;
+    const { error: deleteError } = await context.service.auth.admin.deleteUser(id);
+    if (deleteError) {
+      return failInvitation(
+        context,
+        request,
+        new ApiError(502, "REENROLMENT_PREPARE_FAILED", "The previous removed account could not be retired. Try again."),
+      );
+    }
+  }
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -87,6 +116,7 @@ async function sendInviteWithResend(
   verificationType: "invite" | "recovery",
 ): Promise<void> {
   const link = `${context.config.redirectUrl}?token_hash=${encodeURIComponent(tokenHash)}&type=${verificationType}`;
+  const downloadUrl = Deno.env.get("APP_DOWNLOAD_URL")?.trim() || "https://apexgc.vercel.app/download";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -98,7 +128,7 @@ async function sendInviteWithResend(
       from: "Apex <auth@scnz.site>",
       to: [request.email],
       subject: "Your Apex membership invitation",
-      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#141414"><h1 style="font-size:24px">Welcome to Apex Athletic Club</h1><p>Your membership account is ready. Use this one-time link to accept your invitation and choose a password.</p><p><a href="${escapeHtml(link)}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none">Accept invitation</a></p><p style="color:#666;font-size:13px">If you were not expecting this invitation, you can ignore this email.</p></div>`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#141414"><h1 style="font-size:24px">Welcome to Apex Athletic Club</h1><p>Your membership account is ready. Use this one-time link to accept your invitation and choose a password.</p><p><a href="${escapeHtml(link)}" style="display:inline-block;background:#111;color:#fff;padding:12px 18px;border-radius:999px;text-decoration:none">Accept invitation</a></p><p>After setting your password, install the member app on Android:</p><p><a href="${escapeHtml(downloadUrl)}" style="color:#174d39;font-weight:600">Download the Apex Android app</a></p><p style="color:#666;font-size:13px">If you were not expecting this invitation, you can ignore this email.</p></div>`,
     }),
     signal: AbortSignal.timeout(10_000),
   });
@@ -155,6 +185,7 @@ export async function deliverMemberInvitation(
   context: AdminRequestContext,
   request: DeliveryRequest,
 ): Promise<DeliveryResult> {
+  await retireRemovedMemberAccounts(context, request);
   const expectedUser = await getExpectedAuthUser(context, request);
   const verificationType: "invite" | "recovery" = expectedUser && isConfirmed(expectedUser)
     ? "recovery"

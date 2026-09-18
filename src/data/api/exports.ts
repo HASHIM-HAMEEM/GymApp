@@ -1,5 +1,5 @@
 import { requireSupabase } from '@/lib/supabase';
-import { toCsv } from '@/lib/csv';
+import { toCsvChunks } from '@/lib/csv';
 
 type Row = Record<string, unknown>;
 export async function buildAdminExport() {
@@ -63,7 +63,7 @@ export async function buildAdminExport() {
   return {
     count: rows.length,
     filename: `member-report-${cutoff.replace(/[:.]/g, '-')}.csv`,
-    csv: toCsv(['Member number','First name','Last name','Email','Phone','Membership ID','Plan','Stored state',
+    csv: toCsvChunks(['Member number','First name','Last name','Email','Phone','Membership ID','Plan','Stored state',
       'Start date','Original end date','Freeze credit days','Agreed price','Currency','Payments received','Balance due',
       'Receipts','Payment methods','Last payment at (UTC)','Joined at (UTC)'], rows),
   };

@@ -267,6 +267,7 @@ select throws_ok(
       'Bad',
       'Payment',
       'bad.payment@test.apex.local',
+      p_phone => '+919000000011',
       p_plan_id => (select id from public.plans where slug = 'premium-monthly'),
       p_amount_paid => 9000,
       p_payment_method => 'cash'
@@ -290,6 +291,8 @@ select lives_ok(
       'Pending',
       'Member',
       'pending.member@test.apex.local',
+      p_phone => '+919000000012',
+      p_gender => 'female',
       p_plan_id => (select id from public.plans where slug = 'premium-monthly'),
       p_amount_paid => 1500,
       p_payment_method => 'upi'
@@ -323,7 +326,7 @@ select matches(
     inner join public.members as m on m.id = ms.member_id
     where m.email = 'pending.member@test.apex.local'
   ),
-  '^MRD-R-[0-9]{4}-[0-9]{6}$',
+  '^APX-R-[0-9]{4}-[0-9]{6}$',
   'initial payment receives a server-generated receipt number'
 );
 

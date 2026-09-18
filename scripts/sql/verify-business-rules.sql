@@ -92,7 +92,7 @@ insert into ctx (key, val)
 select t.k, t.v
 from public.create_member_invitation(
   'Asha', 'Kumar', 'asha@test.apex.local',
-  null, null, null, null, '100000000004', null,
+  '+919000000001', null, null, null, '100000000004', null,
   (select id from public.plans where slug = 'premium-monthly'),
   null, 999.99, 'upi'
 ) r,
@@ -157,7 +157,7 @@ select harness.eq('admission admitted is strictly false (M1)',
 
 -- Manual start dates are rejected (M6).
 select harness.throws('create rejects manual start date', '22023',
-  $$select public.create_member_invitation('X','Y','x1@test.apex.local',null,null,null,null,'100000000015',null,
+  $$select public.create_member_invitation('X','Y','x1@test.apex.local','+919000000002',null,null,null,'100000000015',null,
     (select id from public.plans where slug='premium-monthly'), '2026-01-01'::date, null, null)$$);
 
 -- Settlement: exact remaining balance via UPI (M5/M8).
@@ -215,7 +215,7 @@ insert into ctx (key, val)
 select t.k, t.v
 from public.create_member_invitation(
   'Riya', 'Sharma', 'riya@test.apex.local',
-  null, null, null, null, '100000000027', null,
+  '+919000000003', null, null, null, '100000000027', null,
   (select id from public.plans where slug = 'three-month'),
   null, 100.00, 'cash'
 ) r,
@@ -263,7 +263,7 @@ insert into ctx (key, val)
 select t.k, t.v
 from public.create_member_invitation(
   'Arjun', 'Patel', 'arjun@test.apex.local',
-  null, null, null, null, '100000000036', null,
+  '+919000000004', null, null, null, '100000000036', null,
   (select id from public.plans where slug = 'premium-monthly'),
   null, 2499.00, 'upi'
 ) r,
@@ -296,6 +296,14 @@ select harness.eq('renewal queued start is day after current end',
 select harness.eq('renewal queued end is calendar inclusive',
   (select end_date from public.memberships where id = (select val::uuid from ctx where key = 'arjun_renewal')),
   (select public.term_end_date(start_date, 12) from public.memberships where id = (select val::uuid from ctx where key = 'arjun_renewal')));
+select harness.eq('queued renewal immediately extends booked access',
+  public.member_access_through((select val::uuid from ctx where key='arjun_member')),
+  (select end_date from public.memberships where id=(select val::uuid from ctx where key='arjun_renewal')));
+select harness.eq('admin detail exposes the full booked-through date',
+  (select (d->>'access_through')::date from public.member_detail_by_number(
+    (select member_number from public.members where id=(select val::uuid from ctx where key='arjun_member'))
+  ) d),
+  (select end_date from public.memberships where id=(select val::uuid from ctx where key='arjun_renewal')));
 
 -- Idempotent replay: same request id returns the stored row, no duplicate.
 select harness.eq('renewal replay returns same membership',
@@ -308,6 +316,11 @@ select harness.eq('renewal replay adds no membership',
   (select count(*) from public.memberships
     where member_id = (select val::uuid from ctx where key = 'arjun_member')),
   2::bigint);
+select harness.eq('renewal keeps one member account for the email',
+  (select count(*) from public.members where email='arjun@test.apex.local'),1::bigint);
+select harness.eq('renewal replay does not extend access twice',
+  public.member_access_through((select val::uuid from ctx where key='arjun_member')),
+  (select end_date from public.memberships where id=(select val::uuid from ctx where key='arjun_renewal')));
 select harness.throws('renewal request id payload conflict', '23505',
   $$select public.renew_membership(
     (select val::uuid from ctx where key='arjun_member'),
@@ -581,7 +594,7 @@ select harness.eq('member detail payment uses neutral amount key',
     from public.member_detail((select val::uuid from ctx where key = 'asha_member')) m
   ), true);
 select harness.eq('search reports paused status for paused member',
-  (select s.membership_status from public.search_members('MRD-', 100, 0, null) s
+  (select s.membership_status from public.search_members(null, 100, 0, null) s
     where s.member_id = (select val::uuid from ctx where key = 'arjun_member')
   ), 'active');
 
@@ -613,7 +626,7 @@ begin
   p := public.save_membership_plan(null, 'Six-month QA', 6, 1000, true);
   perform harness.eq('admin creates six-month price', (select price from public.plans where id=p), 1000::numeric);
   select * into first_term from public.create_member_invitation(
-    p_first_name=>'Pricing',p_last_name=>'Test',p_email=>'pricing@test.apex.local',p_national_id=>'100000000043',
+    p_first_name=>'Pricing',p_last_name=>'Test',p_email=>'pricing@test.apex.local',p_phone=>'+919000000005',p_national_id=>'100000000043',
     p_plan_id=>p,p_amount_paid=>800,p_payment_method=>'cash',p_agreed_price=>800,p_price_note=>'Student discount');
   perform harness.eq('discount stores agreed snapshot', (select price_snapshot from public.memberships where id=first_term.membership_id), 800::numeric);
   perform harness.eq('discount stores original catalogue price', (select list_price_snapshot from public.memberships where id=first_term.membership_id), 1000::numeric);
@@ -705,13 +718,23 @@ select harness.throws('removed member cannot check in at the desk','22023',
   $$select public.check_in_member((select val::uuid from ctx where key='riya_member'),'A')$$);
 select harness.throws('removed membership cannot change state','22023',
   $$select public.set_membership_state((select val::uuid from ctx where key='riya_membership'),'resume',null)$$);
-select harness.throws('removed member email cannot be re-invited','23505',
+select harness.throws('fresh re-enrolment still requires a mobile number','22023',
   $$select public.create_member_invitation('Riya','Sharma','riya@test.apex.local')$$);
 select harness.eq('removed member appears under the removed filter',
   (select count(*) from public.search_members('Riya',100,0,'removed')),1::bigint);
 select harness.eq('removed member detail exposes removal metadata',
   (select (d->>'removed_at') is not null and d->>'removal_reason' = 'QA removal'
    from public.member_detail((select val::uuid from ctx where key='riya_member')) d), true);
+select harness.eq('member detail resolves a removed member number in one rpc',
+  (select d->>'id' from public.member_detail_by_number(
+    (select member_number from public.members where id=(select val::uuid from ctx where key='riya_member'))
+  ) d), (select val from ctx where key='riya_member'));
+select harness.eq('member detail by number returns null when absent',
+  public.member_detail_by_number('MRD-9999'), null::jsonb);
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+select harness.throws('member cannot resolve admin detail by number','42501',
+  $$select public.member_detail_by_number('MRD-0001')$$);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
 select public.restore_member((select val::uuid from ctx where key='riya_member'),'QA restore');
 select harness.eq('restored member returns to normal search',
   (select count(*) from public.search_members('Riya',100,0,null)),1::bigint);
@@ -721,6 +744,63 @@ select harness.eq('restored profile is active again',
   (select account_state from public.profiles where id='a0000000-0000-0000-0000-000000000003'), 'active');
 select harness.throws('restoring a live member fails','P0002',
   $$select public.restore_member((select val::uuid from ctx where key='riya_member'))$$);
+
+-- A removed person may join again from scratch with the same identity.
+insert into ctx(key,val)
+select x.key, x.value
+from public.create_member_invitation(
+  p_first_name=>'Old', p_last_name=>'Record', p_email=>'rejoin@test.apex.local',
+  p_phone=>'+919000000008', p_national_id=>'100000000062', p_gender=>'female',
+  p_plan_id=>(select id from public.plans where slug='premium-monthly'),
+  p_amount_paid=>2499, p_payment_method=>'cash'
+) r,
+lateral (values ('rejoin_old_member',r.member_id::text),('rejoin_old_invitation',r.invitation_id::text)) x(key,value);
+insert into auth.users(id,email,email_confirmed_at) values ('c0000000-0000-0000-0000-000000000001','rejoin@test.apex.local',now());
+update public.members set auth_user_id='c0000000-0000-0000-0000-000000000001' where id=(select val::uuid from ctx where key='rejoin_old_member');
+update public.member_invitations set auth_user_id='c0000000-0000-0000-0000-000000000001',status='accepted',accepted_at=now() where id=(select val::uuid from ctx where key='rejoin_old_invitation');
+insert into public.profiles(id,role,account_state,must_set_password,display_name)
+values ('c0000000-0000-0000-0000-000000000001','member','active',false,'Old Record');
+select public.remove_member((select val::uuid from ctx where key='rejoin_old_member'),'Left and returned later');
+insert into ctx(key,val)
+select x.key, x.value
+from public.create_member_invitation(
+  p_first_name=>'Fresh', p_last_name=>'Start', p_email=>'rejoin@test.apex.local',
+  p_phone=>'+919000000009', p_national_id=>'100000000062', p_gender=>'other'
+) r,
+lateral (values ('rejoin_new_member',r.member_id::text),('rejoin_new_invitation',r.invitation_id::text)) x(key,value);
+select harness.eq('re-enrolment creates a different member row',
+  (select val from ctx where key='rejoin_new_member') <> (select val from ctx where key='rejoin_old_member'), true);
+select harness.eq('new registrations use the APX member prefix',
+  (select member_number ~ '^APX-[0-9]{6}$' from public.members where id=(select val::uuid from ctx where key='rejoin_new_member')), true);
+select harness.eq('new receipts use the APX-R prefix',
+  (select bool_and(receipt_number ~ '^APX-R-[0-9]{4}-[0-9]{6}$') from public.payments p join public.memberships ms on ms.id=p.membership_id where ms.member_id=(select val::uuid from ctx where key='rejoin_old_member')), true);
+select harness.eq('fresh member gets only the newly entered details',
+  (select first_name||':'||phone||':'||gender from public.members where id=(select val::uuid from ctx where key='rejoin_new_member')),
+  'Fresh:+919000000009:other');
+select harness.eq('fresh member inherits no old memberships',
+  (select count(*) from public.memberships where member_id=(select val::uuid from ctx where key='rejoin_new_member')),0::bigint);
+select harness.eq('historical member keeps the old membership and payment',
+  (select count(*) from public.payments p join public.memberships ms on ms.id=p.membership_id where ms.member_id=(select val::uuid from ctx where key='rejoin_old_member')),1::bigint);
+select harness.throws('active email still cannot be duplicated','23505',
+  $$select public.create_member_invitation('Duplicate','Active','rejoin@test.apex.local','+919000000010',null,null,null,'100000000070',null,null,null,null,null,null,null,'male')$$);
+select harness.throws('active Aadhaar still cannot be duplicated','23505',
+  $$select public.create_member_invitation(p_first_name=>'Duplicate',p_last_name=>'Aadhaar',p_email=>'other@test.apex.local',p_phone=>'+919000000010',p_national_id=>'100000000062',p_gender=>'male')$$);
+select harness.set_user(null,'service_role');
+select harness.eq('re-enrolment preparation returns the retired auth user',
+  (select auth_user_id from public.prepare_removed_member_reenrolment((select val::uuid from ctx where key='rejoin_new_invitation'))),
+  'c0000000-0000-0000-0000-000000000001'::uuid);
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.eq('historical detail points to the fresh member number',
+  (select d->>'reenrolled_as_member_number' from public.member_detail_by_number(
+    (select member_number from public.members where id=(select val::uuid from ctx where key='rejoin_old_member'))
+  ) d),
+  (select member_number from public.members where id=(select val::uuid from ctx where key='rejoin_new_member')));
+select harness.throws('a re-enrolled historical record cannot be restored','22023',
+  $$select public.restore_member((select val::uuid from ctx where key='rejoin_old_member'))$$);
+delete from auth.users where id='c0000000-0000-0000-0000-000000000001';
+select harness.eq('retiring old auth unlinks but does not delete history',
+  (select auth_user_id is null and removed_at is not null from public.members where id=(select val::uuid from ctx where key='rejoin_old_member')),true);
+
 select harness.set_user('a0000000-0000-0000-0000-000000000002');
 insert into ctx(key,val) select 'renewal_upi',r.id::text from public.create_upi_payment_request(null,(select id from public.plans where slug='premium-monthly')) r;
 select public.submit_upi_payment((select val::uuid from ctx where key='renewal_upi'),'UTR999999',null);
@@ -745,13 +825,13 @@ select harness.eq('aadhaar unchanged after blocked updates',
 
 -- Duplicate Aadhaar must be reported as an Aadhaar problem, never as a duplicate email.
 select harness.throws('duplicate aadhaar raises a specific message','23505',
-  $$select public.create_member_invitation('Dup','Aadhaar','dup-aadhaar@test.apex.local',null,null,null,null,'100000000027',null)$$);
+  $$select public.create_member_invitation('Dup','Aadhaar','dup-aadhaar@test.apex.local','+919000000006',null,null,null,'100000000027',null)$$);
 do $$
 begin
-  perform public.create_member_invitation('Dup','Aadhaar','dup-aadhaar@test.apex.local',null,null,null,null,'100000000027',null);
+  perform public.create_member_invitation('Dup','Aadhaar','dup-aadhaar@test.apex.local','+919000000006',null,null,null,'100000000027',null);
   raise exception 'FAIL duplicate aadhaar was accepted';
 exception when unique_violation then
-  if sqlerrm not like 'This Aadhaar number is already registered to member MRD-%' then
+  if sqlerrm not similar to 'This Aadhaar number is already registered to member (MRD-[0-9]{4}|APX-[0-9]{6})' then
     raise exception 'FAIL duplicate aadhaar message :: %', sqlerrm;
   end if;
   raise notice 'ok - duplicate aadhaar message names the existing member';
@@ -760,7 +840,7 @@ end $$;
 -- Email correction before onboarding.
 insert into ctx (key, val)
 select 'typo_member', r.member_id::text
-from public.create_member_invitation('Typo','Mail','typo@test.apex.local',null,null,null,null,'100000000058',null) r;
+from public.create_member_invitation('Typo','Mail','typo@test.apex.local','+919000000007',null,null,null,'100000000058',null) r;
 select harness.throws('email correction rejects same address','22023',
   $$select public.update_member_email((select val::uuid from ctx where key='typo_member'),'typo@test.apex.local')$$);
 select harness.throws('email correction rejects malformed address','22023',
@@ -824,4 +904,74 @@ select harness.throws('member cannot delete plans','42501',
   $$select public.delete_membership_plan((select id from public.plans limit 1))$$);
 select harness.eq('member sees no admin plan usage rows', (select count(*) from public.admin_plans()), 0::bigint);
 select harness.set_user(null);
+
+-- Structured seven-day gym schedule.
+select harness.set_user('a0000000-0000-0000-0000-000000000001');
+select harness.eq('club schedule is normalized to seven days',
+  (select jsonb_array_length(hours) from public.club_config where id=1),7);
+select public.update_club_hours('[
+  {"day":"monday","open":"05:30","close":"22:30","closed":false},
+  {"day":"tuesday","open":"05:30","close":"22:30","closed":false},
+  {"day":"wednesday","open":"05:30","close":"22:30","closed":false},
+  {"day":"thursday","open":"05:30","close":"22:30","closed":false},
+  {"day":"friday","open":"06:00","close":"21:00","closed":false},
+  {"day":"saturday","open":"06:00","close":"23:00","closed":false},
+  {"day":"sunday","open":null,"close":null,"closed":true}
+]'::jsonb);
+select harness.eq('schedule stores ordered machine-readable times',
+  (select (hours->0->>'day')||':'||(hours->0->>'open')||':'||(hours->6->>'day')||':'||(hours->6->>'closed') from public.club_config where id=1),
+  'monday:05:30:sunday:true');
+select harness.eq('schedule stores a member-facing display value',
+  (select hours->0->>'value' from public.club_config where id=1),'5:30 AM–10:30 PM');
+select harness.throws('schedule rejects missing days','22023',
+  $$select public.update_club_hours('[{"day":"monday","open":"06:00","close":"22:00","closed":false}]'::jsonb)$$);
+select harness.throws('schedule rejects invalid clock times','22023',
+  $$select public.update_club_hours('[
+    {"day":"monday","open":"25:00","close":"22:00","closed":false},
+    {"day":"tuesday","open":"06:00","close":"22:00","closed":false},
+    {"day":"wednesday","open":"06:00","close":"22:00","closed":false},
+    {"day":"thursday","open":"06:00","close":"22:00","closed":false},
+    {"day":"friday","open":"06:00","close":"22:00","closed":false},
+    {"day":"saturday","open":"06:00","close":"22:00","closed":false},
+    {"day":"sunday","open":null,"close":null,"closed":true}
+  ]'::jsonb)$$);
+select public.update_club_contact('Apex Updated','Address','City','+919876543210');
+select harness.eq('editing club contact preserves the schedule',
+  (select hours->0->>'open' from public.club_config where id=1),'05:30');
+select harness.set_user('a0000000-0000-0000-0000-000000000002');
+select harness.throws('member cannot edit the gym schedule','42501',
+  $$select public.update_club_hours((select hours from public.club_config where id=1))$$);
+select harness.set_user(null);
+
+-- Push receipt reconciliation is one transactional bulk RPC.
+insert into public.notices (id,category,title,body,audience,author_id)
+values ('b0000000-0000-0000-0000-000000000001','schedule','Receipt test','Test','all_members','a0000000-0000-0000-0000-000000000001');
+insert into public.push_receipts (id,notice_id,expo_push_token,expo_ticket_id,status,attempts) values
+  ('b1000000-0000-0000-0000-000000000001','b0000000-0000-0000-0000-000000000001','ExponentPushToken[bulk-1]','ticket-1','pending',0),
+  ('b1000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000001','ExponentPushToken[bulk-2]','ticket-2','pending',0),
+  ('b1000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000001','ExponentPushToken[bulk-3]','ticket-3','pending',5),
+  ('b1000000-0000-0000-0000-000000000004','b0000000-0000-0000-0000-000000000001','ExponentPushToken[bulk-4]','ticket-4','pending',1);
+select set_config('request.jwt.claim.role','service_role',true);
+select set_config('request.jwt.claims','{"role":"service_role"}',true);
+select harness.eq('bulk receipt rpc records all outcome counts',
+  (select delivered||':'||failed||':'||unknown||':'||retried from public.apply_push_receipt_updates('[
+    {"receipt_id":"b1000000-0000-0000-0000-000000000001","action":"delivered"},
+    {"receipt_id":"b1000000-0000-0000-0000-000000000002","action":"failed","error_code":"DeviceNotRegistered","error_message":"gone"},
+    {"receipt_id":"b1000000-0000-0000-0000-000000000003","action":"unknown","error_code":"RECEIPT_NOT_AVAILABLE"},
+    {"receipt_id":"b1000000-0000-0000-0000-000000000004","action":"retry"}
+  ]'::jsonb)), '1:1:1:1');
+select harness.eq('bulk receipt retry stays pending and increments attempts',
+  (select status||':'||attempts from public.push_receipts where id='b1000000-0000-0000-0000-000000000004'), 'pending:2');
+select harness.eq('bulk receipt terminal errors are persisted',
+  (select status||':'||error_code from public.push_receipts where id='b1000000-0000-0000-0000-000000000002'), 'failed:DeviceNotRegistered');
+select harness.eq('bulk receipt replay is idempotent for terminal rows',
+  (select delivered from public.apply_push_receipt_updates('[{"receipt_id":"b1000000-0000-0000-0000-000000000001","action":"delivered"}]'::jsonb)), 0);
+select harness.throws('bulk receipt rpc rejects duplicate IDs','22023',
+  $$select public.apply_push_receipt_updates('[{"receipt_id":"b1000000-0000-0000-0000-000000000004","action":"retry"},{"receipt_id":"b1000000-0000-0000-0000-000000000004","action":"retry"}]'::jsonb)$$);
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claims','{"role":"authenticated","sub":"a0000000-0000-0000-0000-000000000001"}',true);
+select harness.throws('bulk receipt rpc is service-role only','42501',
+  $$select public.apply_push_receipt_updates('[]'::jsonb)$$);
+select set_config('request.jwt.claim.role','',true);
+select set_config('request.jwt.claims','',true);
 rollback;

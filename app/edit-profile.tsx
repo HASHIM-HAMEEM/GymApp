@@ -60,7 +60,7 @@ export default function EditProfile() {
   const save = async () => {
     let bad: string | null = null;
     if (!first.trim()) bad = t('profile.firstNameRequired');
-    else if (phone.trim() && phone.replace(/\D/g, '').length < 10) bad = t('profile.phoneInvalid');
+    else if (phone.replace(/\D/g, '').length < 10) bad = t('profile.phoneInvalid');
     else if (Boolean(emName.trim()) !== Boolean(emPhone.trim())) bad = t('profile.emergencyBoth');
     else if (emPhone.trim() && emPhone.replace(/\D/g, '').length < 10) bad = t('profile.emergencyPhoneInvalid');
     else if (!isValidAadhaar(nationalId)) bad = t('profile.nationalIdInvalid');

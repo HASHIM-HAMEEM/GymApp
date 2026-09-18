@@ -78,7 +78,7 @@ export default function QrScreen() {
     ms && pass
       ? t('qr.activePass', { plan: ms.planName, date: qrDate(ms.expiryDate, language), seconds: secondsLeft })
       : ms
-      ? `${t('status.active')} · ${ms.planName} · ${t('membership.validUntil', { date: qrDate(ms.expiryDate, language) })}`
+      ? `${t('status.active')} · ${ms.planName} · ${t('membership.validUntil', { date: qrDate(m?.accessThrough ?? ms.expiryDate, language) })}`
       : t('qr.noActive');
 
   return (
@@ -102,7 +102,7 @@ export default function QrScreen() {
           <Text style={[styles.name, { color: c.ink, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>
             {m ? `${m.firstName} ${m.lastName}` : t('member.apexMember')}
           </Text>
-          <Text style={[styles.id, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{m?.id ?? 'MRD-····'}</Text>
+          <Text style={[styles.id, { color: c.ink3, writingDirection: isRtl ? 'rtl' : 'ltr' }]}>{m?.id ?? 'APX-······'}</Text>
         </View>
 
         <View style={[styles.plate, { opacity: unavailable ? 0.28 : 1 }]}>

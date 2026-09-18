@@ -162,10 +162,22 @@ export function mapActivity(rows: ApiActivityDetail[]): ActivityEntry[] {
   }));
 }
 
+export function bookedAccessThrough(rows: ApiMembershipDetail[], asOf: string): string | undefined {
+  const liveEnds = rows
+    .filter((row) => row.state !== 'cancelled' && row.end_date >= asOf)
+    .map((row) => row.end_date)
+    .sort();
+  return liveEnds.at(-1);
+}
+
 export function mapMemberDetail(detail: ApiMemberDetail): Member {
   const current = pickCurrentMembership(detail.memberships, detail.as_of);
   const membership = current ? mapMembership(current, detail.payments) : null;
   const asOf = detail.as_of ?? todayIso();
+  const accessThrough = detail.access_through ?? bookedAccessThrough(detail.memberships, asOf);
+  if (membership?.status === 'expiring' && accessThrough && accessThrough > membership.expiryDate) {
+    membership.status = 'active';
+  }
   const upcomingRow = detail.memberships
     .filter((row) => row.state !== 'cancelled' && row.id !== current?.id && row.start_date > asOf)
     .sort((a, b) => a.start_date.localeCompare(b.start_date))[0] ?? null;
@@ -210,6 +222,7 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     firstName: detail.first_name,
     lastName: detail.last_name,
     phone: detail.phone ?? '',
+    gender: detail.gender,
     email: detail.email,
     dateOfBirth: detail.date_of_birth ?? undefined,
     emergencyName: detail.emergency_contact_name ?? undefined,
@@ -220,6 +233,8 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     removed: Boolean(detail.removed_at),
     removedAt: detail.removed_at ?? undefined,
     removalReason: detail.removal_reason ?? undefined,
+    reenrolledAs: detail.reenrolled_as_member_number ?? undefined,
+    accessThrough,
     membership,
     upcomingMembership,
     payments,
