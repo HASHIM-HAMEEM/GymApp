@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
+import type { ListRenderItem } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useColors, radius, typography, tracking } from '@/theme/tokens';
-import { AppBar, Body } from '@/components/Chrome';
+import { AppBar } from '@/components/Chrome';
 import { TextButton } from '@/components/Button';
 import { ConfirmModal } from '@/components/Overlays';
 import { Banner } from '@/components/Surfaces';
@@ -61,59 +62,68 @@ export default function AdminNotices() {
     }
   };
 
+  const deleteLabel = t('common.delete');
+  const lastIndex = notices.length - 1;
+  const renderNotice = React.useCallback<ListRenderItem<Notice>>(({ item: n, index: i }) => {
+    const color = catColor(c, n.category);
+    return (
+      <View
+        style={[
+          styles.listItem,
+          { borderColor: c.line, backgroundColor: c.bg1 },
+          i === 0 && styles.listItemFirst,
+          i === lastIndex && styles.listItemLast,
+        ]}
+      >
+        <SwipeNoticeRow label={deleteLabel} onDelete={() => setSelectedNotice(n)}>
+          <View style={[styles.nrow, { borderColor: c.line }, i === lastIndex && { borderBottomWidth: 0 }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={n.title}
+              accessibilityHint="Swipe either direction or hold to remove this notice."
+              onLongPress={() => setSelectedNotice(n)}
+              accessibilityActions={[{ name: 'delete', label: deleteLabel }]}
+              onAccessibilityAction={(event) => { if (event.nativeEvent.actionName === 'delete') setSelectedNotice(n); }}
+              onPress={() => router.push({ pathname: '/notice', params: { id: n.id } })}
+              style={({ pressed }) => [styles.noticeLink, { flexDirection: isRtl ? 'row-reverse' : 'row' }, pressed && { opacity: 0.6 }]}
+            >
+              <View style={styles.grow}>
+                <Text style={[styles.cat, { color, writingDirection: textDir }]}>{t(categoryKey[n.category])}</Text>
+                <Text style={[styles.title, { color: c.ink, writingDirection: textDir }]} numberOfLines={2}>{n.title}</Text>
+                <LtrText style={[styles.dt, { color: c.ink3 }]}>
+                  {fmtShort(n.date, language)} · {t(audienceKey[n.audience])} · {t('notices.delivered', { count: n.delivered.toLocaleString() })}
+                </LtrText>
+              </View>
+            </Pressable>
+          </View>
+        </SwipeNoticeRow>
+      </View>
+    );
+  }, [c, deleteLabel, isRtl, language, lastIndex, router, t, textDir]);
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <AppBar
         title={t('notices.title')}
         right={<TextButton onPress={() => router.push('/notice-compose')}>{t('notices.new')}</TextButton>}
       />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-        <Body>
-          {deleteError ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{deleteError}</Text></Banner> : null}
-          {notices.length === 0 ? (
-            <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, textAlign: 'center', paddingVertical: 24, writingDirection: textDir }}>
-              {noticesQuery.isLoading ? t('notices.loading') : t('notices.adminEmpty')}
-            </Text>
-          ) : (
-            <View style={[styles.list, { backgroundColor: c.bg1, borderColor: c.line }]}>
-              {notices.map((n, i) => {
-                const color = catColor(c, n.category);
-                return (
-                  <SwipeNoticeRow key={n.id} label={t('common.delete')} onDelete={() => setSelectedNotice(n)}>
-                  <View
-                    key={n.id}
-                    style={[
-                      styles.nrow,
-                      { borderColor: c.line },
-                      i === notices.length - 1 && { borderBottomWidth: 0 },
-                    ]}
-                  >
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={n.title}
-                      accessibilityHint="Swipe either direction or hold to remove this notice."
-                      onLongPress={() => setSelectedNotice(n)}
-                      accessibilityActions={[{ name: 'delete', label: t('common.delete') }]}
-                      onAccessibilityAction={(event) => { if (event.nativeEvent.actionName === 'delete') setSelectedNotice(n); }}
-                      onPress={() => router.push({ pathname: '/notice', params: { id: n.id } })}
-                      style={({ pressed }) => [styles.noticeLink, { flexDirection: isRtl ? 'row-reverse' : 'row' }, pressed && { opacity: 0.6 }]}
-                    >
-                      <View style={styles.grow}>
-                        <Text style={[styles.cat, { color, writingDirection: textDir }]}>{t(categoryKey[n.category])}</Text>
-                        <Text style={[styles.title, { color: c.ink, writingDirection: textDir }]} numberOfLines={2}>{n.title}</Text>
-                        <LtrText style={[styles.dt, { color: c.ink3 }]}>
-                          {fmtShort(n.date, language)} · {t(audienceKey[n.audience])} · {t('notices.delivered', { count: n.delivered.toLocaleString() })}
-                        </LtrText>
-                      </View>
-                    </Pressable>
-                  </View>
-                  </SwipeNoticeRow>
-                );
-              })}
-            </View>
-          )}
-        </Body>
-      </ScrollView>
+      <FlatList
+        data={notices}
+        keyExtractor={(n) => n.id}
+        renderItem={renderNotice}
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.content}
+        ListHeaderComponent={deleteError ? <Banner variant="error"><Text style={{ writingDirection: textDir }}>{deleteError}</Text></Banner> : null}
+        ListHeaderComponentStyle={deleteError ? styles.header : undefined}
+        ListEmptyComponent={
+          <Text style={{ color: c.ink3, fontSize: 13, letterSpacing: tracking.small, textAlign: 'center', paddingVertical: 24, writingDirection: textDir }}>
+            {noticesQuery.isLoading ? t('notices.loading') : t('notices.adminEmpty')}
+          </Text>
+        }
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews
+      />
       <ConfirmModal
         pending={deleteNotice.isPending}
         visible={Boolean(selectedNotice)}
@@ -130,10 +140,28 @@ export default function AdminNotices() {
 }
 
 const styles = StyleSheet.create({
-  list: {
-    borderRadius: radius.lg,
-    borderWidth: 1,
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 66,
+  },
+  header: {
+    marginBottom: 18,
+  },
+  listItem: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     overflow: 'hidden',
+  },
+  listItemFirst: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+  },
+  listItemLast: {
+    borderBottomWidth: 1,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
   nrow: {
     flexDirection: 'row',
