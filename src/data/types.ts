@@ -152,7 +152,9 @@ export interface Member {
   /** Full payment ledger, newest first */
   payments: MemberPayment[];
   visits: Visit[];
+  visitsTotal: number;
   activity: ActivityEntry[];
+  activityTotal: number;
 }
 
 export interface AppProfile {

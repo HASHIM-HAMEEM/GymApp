@@ -239,7 +239,9 @@ export function mapMemberDetail(detail: ApiMemberDetail): Member {
     upcomingMembership,
     payments,
     visits: mapVisits(detail.check_ins),
+    visitsTotal: detail.check_ins_total ?? detail.check_ins.length,
     activity: mapActivity(detail.activity),
+    activityTotal: detail.activity_total ?? detail.activity.length,
   };
 }
 
@@ -276,7 +278,9 @@ export function mapSearchRow(row: ApiSearchRow): Member {
     payments: [],
     lastVisitAt: row.last_check_in ?? undefined,
     visits: [],
+    visitsTotal: 0,
     activity: [],
+    activityTotal: 0,
   };
 }
 

@@ -213,9 +213,9 @@ export default function MemberOverview() {
                     </Text>
                   </View>
                 ))}
-                {m.visits.length > 20 ? (
+                {m.visitsTotal > 20 ? (
                   <Button variant="quiet" block href="/(member)/visits" style={{ marginTop: 8 }}>
-                    {t('common.countOfTotal', { count: 20, total: m.visits.length })}
+                    {t('common.countOfTotal', { count: 20, total: m.visitsTotal })}
                   </Button>
                 ) : null}
               </View>

@@ -513,9 +513,9 @@ export default function MemberDetail() {
                     </Text>
                   </View>
                 ))}
-                {m.visits.length > 8 ? (
+                {m.visitsTotal > 8 ? (
                   <Text style={[styles.visitFoot, { color: c.ink4, writingDirection: textDir }]}>
-                    {t('common.countOfTotal', { count: Math.min(m.visits.length, 8), total: m.visits.length })}
+                    {t('common.countOfTotal', { count: Math.min(m.visitsTotal, 8), total: m.visitsTotal })}
                   </Text>
                 ) : null}
               </>
@@ -524,7 +524,7 @@ export default function MemberDetail() {
 
           <View style={{ borderWidth: 1, borderColor: c.line, borderRadius: radius.lg, padding: 16, backgroundColor: c.bg1 }}>
             <Pressable accessibilityRole="button" accessibilityState={{ expanded: activityExpanded }} onPress={() => setActivityExpanded((value) => !value)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <Text style={{ color: c.ink, fontSize: 15, fontWeight: '600', flex: 1 }}>{t('memberDetail.activityLog')} · {m.activity.length}</Text>
+              <Text style={{ color: c.ink, fontSize: 15, fontWeight: '600', flex: 1 }}>{t('memberDetail.activityLog')} · {m.activityTotal}</Text>
               <Text style={{ color: c.ink2, fontSize: 13 }}>{activityExpanded ? (isRtl ? 'کم کریں' : 'Minimize −') : (isRtl ? 'دکھائیں' : 'Show +')}</Text>
             </Pressable>
             {activityExpanded ? <>
